@@ -4,7 +4,7 @@ import React, { useState, ChangeEvent, FormEvent, } from "react";
 import Link from "next/link";
 import Image from "next/image";
 // Giả định 'api' là một đối tượng fetch đã được cấu hình (ví dụ: từ /lib/api)
-import { api } from "../../lib/api"; 
+import { api } from "../../lib/api";
 import AuthFooter from "@/components/AuthFooter";
 import FullHeader from "@/components/FullHeader";
 
@@ -17,7 +17,7 @@ type FormState = {
     password: string;
     password_confirmation: string;
 };
-
+// chào bạn 
 // Định nghĩa kiểu cho phản hồi (response) từ API
 type ApiResponse = {
     success: boolean;
@@ -60,7 +60,7 @@ export default function Page() {
         password: "",
         password_confirmation: "",
     });
-    
+
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<MessageState | null>(null);
 
@@ -128,7 +128,7 @@ export default function Page() {
     return (
         <main className="d-flex flex-column min-vh-100">
             <FullHeader showClassicTopBar={true} showTopNav={false} />
-            
+
             {/* Nội dung chính */}
             <section className="py-40 flex-grow-1" style={{ background: "#FF4500", paddingBottom: 120 }}>
                 <div className="container container-lg">
