@@ -366,13 +366,28 @@ export default function FullHeader({
                 <ul className="header-top__right style-two style-three flex-align flex-wrap d-lg-block d-none">
                   <li className="d-sm-flex d-none">
                     <Link
-                      className="d-flex align-content-around gap-10 fw-medium text-main-600 py-14 px-24 bg-main-50 rounded-pill line-height-1 hover-bg-main-600 hover-text-white"
+                      className="d-flex align-items-center gap-10 fw-medium text-main-600 py-10 px-20 bg-main-50 rounded-pill line-height-1 hover-bg-main-600 hover-text-white"
                       href={isLoggedIn ? "/account" : "/dang-nhap"}
+                      style={{ transition: 'all 0.3s ease' }}
                     >
-                      <span className="d-sm-flex d-none line-height-1">
-                        <i className="ph-bold ph-user"></i>
-                      </span>
-                      {displayName}
+                      {isLoggedIn && user?.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt={displayName}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: '2px solid #f2572b'
+                          }}
+                        />
+                      ) : (
+                        <span className="d-flex line-height-1">
+                          <i className="ph-bold ph-user"></i>
+                        </span>
+                      )}
+                      <span>{displayName}</span>
                     </Link>
                   </li>
                 </ul>
@@ -867,13 +882,28 @@ export default function FullHeader({
                   <ul className="header-top__right style-two style-three flex-align flex-wrap d-lg-block d-none">
                     <li className="d-sm-flex d-none">
                       <Link
-                        className="d-flex align-content-around gap-10 fw-medium text-main-600 py-14 px-24 bg-main-50 rounded-pill line-height-1 hover-bg-main-600 hover-text-white"
-                        href="/account"
+                        className="d-flex align-items-center gap-10 fw-medium text-main-600 py-10 px-20 bg-main-50 rounded-pill line-height-1 hover-bg-main-600 hover-text-white"
+                        href={isLoggedIn ? "/account" : "/dang-nhap"}
+                        style={{ transition: 'all 0.3s ease' }}
                       >
-                        <span className="d-sm-flex d-none line-height-1">
-                          <i className="ph-bold ph-user"></i>
-                        </span>
-                        Đăng nhập
+                        {isLoggedIn && user?.avatar ? (
+                          <img
+                            src={user.avatar}
+                            alt={displayName}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                              border: '2px solid #f2572b'
+                            }}
+                          />
+                        ) : (
+                          <span className="d-flex line-height-1">
+                            <i className="ph-bold ph-user"></i>
+                          </span>
+                        )}
+                        <span>{displayName}</span>
                       </Link>
                     </li>
                   </ul>
