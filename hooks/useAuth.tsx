@@ -46,61 +46,63 @@ export type AuthContextType = {
 const AuthContext = createContext<AuthContextType | null>(null);
 const TOKEN_KEY = "access_token";
 
-export function AuthProvider({ 
-  children, 
-  initialUser 
-}: { 
-  children: React.ReactNode; 
-  initialUser: AuthUser | null 
+export function AuthProvider({
+  children,
+  initialUser
+}: {
+  children: React.ReactNode;
+  initialUser: AuthUser | null
 }) {
   const [user, setUserState] = useState<AuthUser | null>(initialUser);
   const [token, setToken] = useState<string | null>(() => Cookies.get(TOKEN_KEY) || null);
-  
+
   const router = useRouter();
   const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
-
-  // Fix eslint: Thêm dependency 'token'
-  // useEffect(() => {
-  //   const currentToken = Cookies.get(TOKEN_KEY);
-  //   if (currentToken && currentToken !== token) {
-  //     setToken(currentToken);
-  //   }
-  // }, [token]);
-  useEffect(() => {
-  const currentToken = Cookies.get(TOKEN_KEY);
-  if (currentToken) setToken(currentToken);
-}, []);
 
   // --- Fetch Me Helper ---
   // Dùng useCallback để tránh warning dependency ở login
   const fetchMe = useCallback(async (accessToken: string) => {
     try {
       const res = await fetch(`${API}/api/auth/thong-tin-nguoi-dung`, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json" 
+          Accept: "application/json"
         },
       });
       if (res.ok) {
         const data = await res.json();
         if (data.user) {
-            const mappedUser: AuthUser = {
-                id: data.user.id,
-                username: data.user.username,
-                hoten: data.user.hoten,
-                sodienthoai: data.user.sodienthoai,
-                gioitinh: data.user.gioitinh,
-                ngaysinh: data.user.ngaysinh,
-                avatar: data.user.avatar,
-                diachi: data.user.diachi
-            };
-            setUserState(mappedUser);
+          const mappedUser: AuthUser = {
+            id: data.user.id,
+            username: data.user.username,
+            hoten: data.user.hoten,
+            sodienthoai: data.user.sodienthoai,
+            gioitinh: data.user.gioitinh,
+            ngaysinh: data.user.ngaysinh,
+            avatar: data.user.avatar,
+            diachi: data.user.diachi
+          };
+          setUserState(mappedUser);
         }
       }
     } catch (e) {
       console.error(e);
     }
   }, [API]);
+
+  // Fix eslint: Thêm dependency 'token'
+  useEffect(() => {
+    const currentToken = Cookies.get(TOKEN_KEY);
+    if (currentToken && currentToken !== token) {
+      setToken(currentToken);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (token && !user) {
+      fetchMe(token);
+    }
+  }, [token, user, fetchMe]);
 
   // --- Login ---
   // Fix eslint: Thêm dependency 'API' và 'fetchMe'
@@ -114,7 +116,7 @@ export function AuthProvider({
     if (!res.ok) throw new Error("Đăng nhập thất bại");
 
     const data = await res.json();
-    
+
     if (data.success && data.token) {
       Cookies.set(TOKEN_KEY, data.token, { expires: 1, path: '/' });
       setToken(data.token);
@@ -132,8 +134,8 @@ export function AuthProvider({
     });
 
     if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Đăng ký thất bại");
+      const err = await res.json();
+      throw new Error(err.message || "Đăng ký thất bại");
     }
   }, [API]);
 

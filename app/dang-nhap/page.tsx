@@ -3,310 +3,394 @@
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
-// Đã loại bỏ 'getTokenFromResponse' và 'LoginResponse' vì không còn dùng
-import { api } from "../../lib/api"; 
 import { useRouter } from "next/navigation";
-import AuthFooter from "@/components/AuthFooter";
 import Cookies from "js-cookie";
+import FullHeader from "@/components/FullHeader";
+import { useAuth } from "@/hooks/useAuth";
 
-// Định nghĩa kiểu cho phản hồi (response) từ API Laravel [cite: 156-160]
+// Định nghĩa kiểu cho phản hồi (response) từ API Laravel
 type LoginForm = {
-  username: string;
-  password: string;
+    username: string;
+    password: string;
+    remember: boolean;
 };
 
 type ApiResponse = {
-  success?: boolean;
-  message?: string;
-  token?: string;
-  errors?: Record<string, string[]>;
-  data?: unknown;
+    success?: boolean;
+    message?: string;
+    token?: string;
+    errors?: Record<string, string[]>;
+    data?: unknown;
 };
 
 type ApiError = {
-  errors?: Record<string, string[]>;
-  message?: string;
-  data?: unknown;
+    errors?: Record<string, string[]>;
+    message?: string;
+    data?: unknown;
 };
 
 type MessageState = {
-  type: "success" | "error";
-  text: string;
+    type: "success" | "error";
+    text: string;
 };
 
 const isApiError = (err: unknown): err is ApiError =>
-  typeof err === "object" && err !== null && ("errors" in err || "message" in err);
+    typeof err === "object" && err !== null && ("errors" in err || "message" in err);
 
 export default function Page() {
-  const [form, setForm] = useState<LoginForm>({ username: "", password: "" });
-  const [loading, setLoading] = useState<boolean>(false);
-  const [message, setMessage] = useState<MessageState | null>(null);
-  const router = useRouter();
+    const [form, setForm] = useState<LoginForm>({ username: "", password: "", remember: false });
+    const [loading, setLoading] = useState<boolean>(false);
+    const [message, setMessage] = useState<MessageState | null>(null);
+    const [showPassword, setShowPassword] = useState<boolean>(false);
+    const router = useRouter();
+    const { login } = useAuth();
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
-  };
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const { name, value, type, checked } = e.target;
+        setForm((p) => ({ ...p, [name]: type === "checkbox" ? checked : value }));
+    };
 
-  const validate = (): string | null => {
-    const u = (form.username ?? "").trim();
-    const p = form.password ?? "";
-    if (!u) return "Vui lòng nhập Tên đăng nhập";
-    if (!/^[A-Za-z0-9_]{1,15}$/.test(u)) return "Username không hợp lệ (chỉ chữ, số, _ , tối đa 15 ký tự)";
-    if (!p) return "Vui lòng nhập mật khẩu";
-    if (!/^[A-Za-z0-9_]{6,15}$/.test(p)) return "Mật khẩu không hợp lệ (6-15 ký tự, chỉ chữ/số/_)";
-    return null;
-  };
+    const togglePassword = () => {
+        setShowPassword((prev) => !prev);
+    };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
-    setMessage(null);
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
+        e.preventDefault();
+        setMessage(null);
 
-    // read values from form element to avoid stale state
-    const formEl = e.currentTarget as HTMLFormElement;
-    const fd = new FormData(formEl);
-    const username = String(fd.get("username") ?? "").trim();
-    const password = String(fd.get("password") ?? "");
+        const formEl = e.currentTarget as HTMLFormElement;
+        const fd = new FormData(formEl);
+        const username = String(fd.get("username") ?? "").trim();
+        const password = String(fd.get("password") ?? "");
 
-    if (!username) {
-      setMessage({ type: "error", text: "Vui lòng nhập Tên đăng nhập" });
-      return;
-    }
-    if (!password) {
-      setMessage({ type: "error", text: "Vui lòng nhập mật khẩu" });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      try { localStorage.removeItem("access_token"); } catch {}
-
-      const payload = { username, password };
-      console.debug("LOGIN payload:", payload);
-
-      const rawResp = await fetch("http://148.230.100.215/api/auth/dang-nhap", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const parsed = await rawResp.json().catch(() => ({}));
-      console.debug("LOGIN response:", rawResp.status, parsed);
-
-      const resp: ApiResponse = parsed as ApiResponse;
-
-    //   if (resp.success && typeof resp.token === "string" && resp.token.length > 0) {
-    //     try { localStorage.setItem("access_token", resp.token); } catch {}
-    //     setMessage({ type: "success", text: resp.message ?? "Đăng nhập thành công!" });
-    //     router.push("/");
-    //     return;
-    //   }
-    
-        if (resp.success && resp.token) {
-            Cookies.set("access_token", resp.token, {
-                expires: 1,          // 1 ngày
-                path: "/",
-            });
-
-            setMessage({ type: "success", text: resp.message ?? "Đăng nhập thành công!" });
-            router.push("/");
+        if (!username) {
+            setMessage({ type: "error", text: "Vui lòng nhập Tên đăng nhập" });
+            return;
+        }
+        if (!password) {
+            setMessage({ type: "error", text: "Vui lòng nhập mật khẩu" });
             return;
         }
 
-      if (resp.errors && typeof resp.errors === "object") {
-        const firstKey = Object.keys(resp.errors)[0];
-        const firstMsg = resp.errors[firstKey]?.[0] ?? resp.message ?? "Dữ liệu không hợp lệ";
-        setMessage({ type: "error", text: firstMsg });
-        return;
-      }
+        setLoading(true);
+        try {
+            try { localStorage.removeItem("access_token"); } catch { }
 
-      setMessage({ type: "error", text: resp.message ?? "Thông tin đăng nhập không hợp lệ." });
-    } catch (err: unknown) {
-      console.error("Login error:", err);
-      let msg = "Đăng nhập thất bại. Vui lòng thử lại.";
-      if (isApiError(err)) {
-        msg = err.message ?? msg;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      setMessage({ type: "error", text: msg });
-    } finally {
-      setLoading(false);
-    }
-  };
-    // ===============================================
-    // KẾT THÚC CẬP NHẬT
-    // ===============================================
+            await login({ username, password });
+
+            if (form.remember) {
+                const token = Cookies.get("access_token");
+                if (token) {
+                    Cookies.set("access_token", token, { expires: 7, path: "/" });
+                }
+            }
+
+            setMessage({ type: "success", text: "Đăng nhập thành công!" });
+            router.push("/");
+        } catch (err: unknown) {
+            console.error("Login error:", err);
+            let msg = "Đăng nhập thất bại. Vui lòng thử lại.";
+            if (isApiError(err)) {
+                msg = err.message ?? msg;
+            } else if (err instanceof Error) {
+                msg = err.message;
+            }
+            setMessage({ type: "error", text: msg });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
-        <main className="d-flex flex-column min-vh-100">
-            {/* Header trắng */}
-            <header className="py-12 bg-white border-bottom border-neutral-40">
-                <div className="container container-lg">
-                    <div className="flex-between flex-align">
-                        <div className="gap-10 d-flex flex-align">
-                            <Image
-                                src="/assets/images/logo/logo_nguyenban.png"
-                                alt="Logo"
-                                width={180}
-                                height={60}
-                                style={{ objectFit: "contain" }}
-                                priority
-                            />
-                            <span className="mb-0 h6 ms-8">Đăng nhập</span>
-                        </div>
-                        <a href="#" style={{ color: "#ee4d2d" }} className="text-sm">
-                            Bạn cần giúp đỡ?
-                        </a>
-                    </div>
-                </div>
-            </header>
+        <>
+            {/* FullHeader - giống trang chủ */}
+            <FullHeader showTopNav={true} showCategoriesBar={false} />
 
-            {/* Hero nền cam */}
-            <section
-                className="py-40 flex-grow-1"
-                style={{ background: "#FF4500", paddingBottom: 120 }}
-            >
-                <div className="container container-lg">
-                    <div className="row flex-align" style={{ marginTop: 56 }}>
-                        {/* Banner trái */}
-                        <div className="col-lg-7 d-lg-block d-none">
-                            <div
-                                className="overflow-hidden position-relative w-100 rounded-10"
-                                style={{ height: 420 }}
-                            >
-                                <Image
-                                    src="/assets/images/logo/mau-banner-quang-cao-khuyen-mai.jpg"
-                                    alt="Promo"
-                                    fill
-                                    sizes="(max-width: 1200px) 50vw, 700px"
-                                    className="object-fit-cover"
-                                    priority
-                                />
-                            </div>
-                        </div>
+            {/* Main Content */}
+            <div className="page">
+                <section className="account pt-20">
+                    <div className="container container-lg">
+                        <div className="row gy-4 justify-content-center">
+                            {/* Login Card */}
+                            <div className="col-xl-5">
+                                <div className="border border-gray-100 rounded-16 px-24 py-40 h-100">
+                                    <h6 className="text-xl mb-32">Đăng nhập</h6>
 
-                        {/* Card đăng nhập */}
-                        <div className="col-lg-5 col-12">
-                            <div
-                                className="p-24 bg-white border rounded-10"
-                                style={{ maxWidth: 420, marginLeft: "auto", borderColor: "#e5e5e5", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}
-                            >
-                                <div className="mb-8 d-flex flex-between flex-align">
-                                    <h5 className="mb-0 text-heading fw-semibold">Đăng nhập</h5>
-                                    <button type="button" className="gap-6 bg-white border btn btn-sm rounded-6 d-flex flex-align" style={{ borderColor: "#ffd1c4", color: "#ee4d2d" }}>
-                                        <span className="text-sm">Đăng nhập với mã QR</span>
-                                        <i className="ph ph-qr-code"></i>
-                                    </button>
-                                </div>
-
-                                {message && (
-                                    <div
-                                        className={`mb-16 p-12 rounded-8 ${
-                                        message.type === "success"
-                                            ? "bg-success-50 text-success-700 border border-success-100"
-                                            : "bg-danger-50 text-danger-700 border border-danger-100"
-                                        }`}
-                                    >
-                                        {message.text}
-                                    </div>
-                                )}
-
-                                <form onSubmit={handleSubmit}>
-                                    <div className="mb-12">
-                                        <input
-                                            id="username"
-                                            name="username"
-                                            value={form.username}
-                                            onChange={handleChange}
-                                            className="px-16 bg-white border shadow-none form-control rounded-6"
-                                            placeholder="Tên đăng nhập"
-                                            type="text"
-                                            style={{ height: 46, borderColor: "#e5e5e5", fontSize: 14 }}
-                                        />
-                                    </div>
-                                    <div className="mb-12">
-                                        <div className="position-relative">
-                                            <input
-                                                id="password"
-                                                name="password"
-                                                value={form.password}
-                                                onChange={handleChange}
-                                                className="px-16 bg-white border shadow-none form-control rounded-6 pe-40"
-                                                placeholder="Mật khẩu"
-                                                type="password"
-                                                style={{ height: 46, borderColor: "#e5e5e5", fontSize: 14 }}
-                                            />
-                                            <i className="ph ph-eye-slash position-absolute" style={{ right: 12, top: 12, color: "#bbb" }}></i>
+                                    {/* Message */}
+                                    {message && (
+                                        <div
+                                            className={`mb-16 p-12 rounded-8 ${message.type === "success"
+                                                ? "bg-success-50 text-success-700 border border-success-100"
+                                                : "bg-danger-50 text-danger-700 border border-danger-100"
+                                                }`}
+                                        >
+                                            {message.text}
                                         </div>
-                                    </div>
+                                    )}
 
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="py-12 text-white btn w-100 rounded-8 text-uppercase fw-semibold"
-                                        style={{ background: "#ee4d2d", letterSpacing: 0.5 }}
-                                    >
-                                        {loading ? "ĐANG XỬ LÝ..." : "ĐĂNG NHẬP"}
-                                    </button>
+                                    <form onSubmit={handleSubmit}>
+                                        <div className="mb-24">
+                                            <label htmlFor="username" className="text-neutral-900 text-lg mb-8 fw-medium">
+                                                Tên đăng nhập <span className="text-danger">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="text-md common-input"
+                                                id="username"
+                                                name="username"
+                                                placeholder="Nhập tên đăng nhập"
+                                                value={form.username}
+                                                onChange={handleChange}
+                                                required
+                                            />
+                                        </div>
 
-                                    <div className="mt-10 d-flex justify-content-end">
-                                        <a href="#" className="text-sm" style={{ color: "#ee4d2d" }}>Quên mật khẩu</a>
-                                    </div>
+                                        <div className="mb-24">
+                                            <label htmlFor="password" className="text-neutral-900 text-lg mb-8 fw-medium">
+                                                Mật khẩu <span className="text-danger">*</span>
+                                            </label>
+                                            <div className="position-relative">
+                                                <input
+                                                    type={showPassword ? "text" : "password"}
+                                                    className="text-md common-input"
+                                                    id="password"
+                                                    name="password"
+                                                    placeholder="Nhập mật khẩu"
+                                                    value={form.password}
+                                                    onChange={handleChange}
+                                                    required
+                                                />
+                                                <span
+                                                    className={`toggle-password position-absolute top-50 inset-inline-end-0 me-16 translate-middle-y cursor-pointer ph ${showPassword ? "ph-eye" : "ph-eye-slash"
+                                                        }`}
+                                                    onClick={togglePassword}
+                                                ></span>
+                                            </div>
+                                        </div>
 
-                                    {/* divider */}
-                                    <div className="gap-12 my-16 d-flex flex-align justify-content-center">
-                                        <span className="border-bottom" style={{ width: "30%", borderBottomColor: "#efefef", borderBottomWidth: 1, display: "inline-block" }}></span>
-                                        <span className="text-gray-500" style={{ fontSize: 12, letterSpacing: 1 }}>HOẶC</span>
-                                        <span className="border-bottom" style={{ width: "30%", borderBottomColor: "#efefef", borderBottomWidth: 1, display: "inline-block" }}></span>
-                                    </div>
+                                        <div className="mb-24 mt-20">
+                                            <div className="flex-align gap-48 flex-wrap">
+                                                <button type="submit" className="btn btn-main py-18 px-40" disabled={loading}>
+                                                    {loading ? "Đang xử lý..." : "Đăng nhập"}
+                                                </button>
+                                                <div className="form-check common-check">
+                                                    <input
+                                                        className="form-check-input"
+                                                        type="checkbox"
+                                                        id="remember"
+                                                        name="remember"
+                                                        checked={form.remember}
+                                                        onChange={handleChange}
+                                                    />
+                                                    <label className="form-check-label flex-grow-1" htmlFor="remember">
+                                                        Ghi nhớ đăng nhập
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                    {/* Social buttons */}
-                                    <div className="gap-12 d-flex">
-                                        <button type="button" className="gap-8 py-12 bg-white border btn rounded-8 w-50 d-flex align-items-center justify-content-center hover-bg-neutral-50 social-btn" style={{ borderColor: "#e5e5e5", color: "#222", fontSize: 15, minWidth: 180 }}>
-                                            <span className="rounded-circle d-inline-flex align-items-center justify-content-center" style={{ width: 24, height: 24, background: "#1877F2" }}>
-                                                <i className="text-white ph-fill ph-facebook-logo"></i>
+                                        <div className="mt-20 flex-align flex-between gap-24">
+                                            <Link href="/quen-mat-khau" className="text-danger-600 text-sm fw-semibold p-0 m-0 hover-text-decoration-underline">
+                                                Quên mật khẩu ?
+                                            </Link>
+                                            <span className="text-gray-900 text-sm fw-normal">
+                                                Bạn chưa có tài khoản ?{" "}
+                                                <Link href="/dang-ky" className="text-main-600 hover-text-decoration-underline text-sm fw-semibold">
+                                                    Đăng ký ngay
+                                                </Link>
                                             </span>
-                                            <strong>Facebook</strong>
-                                        </button>
-                                        <button type="button" className="gap-8 py-12 bg-white border btn rounded-8 w-50 d-flex align-items-center justify-content-center hover-bg-neutral-50 social-btn" style={{ borderColor: "#e5e5e5", color: "#222", fontSize: 15, minWidth: 180 }}>
-                                            <span className="rounded-circle d-inline-flex align-items-center justify-content-center" style={{ width: 24, height: 24, background: "#EA4335" }}>
-                                                <i className="text-white ph ph-google-logo"></i>
-                                            </span>
-                                            <strong>Google</strong>
-                                        </button>
-                                    </div>
-
-                                    {/* Switch to đăng ký */}
-                                    <div className="mt-16 text-center">
-                                        <span className="text-sm" style={{ color: "#bdbdbd" }}>Bạn mới đến với Siêu Thị Vina? </span>
-                                        <Link className="text-sm fw-semibold" href="/dang-ky" style={{ color: "#ee4d2d" }}>Đăng ký</Link>
-                                    </div>
-                                </form>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </section>
+            </div>
+
+            {/* Footer */}
+            <footer className="footer pt-30 overflow-hidden border-top fix-scale-20">
+                <div className="container container-lg">
+                    <div className="footer-item-two-wrapper d-flex align-items-start flex-wrap">
+                        {/* Footer Column 1 */}
+                        <div className="footer-item max-w-275" data-aos="fade-up" data-aos-duration="200">
+                            <div className="footer-item__logo">
+                                <Link href="/">
+                                    <Image
+                                        src="/assets/images/logo/logo_nguyenban.png"
+                                        alt="Siêu Thị Vina"
+                                        width={180}
+                                        height={60}
+                                        style={{ objectFit: "contain" }}
+                                    />
+                                </Link>
+                            </div>
+                            <p className="mb-24">
+                                Trang thương mại điện tử Siêu Thị Vina cung cấp các sản phẩm đa dạng đến với khách hàng
+                            </p>
+                            <div className="flex-align gap-16 mb-16">
+                                <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
+                                    <i className="ph-fill ph-phone-call"></i>
+                                </span>
+                                <a href="tel:+886911975996" className="text-md text-gray-900 hover-text-main-600">
+                                    +886 0911 975 996
+                                </a>
+                            </div>
+                            <div className="flex-align gap-16 mb-16">
+                                <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
+                                    <i className="ph-fill ph-envelope"></i>
+                                </span>
+                                <a href="mailto:hotro@sieuthivina.com" className="text-md text-gray-900 hover-text-main-600">
+                                    hotro@sieuthivina.com
+                                </a>
+                            </div>
+                            <div className="flex-align gap-16 mb-16">
+                                <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
+                                    <i className="ph-fill ph-map-pin"></i>
+                                </span>
+                                <span className="text-md text-gray-900">801/2A Phạm Thế Hiển, Phường 4, Quận 8, TP.HCM</span>
+                            </div>
+                        </div>
+
+                        {/* Footer Column 2 - Về chúng tôi */}
+                        <div className="footer-item" data-aos="fade-up" data-aos-duration="400">
+                            <h6 className="footer-item__title">Về chúng tôi</h6>
+                            <ul className="footer-menu">
+                                <li className="mb-16">
+                                    <Link href="/gioi-thieu" className="text-gray-600 hover-text-main-600">
+                                        Giới thiệu về Siêu thị Vina
+                                    </Link>
+                                </li>
+                                <li className="mb-16">
+                                    <Link href="/lien-he" className="text-gray-600 hover-text-main-600">
+                                        Liên hệ hỗ trợ
+                                    </Link>
+                                </li>
+                                <li className="mb-16">
+                                    <Link href="/dieu-khoan" className="text-gray-600 hover-text-main-600">
+                                        Điều khoản sử dụng
+                                    </Link>
+                                </li>
+                                <li className="mb-16">
+                                    <Link href="/chinh-sach-mua-hang" className="text-gray-600 hover-text-main-600">
+                                        Chính sách mua hàng
+                                    </Link>
+                                </li>
+                                <li className="mb-16">
+                                    <Link href="/chinh-sach-nguoi-dung" className="text-gray-600 hover-text-main-600">
+                                        Chính sách người dùng
+                                    </Link>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Footer Column 3 - Tài khoản */}
+                        <div className="footer-item" data-aos="fade-up" data-aos-duration="600">
+                            <h6 className="footer-item__title">Tài khoản</h6>
+                            <ul className="footer-menu">
+                                <li className="mb-16">
+                                    <Link href="/thong-tin-ca-nhan" className="text-gray-600 hover-text-main-600">
+                                        Truy cập tài khoản
+                                    </Link>
+                                </li>
+                                <li className="mb-16">
+                                    <Link href="/lich-su-don-hang" className="text-gray-600 hover-text-main-600">
+                                        Lịch sử đơn hàng
+                                    </Link>
+                                </li>
+                                <li className="mb-16">
+                                    <Link href="/yeu-thich" className="text-gray-600 hover-text-main-600">
+                                        Danh sách yêu thích
+                                    </Link>
+                                </li>
+                                <li className="mb-16">
+                                    <Link href="/gio-hang" className="text-gray-600 hover-text-main-600">
+                                        Giỏ hàng của bạn
+                                    </Link>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Footer Column 4 - Thông tin khác */}
+                        <div className="footer-item" data-aos="fade-up" data-aos-duration="1000">
+                            <h6 className="footer-item__title">Thông tin khác</h6>
+                            <ul className="footer-menu">
+                                <li className="mb-16">
+                                    <Link href="/san-pham" className="text-gray-600 hover-text-main-600">
+                                        Danh sách sản phẩm
+                                    </Link>
+                                </li>
+                                <li className="mb-16">
+                                    <Link href="/cua-hang" className="text-gray-600 hover-text-main-600">
+                                        Các cửa hàng
+                                    </Link>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Footer Column 5 - Kết nối */}
+                        <div className="footer-item" data-aos="fade-up" data-aos-duration="1200">
+                            <h6>Kết nối & theo dõi</h6>
+                            <p className="mb-16">
+                                Truy cập các nền tảng mạng xã hội <br /> của chúng tôi.
+                            </p>
+                            <ul className="flex-align gap-16">
+                                <li>
+                                    <a
+                                        href="https://www.facebook.com/sieuthivina"
+                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
+                                    >
+                                        <i className="ph-fill ph-facebook-logo"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a
+                                        href="https://www.twitter.com"
+                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
+                                    >
+                                        <i className="ph-fill ph-twitter-logo"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a
+                                        href="https://www.instagram.com"
+                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
+                                    >
+                                        <i className="ph-fill ph-instagram-logo"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a
+                                        href="https://www.linkedin.com"
+                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
+                                    >
+                                        <i className="ph-fill ph-linkedin-logo"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-            </section>
+            </footer>
 
-            <AuthFooter />
-
-            <style jsx global>{`
-                :root, html, body { background: #fff !important; }
-                .bg-overlay::before { display: none !important; }
-                .gradient-shadow::before, .gradient-shadow::after { display: none !important; }
-            `}</style>
-            <style jsx>{`
-                .social-btn strong {
-                display: inline-block !important;
-                margin-left: 8px !important;
-                color: #111 !important;
-                font-weight: 800 !important;
-                font-size: 16px !important;
-                letter-spacing: .2px;
-                }
-            `}</style>
-        </main>
+            {/* Bottom Footer */}
+            <div className="bottom-footer bg-color-three py-8">
+                <div className="container container-lg">
+                    <div className="bottom-footer__inner flex-between flex-wrap gap-16 py-16">
+                        <p className="bottom-footer__text wow fadeInLeftBig">Bản quyền thuộc về Sieuthivina.com</p>
+                        <div className="flex-align gap-8 flex-wrap wow fadeInRightBig">
+                            <span className="text-heading text-sm">Hỗ trợ thanh toán</span>
+                            <Image
+                                src="/assets/images/thumbs/payment-method.png"
+                                alt="Payment methods"
+                                width={220}
+                                height={28}
+                                style={{ width: "auto", height: "auto" }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </>
     );
 }

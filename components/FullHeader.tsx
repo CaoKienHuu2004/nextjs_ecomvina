@@ -59,6 +59,10 @@ export default function FullHeader({
   const { count: wishlistCount } = useWishlist();
   // auth state
   const { user, isLoggedIn, logout } = useAuth();
+  const displayName = useMemo(() => {
+    if (!isLoggedIn) return "Đăng nhập";
+    return user?.hoten?.trim() || user?.username || "Tài khoản";
+  }, [user, isLoggedIn]);
 
 
   // ---- Danh mục (All Categories) ----
@@ -363,12 +367,12 @@ export default function FullHeader({
                   <li className="d-sm-flex d-none">
                     <Link
                       className="d-flex align-content-around gap-10 fw-medium text-main-600 py-14 px-24 bg-main-50 rounded-pill line-height-1 hover-bg-main-600 hover-text-white"
-                      href="/dang-nhap"
+                      href={isLoggedIn ? "/account" : "/dang-nhap"}
                     >
                       <span className="d-sm-flex d-none line-height-1">
                         <i className="ph-bold ph-user"></i>
                       </span>
-                      Đăng nhập
+                      {displayName}
                     </Link>
                   </li>
                 </ul>
