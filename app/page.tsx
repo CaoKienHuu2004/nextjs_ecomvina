@@ -79,7 +79,7 @@ export default function Home() {
       <MobileMenu visible={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
 
       {/* Header với thanh đỏ và header chính */}
-      <FullHeader showClassicTopBar={false} showTopNav={true} showCategoriesBar={false} />
+      <FullHeader showClassicTopBar={true} showTopNav={false} />
 
       <main id="main-content" role="main" className="home-two">
 

@@ -318,9 +318,9 @@ export default function FullHeader({
 
       {/* HEADER MIDDLE */}
       {showTopNav && (
-        <header className="header border-bottom border-neutral-40 pt-16 pb-10" style={{ zIndex: 99 }}>
-          <div className="container container-lg">
-            <nav className="header-inner flex-between gap-16">
+        <header className="header border-bottom border-neutral-40 pt-16 pb-10" style={{ zIndex: 99, overflow: 'visible' }}>
+          <div className="container container-lg" style={{ overflow: 'visible' }}>
+            <nav className="header-inner flex-between gap-16" style={{ overflow: 'visible' }}>
               {/* Logo */}
               <div className="logo">
                 <Link href="/" className="link" aria-label="Trang chủ Siêu Thị Vina">
@@ -334,8 +334,8 @@ export default function FullHeader({
               </div>
 
               {/* Desktop Search + Keywords */}
-              <div className="header-menu w-50 d-lg-block d-none">
-                <div className="mx-20">
+              <div className="header-menu w-50 d-lg-block d-none" style={{ overflow: 'visible' }}>
+                <div className="mx-20" style={{ overflow: 'visible' }}>
                   <SearchBoxWithSuggestions placeholder="Sâm Ngọc Linh...." />
                   <div className="flex-align mt-10 gap-12 title">
                     <Link href="/shop?query=sâm ngọc linh" className="text-sm link text-gray-600 hover-text-main-600 fst-italic">
@@ -660,7 +660,7 @@ export default function FullHeader({
                         </Link>
                       </li>
                       <li className="mt-8">
-                        <SearchBox />
+                        <SearchBoxWithSuggestions />
                       </li>
                     </ul>
                   </div>
@@ -670,235 +670,216 @@ export default function FullHeader({
           </header>
         ) : null
       ) : (
-        // CLASSIC HEADER (giữ cấu trúc cũ, nhưng không jQuery)
+        // CLASSIC HEADER (giống TopHeaderBar)
         <>
           {showClassicTopBar && (
-            <div className="py-10 header-top bg-main-600 d-none d-lg-block">
+            <div style={{ background: "rgb(229, 57, 53)", width: "100%", padding: "10px 0px", display: "block" }}>
               <div className="container container-lg">
-                <div className="flex-wrap gap-8 flex-between">
-                  <ul className="flex-wrap gap-16 header-top__right flex-align">
-                    {/* <li className="flex-align">
-                      <Link href="#" className="text-sm text-center text-white-6 hover-text-white">
-                        <i className="ph-bold ph-storefront text-white-6"></i> Truy cập bán hàng
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                  }}
+                >
+                  {/* Nhóm trái: Đăng ký / Giới thiệu / Liên hệ */}
+                  <ul
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "16px",
+                      listStyle: "none",
+                      margin: 0,
+                      padding: 0,
+                    }}
+                  >
+                    <li style={{ display: "flex", alignItems: "center" }}>
+                      <Link
+                        href="/dangky"
+                        style={{
+                          color: "rgba(255, 255, 255, 0.9)",
+                          fontSize: "14px",
+                          textDecoration: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <i className="ph-bold ph-user"></i> Đăng ký thành viên
                       </Link>
                     </li>
-                    <li className="flex-align">
-                      <Link href="#" className="text-sm text-white-6 hover-text-white">
-                        <i className="ph-bold ph-handshake text-white-6"></i> Đăng ký đối tác
-                      </Link>
-                    </li> */}
-                    <li className="flex-align">
-                      <Link href="#" className="text-sm text-white-6 hover-text-white pe-1">
-                        <i className="ph-bold ph-info text-white-6"></i> Giới thiệu về Siêu Thị Vina
-                      </Link>
+                    <li style={{ display: "flex", alignItems: "center" }}>
+                      <a
+                        href="#"
+                        style={{
+                          color: "rgba(255, 255, 255, 0.9)",
+                          fontSize: "14px",
+                          textDecoration: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <i className="ph-bold ph-info"></i> Giới thiệu về Siêu Thị Vina
+                      </a>
                     </li>
-                    <li className="flex-align">
-                      <Link href="/contact" className="text-sm text-white-6 hover-text-white">
-                        <i className="ph-bold ph-chat-dots text-white-6"></i> Liên hệ hỗ trợ
-                      </Link>
+                    <li style={{ display: "flex", alignItems: "center" }}>
+                      <a
+                        href="#"
+                        style={{
+                          color: "rgba(255, 255, 255, 0.9)",
+                          fontSize: "14px",
+                          textDecoration: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <i className="ph-bold ph-chat-dots"></i> Liên hệ hỗ trợ
+                      </a>
                     </li>
                   </ul>
 
-                  <ul className="flex-wrap gap-16 header-top__right flex-align">
-                    {/* Danh mục */}
+                  {/* Nhóm phải: Danh mục / Tra cứu đơn hàng / Giỏ hàng */}
+                  <ul
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "16px",
+                      listStyle: "none",
+                      margin: 0,
+                      padding: 0,
+                    }}
+                  >
                     <li
-                      className="flex-shrink-0 d-block on-hover-item text-white-6"
+                      style={{ display: "flex", alignItems: "center", position: "relative" }}
                       ref={categoryButtonRef}
                       onMouseEnter={handleMouseEnter}
                       onMouseLeave={handleMouseLeave}
                     >
-                      <button
-                        className="gap-4 text-sm category__button flex-align text-white-6 rounded-top js-open-menu"
-                        type="button"
-                        aria-expanded={showCategoryMenu}
+                      <a
+                        href="#"
+                        style={{
+                          color: "rgba(255, 255, 255, 0.9)",
+                          fontSize: "14px",
+                          textDecoration: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
                       >
-                        <span className="text-sm icon d-md-flex d-none">
-                          <i className="ph ph-squares-four"></i>
-                        </span>
-                        <span className="d-sm-flex d-none">Danh mục</span>
-                      </button>
+                        <i className="ph ph-squares-four"></i> Danh mục
+                      </a>
                     </li>
-
-                    <li className="flex-align">
-                      <Link href="/orders" className="text-sm text-white-6 hover-text-white">
+                    <li style={{ display: "flex", alignItems: "center" }}>
+                      <Link
+                        href="/orders"
+                        style={{
+                          color: "rgba(255, 255, 255, 0.9)",
+                          fontSize: "14px",
+                          textDecoration: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
                         <i className="ph-bold ph-notepad"></i> Tra cứu đơn hàng
                       </Link>
                     </li>
-                    <li className="flex-align">
-                      <Link href="/gio-hang" className="text-sm text-white-6 hover-text-white" data-cart-icon>
+                    <li style={{ display: "flex", alignItems: "center" }}>
+                      <Link
+                        href="/gio-hang"
+                        style={{
+                          color: "rgba(255, 255, 255, 0.9)",
+                          fontSize: "14px",
+                          textDecoration: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
                         <i className="ph-bold ph-shopping-cart"></i> Giỏ hàng
-                        <span className="badge bg-success-600 rounded-circle ms-6">{totalItems}</span>
+                        <span
+                          style={{
+                            background: "rgb(0, 230, 118)",
+                            color: "rgb(255, 255, 255)",
+                            borderRadius: "4px",
+                            padding: "2px 6px",
+                            marginLeft: "4px",
+                            fontSize: "13px",
+                          }}
+                        >
+                          {totalItems}
+                        </span>
                       </Link>
                     </li>
                   </ul>
-
                 </div>
               </div>
             </div>
-
           )}
 
-          <header className="header border-bottom border-neutral-40 pt-14 pb-14">
-            <div className="container">
-              <nav className="gap-8 header-inner flex-between">
+          {/* Header chính */}
+          <header className="header border-bottom border-neutral-40 pt-16 pb-10" style={{ zIndex: 99, overflow: 'visible' }}>
+            <div className="container container-lg" style={{ overflow: 'visible' }}>
+              <nav className="header-inner flex-between gap-16" style={{ overflow: 'visible' }}>
                 <div className="logo">
-                  <Link href="/" className="link" aria-label="Home">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                  <Link className="link" aria-label="Trang chủ Siêu Thị Vina" href="/">
+                    <Image
+                      alt="Logo"
+                      width={140}
+                      height={40}
                       src="/assets/images/logo/logo_nguyenban.png"
-                      alt="Logo" width={100} height={20}
                     />
                   </Link>
                 </div>
-                <div className="header-menu w-50 d-lg-block d-none">
-                  <div className="relative mx-20">
-                    <SearchBoxWithSuggestions />
+                <div className="header-menu w-50 d-lg-block d-none" style={{ overflow: 'visible' }}>
+                  <div className="mx-20" style={{ overflow: 'visible' }}>
+                    <SearchBoxWithSuggestions placeholder="Sâm Ngọc Linh...." />
+                    <div className="flex-align mt-10 gap-12 title">
+                      <Link className="text-sm link text-gray-600 hover-text-main-600 fst-italic" href="/shop?query=sâm ngọc linh">
+                        Sâm Ngọc Linh
+                      </Link>
+                      <Link className="text-sm link text-gray-600 hover-text-main-600 fst-italic" href="/shop?query=sách hán ngữ 3">
+                        Sách hán ngữ 3
+                      </Link>
+                      <Link className="text-sm link text-gray-600 hover-text-main-600 fst-italic" href="/shop?query=móc khóa genshin">
+                        Móc khóa genshin
+                      </Link>
+                      <Link className="text-sm link text-gray-600 hover-text-main-600 fst-italic" href="/shop?query=đồ chơi minecraft">
+                        Đồ chơi minecraft
+                      </Link>
+                      <Link className="text-sm link text-gray-600 hover-text-main-600 fst-italic" href="/shop?query=điện nội thất">
+                        Điện nội thất
+                      </Link>
+                    </div>
                   </div>
                 </div>
-                <div
-                  className="d-lg-block d-none position-relative"
-                  style={{ marginLeft: "0px" }}// sát khung tìm kiếm hơn, giống hình
-                >
-                  {isLoggedIn ? (
-                    <div
-                      ref={userRef}
-                      className="flex-wrap on-hover-item nav-menu__item has-submenu header-top__right style-two style-three flex-align position-relative"
-                    >
-                      <button
-                        type="button"
-                        aria-haspopup="menu"
-                        aria-expanded={userOpen}
-                        onClick={() =>
-                          userOpen ? setUserOpen(false) : openOnly("user")
-                        }
-                        style={{
-                          background: userOpen ? "#E53935" : "#FCE9E8",
-                          color: userOpen ? "#fff" : "#E53935",
-                          transition: "background 0.2s, color 0.2s",
-                          fontSize: "0.98rem", // chữ vừa phải
-                          padding: "7px 18px", // nút nhỏ lại
-                          minWidth: 0,
-                        }}
-                        className="gap-6 d-flex justify-content-center flex-align rounded-pill btn-reset fw-medium"
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background = "#E53935";
-                          e.currentTarget.style.color = "#fff";
-                        }}
-                        onMouseLeave={e => {
-                          if (!userOpen) {
-                            e.currentTarget.style.background = "#FCE9E8";
-                            e.currentTarget.style.color = "#E53935";
-                          }
-                        }}
+                <div className="header-right flex-align">
+                  <ul className="header-top__right style-two style-three flex-align flex-wrap d-lg-block d-none">
+                    <li className="d-sm-flex d-none">
+                      <Link
+                        className="d-flex align-content-around gap-10 fw-medium text-main-600 py-14 px-24 bg-main-50 rounded-pill line-height-1 hover-bg-main-600 hover-text-white"
+                        href="/account"
                       >
-                        <span
-                          className="line-height-1"
-                          aria-hidden
-                          style={{
-                            fontSize: "0.70rem", // icon nhỏ hơn chữ
-                            flex: "0 0 30%",     // icon chỉ chiếm ~1/3 nút
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          {getAvatarSrc(user) ? (
-                            <Image src={getAvatarSrc(user) as string} alt={getDisplayName(user)} width={28} height={28} className="rounded-circle" />
-                          ) : (
-                            <i className="ph-bold ph-user" style={{ fontSize: 18 }} />
-                          )}
+                        <span className="d-sm-flex d-none line-height-1">
+                          <i className="ph-bold ph-user"></i>
                         </span>
-                        <span
-                          style={{
-                            fontSize: "0.98rem", // chữ vừa phải
-                            flex: "1 1 86%",
-                            marginLeft: 6,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {getDisplayName(user)}
-                        </span>
-                      </button>
-                      {userOpen && (
-                        <ul
-                          role="menu"
-                          className="bg-white rounded-md shadow common-dropdown nav-submenu scroll-sm position-absolute"
-                        >
-                          <li className="common-dropdown__item nav-submenu__item" role="none">
-                            <Link
-                              href="/wishlist"
-                              role="menuitem"
-                              className="common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100"
-                              data-cart-icon
-                            >
-                              <i className="ph-bold ph-heart text-main-600"></i>
-                              Yêu thích
-                              <span className="badge bg-success-600 rounded-circle ms-8">
-                                {wishlistCount}
-                              </span>
-                            </Link>
-                          </li>
-                          <li className="common-dropdown__item nav-submenu__item" role="none">
-                            <Link
-                              href="/account"
-                              role="menuitem"
-                              className="common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100"
-                            >
-                              <i className="ph-bold ph-user text-main-600"></i>
-                              Tài khoản
-                            </Link>
-                          </li>
-                          <li className="common-dropdown__item nav-submenu__item" role="none">
-                            <Link
-                              href="/orders"
-                              role="menuitem"
-                              className="common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100"
-                            >
-                              <i className="ph-bold ph-notepad text-main-600"></i>
-                              Đơn hàng của tôi
-                            </Link>
-                          </li>
-                          <li className="common-dropdown__item nav-submenu__item" role="none">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                logout();
-                                setUserOpen(false);
-                              }}
-                              className="btn-reset common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100 w-100 text-start"
-                            >
-                              <i className="ph-bold ph-sign-out text-main-600"></i>
-                              Đăng xuất
-                            </button>
-                          </li>
-                        </ul>
-                      )}
-                    </div>
-                  ) : (
-                    <Link
-                      href="/dang-nhap"
-                      style={{
-                        background: "#FCE9E8",
-                        color: "#E53935",
-                        transition: "background 0.2s, color 0.2s",
-                        fontSize: "0.98rem", // chữ vừa phải
-                        padding: "7px 18px", // nút nhỏ lại
-                        minWidth: 0,
-                      }}
-                      className="gap-6 d-flex justify-content-center flex-align rounded-pill fw-medium"
-                      onMouseEnter={e => {
-                        (e.currentTarget as HTMLElement).style.background = "#E53935";
-                        (e.currentTarget as HTMLElement).style.color = "#fff";
-                      }}
-                      onMouseLeave={e => {
-                        (e.currentTarget as HTMLElement).style.background = "#FCE9E8";
-                        (e.currentTarget as HTMLElement).style.color = "#E53935";
-                      }}
-                    >
-                      <i className="ph-bold ph-user" style={{ fontSize: "0.85rem" }} />
-                      <span style={{ fontSize: "0.98rem", marginLeft: 6 }}>Đăng nhập</span>
-                    </Link>
-                  )}
+                        Đăng nhập
+                      </Link>
+                    </li>
+                  </ul>
+                  <button
+                    type="button"
+                    className="toggle-mobileMenu d-lg-none ms-3n text-gray-800 text-4xl d-flex"
+                    onClick={() => setMobileOpen((s) => !s)}
+                  >
+                    <i className="ph ph-list"></i>
+                  </button>
                 </div>
               </nav>
               {mobileOpen && (

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useCart } from '@/hooks/useCart';
 import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData';
 import Image from 'next/image';
-import SearchBoxWithSuggestions from '@/components/SearchBoxWithSuggestions';
+import FullHeader from '@/components/FullHeader';
 
 // Helper format giá tiền
 const formatPrice = (price: number) => {
@@ -339,215 +339,8 @@ function CartPageContent() {
   };
 
   return (
-    <div className="page">
-      {/* Thanh đỏ trên cùng */}
-      <div style={{ background: "rgb(229, 57, 53)", width: "100%", padding: "10px 0px", display: "block" }}>
-        <div className="container container-lg">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "8px",
-            }}
-          >
-            {/* Nhóm trái: Đăng ký / Giới thiệu / Liên hệ */}
-            <ul
-              style={{
-                display: "flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "16px",
-                listStyle: "none",
-                margin: 0,
-                padding: 0,
-              }}
-            >
-              <li style={{ display: "flex", alignItems: "center" }}>
-                <Link
-                  href="/dangky"
-                  style={{
-                    color: "rgba(255, 255, 255, 0.9)",
-                    fontSize: "14px",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  <i className="ph-bold ph-user"></i> Đăng ký thành viên
-                </Link>
-              </li>
-              <li style={{ display: "flex", alignItems: "center" }}>
-                <a
-                  href="#"
-                  style={{
-                    color: "rgba(255, 255, 255, 0.9)",
-                    fontSize: "14px",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  <i className="ph-bold ph-info"></i> Giới thiệu về Siêu Thị Vina
-                </a>
-              </li>
-              <li style={{ display: "flex", alignItems: "center" }}>
-                <a
-                  href="#"
-                  style={{
-                    color: "rgba(255, 255, 255, 0.9)",
-                    fontSize: "14px",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  <i className="ph-bold ph-chat-dots"></i> Liên hệ hỗ trợ
-                </a>
-              </li>
-            </ul>
-
-            {/* Nhóm phải: Danh mục / Tra cứu đơn hàng / Giỏ hàng */}
-            <ul
-              style={{
-                display: "flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "16px",
-                listStyle: "none",
-                margin: 0,
-                padding: 0,
-              }}
-            >
-              <li style={{ display: "flex", alignItems: "center", position: "static" }}>
-                <a
-                  href="#"
-                  style={{
-                    color: "rgba(255, 255, 255, 0.9)",
-                    fontSize: "14px",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  <i className="ph ph-squares-four"></i> Danh mục
-                </a>
-              </li>
-              <li style={{ display: "flex", alignItems: "center" }}>
-                <a
-                  href="#"
-                  style={{
-                    color: "rgba(255, 255, 255, 0.9)",
-                    fontSize: "14px",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  <i className="ph-bold ph-notepad"></i> Tra cứu đơn hàng
-                </a>
-              </li>
-              <li style={{ display: "flex", alignItems: "center" }}>
-                <Link
-                  href="/gio-hang"
-                  style={{
-                    color: "rgba(255, 255, 255, 0.9)",
-                    fontSize: "14px",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  <i className="ph-bold ph-shopping-cart"></i> Giỏ hàng
-                  <span
-                    style={{
-                      background: "rgb(0, 230, 118)",
-                      color: "rgb(255, 255, 255)",
-                      borderRadius: "4px",
-                      padding: "2px 6px",
-                      marginLeft: "4px",
-                      fontSize: "13px",
-                    }}
-                  >
-                    0
-                  </span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Header trang giỏ hàng */}
-      <header className="header border-bottom border-neutral-40 pt-16 pb-10 pz99">
-        <div className="container container-lg">
-          <nav className="header-inner flex-between gap-16">
-            <div className="logo">
-              <Link className="link" aria-label="Trang chủ Siêu Thị Vina" href="/">
-                <img
-                  alt="Logo"
-                  width={140}
-                  height={40}
-                  src="https://sieuthivina.com/assets/client/images/logo/logo_nguyenban.png"
-                />
-              </Link>
-            </div>
-
-            <div className="header-menu w-50 d-lg-block d-none">
-              <div className="mx-20">
-                {/* Ô tìm kiếm có gợi ý giống trang chủ */}
-                <SearchBoxWithSuggestions placeholder="Sâm Ngọc Linh...." />
-                <div className="flex-align mt-10 gap-12 title">
-                  <Link className="text-sm link text-gray-600 hover-text-main-600 fst-italic" href="/shop?query=sâm ngọc linh">
-                    Sâm Ngọc Linh
-                  </Link>
-                  <Link className="text-sm link text-gray-600 hover-text-main-600 fst-italic" href="/shop?query=sách hán ngữ 3">
-                    Sách hán ngữ 3
-                  </Link>
-                  <Link className="text-sm link text-gray-600 hover-text-main-600 fst-italic" href="/shop?query=móc khóa genshin">
-                    Móc khóa genshin
-                  </Link>
-                  <Link className="text-sm link text-gray-600 hover-text-main-600 fst-italic" href="/shop?query=đồ chơi minecraft">
-                    Đồ chơi minecraft
-                  </Link>
-                  <Link className="text-sm link text-gray-600 hover-text-main-600 fst-italic" href="/shop?query=điện nội thất">
-                    Điện nội thất
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            <div className="header-right flex-align">
-              <ul className="header-top__right style-two style-three flex-align flex-wrap d-lg-block d-none">
-                <li className="d-sm-flex d-none">
-                  <Link
-                    className="d-flex align-content-around gap-10 fw-medium text-main-600 py-14 px-24 bg-main-50 rounded-pill line-height-1 hover-bg-main-600 hover-text-white"
-                    href="/dang-nhap"
-                  >
-                    <span className="d-sm-flex d-none line-height-1">
-                      <i className="ph-bold ph-user"></i>
-                    </span>
-                    Đăng nhập
-                  </Link>
-                </li>
-              </ul>
-              <button
-                type="button"
-                className="toggle-mobileMenu d-lg-none ms-3n text-gray-800 text-4xl d-flex"
-              >
-                <i className="ph ph-list"></i>
-              </button>
-            </div>
-          </nav>
-        </div>
-      </header>
+    <>
+      <FullHeader showClassicTopBar={true} showTopNav={false} />
 
       <section className="cart py-20 mb-60">
         <div className="container container-lg">
@@ -837,7 +630,7 @@ function CartPageContent() {
         onConfirm={confirmDelete}
         onCancel={closeDeleteModal}
       />
-    </div >
+    </>
   );
 }
 

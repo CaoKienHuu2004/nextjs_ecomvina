@@ -6,6 +6,7 @@ import Image from "next/image";
 import { api, getTokenFromResponse, type LoginResponse } from "../../lib/api";
 import { useRouter } from "next/navigation";
 import AuthFooter from "@/components/AuthFooter";
+import FullHeader from "@/components/FullHeader";
 
 export default function Page() {
   const [form, setForm] = useState({ identifier: "", password: "" });
@@ -34,7 +35,7 @@ export default function Page() {
     try {
       setLoading(true);
       // Xóa token cũ trước khi đăng nhập để tránh hiểu nhầm trạng thái
-      try { localStorage.removeItem("access_token"); } catch {}
+      try { localStorage.removeItem("access_token"); } catch { }
 
       const resp = await api.post<LoginResponse>("/api/auth/dang-nhap", {
         identifier: form.identifier,
@@ -45,7 +46,7 @@ export default function Page() {
         setMessage({ type: "error", text: "Thông tin đăng nhập không hợp lệ." });
         return;
       }
-      try { localStorage.setItem("access_token", token); } catch {}
+      try { localStorage.setItem("access_token", token); } catch { }
       setMessage({ type: "success", text: "Đăng nhập thành công!" });
       router.push("/");
     } catch (err: unknown) {
@@ -59,27 +60,7 @@ export default function Page() {
 
   return (
     <main className="d-flex flex-column min-vh-100">
-      {/* Header trắng */}
-      <header className="py-12 bg-white border-bottom border-neutral-40">
-        <div className="container container-lg">
-          <div className="flex-between flex-align">
-            <div className="gap-10 d-flex flex-align">
-              <Image
-                src="/assets/images/logo/logo_nguyenban.png"
-                alt="Logo"
-                width={180}
-                height={60}
-                style={{ objectFit: "contain" }}
-                priority
-              />
-              <span className="mb-0 h6 ms-8">Đăng nhập</span>
-            </div>
-            <a href="#" style={{ color: "#ee4d2d" }} className="text-sm">
-              Bạn cần giúp đỡ?
-            </a>
-          </div>
-        </div>
-      </header>
+      <FullHeader showClassicTopBar={true} showTopNav={false} />
 
       {/* Hero nền cam */}
       <section
@@ -121,11 +102,10 @@ export default function Page() {
 
                 {message && (
                   <div
-                    className={`mb-16 p-12 rounded-8 ${
-                      message.type === "success"
+                    className={`mb-16 p-12 rounded-8 ${message.type === "success"
                         ? "bg-success-50 text-success-700 border border-success-100"
                         : "bg-danger-50 text-danger-700 border border-danger-100"
-                    }`}
+                      }`}
                   >
                     {message.text}
                   </div>

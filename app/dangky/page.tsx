@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { api } from "../../lib/api";
 import AuthFooter from "@/components/AuthFooter";
+import FullHeader from "@/components/FullHeader";
 
 export default function Page() {
     // Đơn giản theo flow giống ảnh: đăng ký bằng số điện thoại
@@ -67,25 +68,7 @@ export default function Page() {
 
     return (
         <main className="d-flex flex-column min-vh-100">
-            {/* Header top trắng giống Shopee */}
-            <header className="bg-white border-bottom border-neutral-40 py-12">
-                <div className="container container-lg">
-                    <div className="flex-between flex-align">
-                        <div className="d-flex flex-align gap-10">
-                            <Image
-                                src="/assets/images/logo/logo_nguyenban.png"
-                                alt="Logo"
-                                width={180}
-                                height={60}
-                                style={{ objectFit: "contain" }}
-                                priority
-                            />
-                            <span className="h6 mb-0 ms-8">Đăng ký</span>
-                        </div>
-                        <a href="#" style={{ color: "#ee4d2d" }} className="text-sm">Bạn cần giúp đỡ?</a>
-                    </div>
-                </div>
-            </header>
+            <FullHeader showClassicTopBar={true} showTopNav={false} />
             {/* Hero đỏ theo layout */}
             <section className="py-40 flex-grow-1" style={{
                 background: "#FF4500",

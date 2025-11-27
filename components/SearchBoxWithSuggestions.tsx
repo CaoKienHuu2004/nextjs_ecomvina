@@ -133,7 +133,7 @@ export default function SearchBoxWithSuggestions({ placeholder = "Sâm Ngọc Li
             {showDropdown && suggestions.length > 0 && (
                 <div
                     className="mt-2 bg-white border border-gray-100 rounded-8 shadow-sm overflow-hidden"
-                    style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 2000 }}
+                    style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 99999, pointerEvents: 'auto' }}
                 >
                     <div className="px-16 py-8 text-xs text-gray-500 fw-semibold border-bottom border-gray-100">
                         SẢN PHẨM GỢI Ý
@@ -145,6 +145,7 @@ export default function SearchBoxWithSuggestions({ placeholder = "Sâm Ngọc Li
                                 href={`/shop?query=${encodeURIComponent(item.name)}`}
                                 className="w-100 text-start px-16 py-10 d-flex gap-12 align-items-center hover-bg-neutral-50 text-decoration-none"
                                 onClick={() => setShowDropdown(false)}
+                                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
                             >
                                 <div
                                     className="flex-shrink-0 rounded-4 overflow-hidden bg-neutral-20"
@@ -179,7 +180,7 @@ export default function SearchBoxWithSuggestions({ placeholder = "Sâm Ngọc Li
             {loading && (
                 <div
                     className="mt-2 bg-white border border-gray-100 rounded-8 shadow-sm px-16 py-8 text-xs text-gray-500"
-                    style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 2000 }}
+                    style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 99999 }}
                 >
                     Đang tìm kiếm...
                 </div>
