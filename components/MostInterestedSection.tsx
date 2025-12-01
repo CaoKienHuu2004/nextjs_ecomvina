@@ -107,9 +107,9 @@ export default function MostInterestedSection() {
                             <div className="row g-12">
                                 {products.map((product) => (
                                     <div key={product.id} className="col-xxl-2 col-xl-3 col-lg-4 col-xs-6">
-                                        <div className="product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2" style={{ maxWidth: "220px", minHeight: "360px" }}>
-                                            <a href={`/product-details/${product.slug}?category=${encodeURIComponent("Được quan tâm nhiều nhất")}`} className="flex-center rounded-8 bg-gray-50 position-relative" style={{ height: "220px" }}>
-                                                <Image alt={product.ten} loading="lazy" width={240} height={240} decoding="async" className="w-100 rounded-top-2" src={product.mediaurl} style={{ color: "transparent", objectFit: "cover" }} />
+                                        <div className="product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2">
+                                            <a href={`/product-details/${product.slug}?category=${encodeURIComponent("Được quan tâm nhiều nhất")}`} className="flex-center rounded-8 bg-gray-50 position-relative" style={{ height: "210px" }}>
+                                                <Image alt={product.ten} loading="lazy" width={240} height={240} decoding="async" className="w-100 rounded-top-2" src={product.mediaurl} style={{ color: "transparent", objectFit: "cover", width: "100%", height: "100%" }} />
                                             </a>
                                             <div className="product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex px-10 pb-8">
                                                 <div>

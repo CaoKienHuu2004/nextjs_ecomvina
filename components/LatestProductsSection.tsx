@@ -98,22 +98,26 @@ export default function LatestProductsSection() {
                         <div className="tab-pane fade show active" id="pills-all" role="tabpanel" aria-labelledby="pills-all-tab" tabIndex={0}>
                             <div className="row g-12">
                                 {products.map((product) => {
-                                    // Fix riêng cho sản phẩm áo Rabity
-                                    const isRabityProduct = product.slug === "ao-ni-dai-tay-be-gai-rabity";
-                                    const imageStyle = isRabityProduct
-                                        ? { color: "transparent", objectFit: "cover" as const, width: "100%", height: "100%" }
-                                        : { color: "transparent", objectFit: "cover" as const };
-                                    const containerStyle = isRabityProduct
-                                        ? { height: "220px", width: "100%", overflow: "hidden" }
-                                        : { height: "220px" };
-                                    const imageWidth = isRabityProduct ? 220 : 240;
-                                    const imageHeight = isRabityProduct ? 220 : 240;
+                                    const imageStyle = { color: "transparent", objectFit: "cover" as const, width: "100%", height: "100%" };
 
                                     return (
                                         <div key={product.id} className="col-xxl-2 col-xl-3 col-lg-4 col-xs-6">
-                                            <div className="product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2" style={{ maxWidth: "220px", minHeight: "360px" }}>
-                                                <a href={`/product-details/${product.slug}?category=${encodeURIComponent("Hàng mới chào sân")}`} className="flex-center rounded-8 bg-gray-50 position-relative" style={containerStyle}>
-                                                    <Image alt={product.ten} loading="lazy" width={imageWidth} height={imageHeight} decoding="async" className={isRabityProduct ? "rounded-top-2" : "w-100 rounded-top-2"} src={product.mediaurl} style={imageStyle} />
+                                            <div className="product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2">
+                                                <a
+                                                    href={`/product-details/${product.slug}?category=${encodeURIComponent("Hàng mới chào sân")}`}
+                                                    className="flex-center rounded-8 bg-gray-50 position-relative"
+                                                    style={{ height: "210px" }}
+                                                >
+                                                    <Image
+                                                        alt={product.ten}
+                                                        loading="lazy"
+                                                        width={240}
+                                                        height={240}
+                                                        decoding="async"
+                                                        className="w-100 rounded-top-2"
+                                                        src={product.mediaurl}
+                                                        style={imageStyle}
+                                                    />
                                                 </a>
                                                 <div className="product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex px-10 pb-8">
                                                     <div>

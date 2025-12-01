@@ -3,30 +3,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-// Swiper
-import { Swiper, SwiperSlide } from "swiper/react";
-import type { Swiper as SwiperType } from "swiper";
-import { Autoplay, Navigation } from "swiper/modules";
-
-/* =======================
-   THEME — tuỳ chỉnh màu badge & icon theo UI bên trái
-======================= */
-const THEME = {
-  sectionTitle: "Danh mục hàng đầu",
-  tabsVariantClass: "nav common-tab style-two nav-pills", // nhóm tab
-  cardWrapClass:
-    "product-card h-100 p-16 border border-gray-100 hover-border-main-600 rounded-16 position-relative transition-2",
-  thumbClass: "product-card__thumb flex-center rounded-8 bg-gray-50 position-relative",
-  titleClass: "title text-lg fw-semibold my-16",
-  priceWrapClass: "product-card__price mt-16 mb-30",
-  starIconClass: "ph-fill ph-star text-warning-600",
-  saleBadgeClass: "bg-danger-600",
-  freeBadgeClass: "bg-primary-600",
-  soldBadgeClass: "bg-gray-600",
-  // Badge khi hiển thị danh mục
-  catSoldBadgeClass: "bg-success-600",
-};
-
 /* =======================
    Types theo API (không any)
 ======================= */
@@ -167,17 +143,10 @@ const toUI = (p: ApiProduct): UIProduct => {
    Component
 ======================= */
 export default function TrendingProductsTabs() {
-  // Lưu danh mục (để render view "Xem đầy đủ")
-  const [categories, setCategories] = useState<ApiCategory[]>([]);
-  // Tabs động: "Xem đầy đủ" + mỗi danh mục
   const [tabs, setTabs] = useState<{ key: string; label: string }[]>([{ key: "all", label: "All" }]);
-  // Map sản phẩm theo tab
   const [byTab, setByTab] = useState<Record<string, UIProduct[]>>({ all: [] });
   const [active, setActive] = useState<string>("all");
   const [loading, setLoading] = useState<boolean>(true);
-
-  // Swiper refs for navigation
-  const swiperRef = React.useRef<SwiperType | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -200,7 +169,6 @@ export default function TrendingProductsTabs() {
           map.all = map.all.concat(list);
         });
 
-        setCategories(cats);
         setTabs(nextTabs);
         setByTab(map);
       })
@@ -210,231 +178,142 @@ export default function TrendingProductsTabs() {
     };
   }, []);
 
-  // Danh mục bán chạy theo total_sold (cao -> thấp)
-  const topCategories: ApiCategory[] = useMemo(() => {
-    const cloned = [...categories];
-    cloned.sort((a, b) => (b.total_sold || 0) - (a.total_sold || 0));
-    return cloned;
-  }, [categories]);
-
   // Sản phẩm của tab hiện tại
-  const products: UIProduct[] = useMemo(() => byTab[active] || [], [byTab, active]);
-
-  // Link "Xem tất cả" tương ứng tab hiện tại
   const viewAllHref =
     active === "all"
       ? "/products?sort=trending"
       : `/products?category=${encodeURIComponent(active)}&sort=trending`;
 
   // Giới hạn hiển thị (giống bố cục bên trái: 6/12 card)
-  const visibleCats: ApiCategory[] = topCategories.slice(0, 12);
-  const visibleProds: UIProduct[] = products.slice(0, 12);
+  const visibleTabs = tabs.slice(0, 5);
 
-  // Ảnh đại diện danh mục: ảnh sp đầu tiên
-  const catThumb = (c: ApiCategory): string => {
-    const p = c.sanphams?.[0];
-    return p ? pickImage(p) : "/assets/images/thumbs/product-two-img1.png";
-  };
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      minimumFractionDigits: 0,
+    }).format(price);
+
+  if (loading) {
+    return (
+      <section className="trending-productss overflow-hidden mt-10 fix-scale-80">
+        <div className="container container-lg px-0">
+          <div className="border border-gray-100 p-24 rounded-8">
+            <div className="section-heading mb-24">
+              <div className="flex-between flex-align flex-wrap gap-8">
+                <h6 className="mb-0 wow fadeInLeft" style={{ visibility: "visible", animationName: "fadeInLeft" }}>
+                  <i className="ph-bold ph-squares-four text-main-600" /> Danh mục hàng đầu
+                </h6>
+              </div>
+            </div>
+            <div className="py-16 text-center text-gray-500">Đang tải danh mục…</div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="overflow-hidden trending-productss">
-      <div className="container">
-        <div className="p-24 border border-gray-100 rounded-16">
-          <div className="mb-24 section-heading">
-            <div className="flex-wrap gap-8 flex-between">
-              <h6 className="mb-0">
-                <i className="ph-bold ph-squares-four text-main-600" /> {THEME.sectionTitle}
+    <section className="trending-productss overflow-hidden mt-10 fix-scale-80">
+      <div className="container container-lg px-0">
+        <div className="border border-gray-100 p-24 rounded-8">
+          <div className="section-heading mb-24">
+            <div className="flex-between flex-align flex-wrap gap-8">
+              <h6 className="mb-0 wow fadeInLeft" style={{ visibility: "visible", animationName: "fadeInLeft" }}>
+                <i className="ph-bold ph-squares-four text-main-600" /> Danh mục hàng đầu
               </h6>
-
-              <div className="gap-16 flex-align">
-                <a href={viewAllHref} className="text-sm fw-semibold hover-text-decoration-underline">Xem đầy đủ</a>
-                {active === "all" && (
-                  <div className="gap-8 flex-align">
+              <ul className="nav common-tab style-two nav-pills wow fadeInRight m-0" role="tablist">
+                {visibleTabs.map((tab) => (
+                  <li className="nav-item" role="presentation" key={tab.key}>
                     <button
+                      className={`nav-link fw-medium text-sm hover-border-main-600 ${active === tab.key ? "active" : ""}`}
                       type="button"
-                      onClick={() => swiperRef.current?.slidePrev()}
-                      className="w-32 h-32 text-lg border border-gray-100 rounded-circle flex-center hover-border-neutral-600 hover-bg-neutral-600 hover-text-white transition-1"
-                      aria-label="Prev"
+                      role="tab"
+                      onClick={() => setActive(tab.key)}
                     >
-                      <i className="ph ph-caret-left"></i>
+                      {tab.label}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => swiperRef.current?.slideNext()}
-                      className="w-32 h-32 text-lg border border-gray-100 rounded-circle flex-center hover-border-neutral-600 hover-bg-neutral-600 hover-text-white transition-1"
-                      aria-label="Next"
-                    >
-                      <i className="ph ph-caret-right"></i>
-                    </button>
-                  </div>
-                )}
-                <ul className={THEME.tabsVariantClass} role="tablist">
-                  {tabs.map((t) => (
-                    <li className="nav-item" role="presentation" key={t.key}>
-                      <button
-                        className={`nav-link fw-medium text-sm hover-border-main-600 ${active === t.key ? "active" : ""}`}
-                        type="button"
-                        role="tab"
-                        onClick={() => setActive(t.key)}
-                      >
-                        {t.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 
-
-          {loading ? (
-            <div className="py-24 text-center text-gray-500">Đang tải danh mục…</div>
-          ) : active === "all" ? (
-            // ======= VIEW "All": HIỂN THỊ CÁC DANH MỤC TOP SOLD VỚI SWIPER =======
-            <Swiper
-              modules={[Autoplay, Navigation]}
-              spaceBetween={12}
-              slidesPerView={6}
-              autoplay={{
-                delay: 3000,
-                disableOnInteraction: false,
-                pauseOnMouseEnter: true,
-              }}
-              loop={visibleCats.length > 6}
-              speed={600}
-              navigation={false}
-              onSwiper={(swiper) => {
-                swiperRef.current = swiper;
-              }}
-              breakpoints={{
-                0: {
-                  slidesPerView: 2,
-                },
-                575: {
-                  slidesPerView: 3,
-                },
-                992: {
-                  slidesPerView: 4,
-                },
-                1200: {
-                  slidesPerView: 5,
-                },
-                1600: {
-                  slidesPerView: 6,
-                },
-              }}
-              className="categories-swiper-tabs"
-            >
-              {visibleCats.map((c) => {
-                const href = `/products?category=${c.slug}&sort=trending`;
-                const img = catThumb(c);
-                return (
-                  <SwiperSlide key={c.id}>
-                    <div className={THEME.cardWrapClass}>
-                      <Link href={href} className={THEME.thumbClass}>
-                        <span
-                          className={`product-card__badge ${THEME.catSoldBadgeClass} px-8 py-4 text-sm text-white position-absolute inset-inline-start-0 inset-block-start-0`}
-                        >
-                          Đã bán {c.total_sold.toLocaleString("vi-VN")}
-                        </span>
-                        <Image
-                          src={img}
-                          alt={c.ten}
-                          width={220}
-                          height={180}
-                          className="w-auto max-w-unset"
-                          unoptimized={/^https?:\/\//.test(img)}
-                        />
-                      </Link>
-
-                      <div className="mt-16 product-card__content w-100">
-                        <h6 className={THEME.titleClass}>
-                          <Link href={href} className="link text-line-2">
-                            {c.ten}
-                          </Link>
-                        </h6>
-                        <div className="text-xs text-gray-600">Top danh mục theo lượt bán • Nhấn để xem sản phẩm</div>
-                      </div>
-                    </div>
-                  </SwiperSlide>
-                );
-              })}
-            </Swiper>
-          ) : (
-            // ======= VIEW DANH MỤC CỤ THỂ: HIỂN THỊ SẢN PHẨM =======
-            <div className="row g-12">
-              {visibleProds.map((p) => (
-                <div className="col-xxl-2 col-xl-3 col-lg-4 col-sm-6" key={p.id}>
-                  <div className={THEME.cardWrapClass}>
-                    <Link href={p.href} className={THEME.thumbClass}>
-                      {p.isDiscounted && (
-                        <span
-                          className={`product-card__badge ${THEME.saleBadgeClass} px-8 py-4 text-sm text-white position-absolute inset-inline-start-0 inset-block-start-0`}
-                        >
-                          Top deal
-                        </span>
-                      )}
-                      {p.isFree && (
-                        <span
-                          className={`product-card__badge ${THEME.freeBadgeClass} px-8 py-4 text-sm text-white position-absolute inset-inline-start-0 inset-block-start-0`}
-                        >
-                          Miễn phí
-                        </span>
-                      )}
-                      {p.isSold && (
-                        <span
-                          className={`product-card__badge ${THEME.soldBadgeClass} px-8 py-4 text-sm text-white position-absolute inset-inline-start-0 inset-block-start-0`}
-                        >
-                          Hết hàng
-                        </span>
-                      )}
-                      <Image
-                        src={p.image}
-                        alt={p.name}
-                        width={220}
-                        height={180}
-                        className="w-auto max-w-unset"
-                        unoptimized={/^https?:\/\//.test(p.image)}
-                      />
-                    </Link>
-
-                    <div className="mt-16 product-card__content w-100">
-                      <h6 className={THEME.titleClass}>
-                        <Link href={p.href} className="link text-line-2">
-                          {p.name}
+          <div className="tab-content" id="pills-tabContent">
+            {visibleTabs.map((tab) => (
+              <div
+                key={tab.key}
+                className={`tab-pane fade ${active === tab.key ? "show active" : ""}`}
+                role="tabpanel"
+                aria-labelledby={`tab-${tab.key}`}
+                tabIndex={0}
+              >
+                <div className="row g-12">
+                  {(byTab[tab.key] || []).slice(0, 12).map((product) => (
+                    <div className="col-xxl-2 col-xl-3 col-lg-4 col-xs-6" key={product.id}>
+                      <div className="product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2">
+                        <Link href={product.href} className="flex-center rounded-8 bg-gray-50 position-relative" style={{ height: "210px" }}>
+                          <Image
+                            src={product.image}
+                            alt={product.name}
+                            width={240}
+                            height={240}
+                            className="w-100 rounded-top-2"
+                            style={{ color: "transparent", objectFit: "cover", width: "100%", height: "100%" }}
+                            unoptimized={/^https?:\/\//.test(product.image)}
+                          />
                         </Link>
-                      </h6>
 
-                      <div className="mb-6 text-xs text-gray-600">
-                        <span className="me-6 text-warning-600">
-                          <i className={THEME.starIconClass} />
-                        </span>
-                        <span className="fw-semibold">{p.ratingAverage.toFixed(1)}</span>
-                        <span className="ms-4">({p.ratingCount >= 1000 ? `${Math.round(p.ratingCount / 100) / 10}k` : p.ratingCount})</span>
-                      </div>
-
-                      <div className="mb-6 gap-6 flex-align text-gray-500">
-                        <i className="ph-bold ph-storefront text-main-600"></i>
-                        <span className="text-xs">Siêu thị Vina</span>
-                      </div>
-
-                      <div className={THEME.priceWrapClass}>
-                        {p.isDiscounted && (
-                          <span className="text-gray-400 text-md fw-semibold text-decoration-line-through me-8">
-                            {p.originalPrice.toLocaleString("vi-VN")} đ
-                          </span>
-                        )}
-                        <span className="text-heading text-md fw-semibold">
-                          {p.sellingPrice.toLocaleString("vi-VN")} đ{" "}
-                          {/* <span className="text-gray-500 fw-normal">/Qty</span> */}
-                        </span>
+                        <div className="product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex mt-10 px-10 pb-8">
+                          <div>
+                            <h6 className="title text-lg fw-semibold mt-2 mb-2">
+                              <Link href={product.href} className="link text-line-2">
+                                {product.name}
+                              </Link>
+                            </h6>
+                            <div className="flex-align justify-content-between mt-2">
+                              <div className="flex-align gap-6">
+                                <span className="text-xs fw-medium text-gray-500">Đánh giá</span>
+                                <span className="text-xs fw-medium text-gray-500">
+                                  {product.ratingAverage.toFixed(1)} <i className="ph-fill ph-star text-warning-600"></i>
+                                </span>
+                              </div>
+                              <div className="flex-align gap-4">
+                                <span className="text-xs fw-medium text-gray-500">
+                                  {product.ratingCount >= 1000
+                                    ? `${Math.round(product.ratingCount / 100) / 10}k`
+                                    : product.ratingCount}
+                                </span>
+                                <span className="text-xs fw-medium text-gray-500">Đã bán</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="product-card__price mt-5">
+                            {product.discountPercent > 0 && (
+                              <div className="flex-align gap-4 text-main-two-600">
+                                <i className="ph-fill ph-seal-percent text-sm"></i> -{product.discountPercent}%
+                                <span className="text-gray-400 text-sm fw-semibold text-decoration-line-through">
+                                  {formatPrice(product.originalPrice)}
+                                </span>
+                              </div>
+                            )}
+                            <span className="text-heading text-lg fw-semibold">
+                              {formatPrice(product.sellingPrice)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="mx-auto w-100 text-center">
+                  <Link href={viewAllHref} className="btn border-main-600 text-main-600 hover-bg-main-600 hover-border-main-600 hover-text-white rounded-8 px-32 py-12 mt-40">
+                    Xem thêm sản phẩm
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>

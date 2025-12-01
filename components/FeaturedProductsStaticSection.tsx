@@ -230,11 +230,6 @@ const FeaturedProductsStaticSection = () => {
                         <div className="featured-products__banner position-relative rounded-16 overflow-hidden p-28 pb-0 z-1 text-center h-100 aos-init aos-animate" data-aos="fade-up" data-aos-duration="1000">
                             <a href="https://shopee.tw" className="p-0 m-0 w-100 h-100 d-block">
                                 <img src="https://sieuthivina.com/assets/client/images/bg/shopee-09.jfif" alt="shopee-09" className="position-absolute inset-block-start-0 inset-inline-start-0 z-n1 w-100 h-100 cover-img" />
-                                <div className="position-relative text-white">
-                                    <p className="text-uppercase text-xs mb-2">Ưu đãi độc quyền</p>
-                                    <h5 className="fw-semibold mb-8">Mua sắm tiết kiệm</h5>
-                                    <p className="text-sm mb-0">Cập nhật deal mới mỗi ngày</p>
-                                </div>
                             </a>
                         </div>
                     </div>

@@ -111,11 +111,11 @@ export default function GiftEventsSection() {
           </div>
 
           <div className="gift-event-slider arrow-style-two">
-            <div className="d-flex flex-wrap" style={{ gap: "12px" }}>
+            <div className="d-flex flex-wrap justify-content-center" style={{ gap: "12px" }}>
               {displayedGifts.map((gift) => (
-                <div key={gift.id} className="gift-col-5">
-                  <div className="product-card p-card border border-gray-100 rounded-16 position-relative transition-2" style={{ height: "380px", overflow: "hidden" }}>
-                    <Link href={`/chi-tiet-qt`}>
+                <div key={gift.id} style={{ width: "244px", display: "inline-block" }}>
+                  <div className="product-card p-card border border-gray-100 rounded-16 position-relative transition-2" style={{ height: "340px" }}>
+                    <Link href={`/chi-tiet-qt?id=${gift.id}`}>
                       <div
                         className="rounded-16"
                         style={{
@@ -131,35 +131,41 @@ export default function GiftEventsSection() {
                           backgroundPosition: "center"
                         }}
                       >
-                        {/* Overlay gradient để dễ đọc chữ hơn */}
                         <div
                           className="card-overlay rounded-16 transition-1"
                           style={{
                             position: "absolute",
-                            top: 0, left: 0, width: "100%", height: "100%",
-                            background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%)"
+                            bottom: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "50%",
+                            background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)",
+                            zIndex: 1
                           }}
                         ></div>
                       </div>
                     </Link>
 
-                    {/* Nội dung đè lên ảnh, nằm ở đáy, CANH GIỮA */}
                     <div
-                      className="gift-card-content position-absolute w-100 p-16 d-flex flex-column align-items-center justify-content-end"
-                      style={{ bottom: 0, left: 0, zIndex: 2, height: "100%" }}
+                      className="card-content p-14 w-100 position-absolute d-flex flex-column align-items-center"
+                      style={{ bottom: 0, left: 0, zIndex: 2 }}
                     >
-                      <div className="gift-card-title title text-white text-lg fw-bold mb-12 text-shadow-sm text-center w-100">
-                        <Link href={`/chi-tiet-qt`} className="link text-line-2 text-white hover-text-main-600 transition-1">
+                      <div className="title text-lg fw-semibold mt-5 mb-5 text-center w-100">
+                        <Link
+                          href={`/chi-tiet-qt?id=${gift.id}`}
+                          className="link text-line-2"
+                          style={{ color: "white", display: "block" }}
+                        >
                           {gift.tieude}
                         </Link>
                       </div>
 
-                      <div className="flex-align gap-6 bg-white bg-opacity-90 p-8 px-16 rounded-pill d-inline-flex shadow-sm">
-                        <span className="text-main-600 text-lg d-flex">
+                      <div className="flex-align gap-4 bg-gray-50 p-5 rounded-8">
+                        <span className="text-main-600 text-md d-flex">
                           <i className="ph-bold ph-timer"></i>
                         </span>
-                        <span className="text-gray-700 text-sm fw-semibold">
-                          {gift.thoigian_conlai}
+                        <span className="text-gray-500 text-xs">
+                          Còn lại <strong>{gift.thoigian_conlai}</strong>
                         </span>
                       </div>
                     </div>

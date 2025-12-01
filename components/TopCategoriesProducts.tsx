@@ -102,7 +102,7 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
                                 cat.sanpham.map((sp) => (
                                     <div key={sp.id} className="col-xxl-2 col-xl-3 col-lg-4 col-xs-6">
                                         <div className="product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                                            <a href={`/product-details/${sp.slug}?category=${encodeURIComponent(cat.ten)}`} className="flex-center rounded-8 bg-gray-50 position-relative" style={{ minHeight: '250px' }}>
+                                            <a href={`/product-details/${sp.slug}?category=${encodeURIComponent(cat.ten)}`} className="flex-center rounded-8 bg-gray-50 position-relative" style={{ height: '210px' }}>
                                                 <Image
                                                     src={
                                                         sp.hinh_anh
@@ -117,11 +117,17 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
                                                     width={240}
                                                     height={240}
                                                     className="w-100 rounded-top-2"
-                                                    style={{ objectFit: 'cover', maxHeight: '250px' }}
+                                                    style={{ color: 'transparent', objectFit: 'cover', width: '100%', height: '100%' }}
                                                 />
                                             </a>
-                                            <div className="product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex mt-10 px-10 pb-8">
+                                            <div className="product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex px-10 pb-8">
                                                 <div>
+                                                    <div className="flex-align justify-content-between">
+                                                        <div className="flex-align gap-4 w-100">
+                                                            <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
+                                                            <span className="text-gray-500 text-xs" title="Trung Tâm Bán Hàng Siêu Thị Vina" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}>Trung Tâm Bán Hàng Siêu Thị Vina</span>
+                                                        </div>
+                                                    </div>
                                                     <h6 className="title text-lg fw-semibold mt-2 mb-2">
                                                         <a href={`/product-details/${sp.slug}?category=${encodeURIComponent(cat.ten)}`} className="link text-line-2" tabIndex={0}>{sp.ten}</a>
                                                     </h6>
@@ -136,7 +142,7 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="product-card__price mt-5">
+                                                <div className="product-card__price">
                                                     {(sp.gia.discount_percent || 0) > 0 && (
                                                         <div className="flex-align gap-4 text-main-two-600">
                                                             <i className="ph-fill ph-seal-percent text-sm"></i> -{sp.gia.discount_percent}%

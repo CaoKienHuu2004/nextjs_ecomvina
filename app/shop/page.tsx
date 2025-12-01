@@ -1,11 +1,70 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { fetchSearchProducts, fetchHomePage } from "@/lib/api";
-import type { SearchProduct } from "@/lib/api";
+import type { SearchProduct, TopBrand } from "@/lib/api";
 import FullHeader from "@/components/FullHeader";
+
+const slugify = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const CATEGORY_OPTIONS = [
+  { value: "", label: "Tất cả" },
+  { value: "suc-khoe", label: "Sức khỏe" },
+  { value: "thuc-pham-chuc-nang", label: "Thực phẩm chức năng" },
+  { value: "cham-soc-ca-nhan", label: "Chăm sóc cá nhân" },
+  { value: "lam-dep", label: "Làm đẹp" },
+  { value: "dien-may", label: "Điện máy" },
+  { value: "thiet-bi-y-te", label: "Thiết bị y tế" },
+  { value: "bach-hoa", label: "Bách hóa" },
+  { value: "noi-that-trang-tri", label: "Nội thất - Trang trí" },
+  { value: "me-va-be", label: "Mẹ & bé" },
+  { value: "thoi-trang", label: "Thời trang" },
+  { value: "thuc-pham-do-an", label: "Thực phẩm - đồ ăn" },
+  { value: "do-uong", label: "Đồ uống" }
+];
+
+const CATEGORY_NAME_TO_SLUG: Record<string, string> = {
+  "Bách hóa": "bach-hoa",
+  "Sức khỏe": "suc-khoe",
+  "Thực phẩm - đồ ăn": "thuc-pham-do-an",
+  "Thiết bị y tế": "thiet-bi-y-te",
+  "Làm đẹp": "lam-dep",
+  "Mẹ & bé": "me-va-be",
+  "Điện máy": "dien-may",
+  "Nội thất - Trang trí": "noi-that-trang-tri",
+  "Thời trang": "thoi-trang",
+  "Đồ uống": "do-uong",
+  "Chăm sóc cá nhân": "cham-soc-ca-nhan",
+  "Thực phẩm chức năng": "thuc-pham-chuc-nang"
+};
+
+const PRICE_OPTIONS = [
+  { value: "", label: "Tất cả" },
+  { value: "low100", label: "Dưới 100.000đ" },
+  { value: "to200", label: "100.000đ - 200.000đ" },
+  { value: "to300", label: "200.000đ - 300.000đ" },
+  { value: "to500", label: "300.000đ - 500.000đ" },
+  { value: "to700", label: "500.000đ - 700.000đ" },
+  { value: "to1000", label: "700.000đ - 1.000.000đ" },
+  { value: "high1000", label: "Trên 1.000.000đ" }
+];
+
+const BRAND_OPTIONS = [
+  { value: "", label: "Tất cả" },
+  { value: "stv-trading", label: "STV Trading" },
+  { value: "cchoi", label: "C'CHOI" },
+  { value: "acaci-labs", label: "ACACI LABS" },
+  { value: "global-yen-sao-nest100", label: "GLOBAL (Yến Sào NEST100)" },
+  { value: "chat-viet-group", label: "CHẤT VIỆT GROUP" }
+];
 
 interface Product {
   id: number;
@@ -13,6 +72,7 @@ interface Product {
   slug?: string;
   category?: string;
   brand: string;
+  brandSlug: string;
   price: number;
   rating: number;
   image: string;
@@ -32,6 +92,7 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [inputValue, setInputValue] = useState(queryParam); // Giá trị input tạm
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   // State cho phân trang
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,6 +113,29 @@ export default function ShopPage() {
     thuonghieu: "",
     rating: ""
   });
+
+  const categoryOptionsWithCount = useMemo(() => {
+    const counts = allProducts.reduce<Record<string, number>>((acc, product) => {
+      if (product.category) {
+        acc[product.category] = (acc[product.category] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    return CATEGORY_OPTIONS.map((opt) => ({
+      ...opt,
+      count: opt.value ? counts[opt.value] || 0 : allProducts.length
+    }));
+  }, [allProducts]);
+
+  const brandCounts = useMemo(() => {
+    return allProducts.reduce<Record<string, number>>((acc, product) => {
+      if (product.brandSlug) {
+        acc[product.brandSlug] = (acc[product.brandSlug] || 0) + 1;
+      }
+      return acc;
+    }, {});
+  }, [allProducts]);
 
   // Sync inputValue khi queryParam thay đổi
   useEffect(() => {
@@ -263,12 +347,14 @@ export default function ShopPage() {
                     return ""; // Không xác định
                   };
 
+                  const brandName = item.thuonghieu || "Không rõ";
                   const product = {
                     id: item.id,
                     name: item.ten,
                     slug: (item as any).slug,
                     category: inferCategory(item.ten),
-                    brand: item.thuonghieu || "Không rõ",
+                    brand: brandName,
+                    brandSlug: slugify(brandName || ""),
                     price: currentPrice, // Giá hiện tại đã giảm
                     rating: ratingValue,
                     image: imageUrl,
@@ -289,22 +375,6 @@ export default function ShopPage() {
           try {
             const homeData = await fetchHomePage(); // Lấy dữ liệu mặc định từ API
 
-            // Map tên danh mục tiếng Việt sang slug
-            const categoryNameToSlug: { [key: string]: string } = {
-              "Bách hóa": "bach-hoa",
-              "Sức khỏe": "suc-khoe",
-              "Thực phẩm - đồ ăn": "thuc-pham-do-an",
-              "Thiết bị y tế": "thiet-bi-y-te",
-              "Làm đẹp": "lam-dep",
-              "Mẹ & bé": "me-va-be",
-              "Điện máy": "dien-may",
-              "Nội thất - Trang trí": "noi-that-trang-tri",
-              "Thời trang": "thoi-trang",
-              "Đồ uống": "do-uong",
-              "Chăm sóc cá nhân": "cham-soc-ca-nhan",
-              "Thực phẩm chức năng": "thuc-pham-chuc-nang"
-            };
-
             const allProductsFromAPI: any[] = [];
             const mostWatched = homeData.data.most_watched || [];
 
@@ -320,93 +390,79 @@ export default function ShopPage() {
             if (sourceParam === "hot_sales" || sourceParam === "best_products" ||
               sourceParam === "new_launch" || sourceParam === "most_watched") {
 
-              // Nếu ĐỒNG THỜI có category filter → Lấy từ top_categories thay vì source
-              if (categoryParam && categoryParam !== "") {
-                console.log(`🔍 Shop - Có source="${sourceParam}" VÀ category="${categoryParam}" → Lấy từ top_categories`);
+              // Lấy sản phẩm từ source tương ứng
+              console.log(`🔍 Shop - Đang lấy sản phẩm từ source="${sourceParam}"`);
 
-                // Lấy sản phẩm từ top_categories (đầy đủ)
-                homeData.data.top_categories?.forEach((cat: any) => {
-                  if (cat.sanpham && Array.isArray(cat.sanpham)) {
-                    const categorySlug = categoryNameToSlug[cat.ten] || "";
-                    cat.sanpham.forEach((product: any) => {
-                      allProductsFromAPI.push({
-                        ...product,
-                        categoryFromAPI: categorySlug,
-                        categoryName: cat.ten
-                      });
-                    });
-                  }
+              if (sourceParam === "hot_sales") {
+                const hotSales = (homeData.data.hot_sales || [])
+                  .slice()
+                  .sort((a, b) => {
+                    const soldA = parseInt(a.sold_count || "0");
+                    const soldB = parseInt(b.sold_count || "0");
+                    return soldB - soldA;
+                  });
+                console.log('🔥 Shop - Hot Sales từ API:', hotSales.length, 'sản phẩm');
+                hotSales.forEach((product: any) => {
+                  allProductsFromAPI.push({
+                    ...product,
+                    categoryFromAPI: inferCategory(product.ten),
+                    categoryName: "Top deal • Siêu rẻ"
+                  });
                 });
-              } else {
-                // Nếu chỉ có source, KHÔNG có category filter → Lấy từ source
-                if (sourceParam === "hot_sales") {
-                  const hotSales = (homeData.data.hot_sales || [])
-                    .slice()
-                    .sort((a, b) => {
-                      const soldA = parseInt(a.sold_count || "0");
-                      const soldB = parseInt(b.sold_count || "0");
-                      return soldB - soldA;
-                    });
-                  console.log('🔥 Shop - Hot Sales từ API:', hotSales.length, 'sản phẩm');
-                  hotSales.forEach((product: any) => {
-                    allProductsFromAPI.push({
-                      ...product,
-                      categoryFromAPI: inferCategory(product.ten),
-                      categoryName: "Top deal • Siêu rẻ"
-                    });
+              } else if (sourceParam === "best_products") {
+                const bestProducts = (homeData.data.best_products || [])
+                  .slice()
+                  .sort((a, b) => {
+                    const soldA = parseInt(a.sold_count || "0");
+                    const soldB = parseInt(b.sold_count || "0");
+                    return soldB - soldA;
                   });
-                } else if (sourceParam === "best_products") {
-                  const bestProducts = (homeData.data.best_products || [])
-                    .slice()
-                    .sort((a, b) => {
-                      const soldA = parseInt(a.sold_count || "0");
-                      const soldB = parseInt(b.sold_count || "0");
-                      return soldB - soldA;
-                    });
-                  bestProducts.forEach((product: any) => {
-                    allProductsFromAPI.push({
-                      ...product,
-                      categoryFromAPI: inferCategory(product.ten),
-                      categoryName: "Sản phẩm hàng đầu"
-                    });
+                console.log('⭐ Shop - Best Products từ API:', bestProducts.length, 'sản phẩm');
+                bestProducts.forEach((product: any) => {
+                  allProductsFromAPI.push({
+                    ...product,
+                    categoryFromAPI: inferCategory(product.ten),
+                    categoryName: "Sản phẩm hàng đầu"
                   });
-                } else if (sourceParam === "new_launch") {
-                  const newLaunch = (homeData.data.new_launch || [])
-                    .slice()
-                    .sort((a, b) => {
-                      const soldA = parseInt(a.sold_count || "0");
-                      const soldB = parseInt(b.sold_count || "0");
-                      return soldB - soldA;
-                    });
-                  newLaunch.forEach((product: any) => {
-                    allProductsFromAPI.push({
-                      ...product,
-                      categoryFromAPI: inferCategory(product.ten),
-                      categoryName: "Hàng mới chào sân",
-                    });
+                });
+              } else if (sourceParam === "new_launch") {
+                const newLaunch = (homeData.data.new_launch || [])
+                  .slice()
+                  .sort((a, b) => {
+                    const soldA = parseInt(a.sold_count || "0");
+                    const soldB = parseInt(b.sold_count || "0");
+                    return soldB - soldA;
                   });
-                } else if (sourceParam === "most_watched") {
-                  const mostWatchedOnly = (homeData.data.most_watched || [])
-                    .slice()
-                    .sort((a, b) => {
-                      const soldA = parseInt(a.sold_count || "0");
-                      const soldB = parseInt(b.sold_count || "0");
-                      return soldB - soldA;
-                    });
-                  mostWatchedOnly.forEach((product: any) => {
-                    allProductsFromAPI.push({
-                      ...product,
-                      categoryFromAPI: inferCategory(product.ten),
-                      categoryName: "Được quan tâm nhiều nhất",
-                    });
+                console.log('🆕 Shop - New Launch từ API:', newLaunch.length, 'sản phẩm');
+                newLaunch.forEach((product: any) => {
+                  allProductsFromAPI.push({
+                    ...product,
+                    categoryFromAPI: inferCategory(product.ten),
+                    categoryName: "Hàng mới chào sân",
                   });
-                }
+                });
+              } else if (sourceParam === "most_watched") {
+                const mostWatchedOnly = (homeData.data.most_watched || [])
+                  .slice()
+                  .sort((a, b) => {
+                    const soldA = parseInt(a.sold_count || "0");
+                    const soldB = parseInt(b.sold_count || "0");
+                    return soldB - soldA;
+                  });
+                console.log('👀 Shop - Most Watched từ API:', mostWatchedOnly.length, 'sản phẩm');
+                mostWatchedOnly.forEach((product: any) => {
+                  allProductsFromAPI.push({
+                    ...product,
+                    categoryFromAPI: inferCategory(product.ten),
+                    categoryName: "Được quan tâm nhiều nhất",
+                  });
+                });
               }
             } else {
               // Mặc định: Lấy sản phẩm từ top_categories - ĐÚNG SỐ LƯỢNG API TRẢ VỀ
               homeData.data.top_categories?.forEach((cat: any) => {
                 if (cat.sanpham && Array.isArray(cat.sanpham)) {
-                  const categorySlug = categoryNameToSlug[cat.ten] || "";
+                  const categorySlug = CATEGORY_NAME_TO_SLUG[cat.ten] || "";
 
                   console.log(`📦 Shop - ${cat.ten} (slug: ${categorySlug}): ${cat.sanpham.length} sản phẩm từ API`);
 
@@ -467,12 +523,15 @@ export default function ShopPage() {
                 imageUrl = `/assets/images/thumbs/${imageUrl}`;
               }
 
+              const brandName = item.thuonghieu || "Không rõ";
+
               return {
                 id: item.id,
                 name: item.ten,
                 slug: item.slug,
                 category: item.categoryFromAPI || "", // Dùng category từ API
-                brand: item.thuonghieu || "Không rõ",
+                brand: brandName,
+                brandSlug: slugify(brandName || ""),
                 price: currentPrice,
                 rating: ratingValue,
                 image: imageUrl,
@@ -537,29 +596,51 @@ export default function ShopPage() {
     // 3. Lọc theo thương hiệu
     if (filters.thuonghieu && filters.thuonghieu !== "") {
       filtered = filtered.filter(p =>
-        p.brand && p.brand.toLowerCase() === filters.thuonghieu.toLowerCase()
+        p.brandSlug === filters.thuonghieu
       );
-    }
-
-    // 4. Lọc theo rating
-    if (filters.rating && filters.rating !== "") {
-      const minRating = parseFloat(filters.rating);
-      filtered = filtered.filter(p => p.rating >= minRating);
     }
 
     setFilteredProducts(filtered);
   }, [allProducts, filters]);
 
-  const handleFilter = (e: React.FormEvent) => {
+  const indexOfLastProduct = currentPage * productsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+
+  const formatCurrency = (value?: number) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return "0 đ";
+    return `${value.toLocaleString("vi-VN")} đ`;
+  };
+
+  const formatRating = (value?: number) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return "0";
+    const formatted = value.toFixed(1);
+    return formatted.endsWith(".0") ? formatted.slice(0, -2) : formatted;
+  };
+
+  const formatSold = (value?: number) => (value || 0).toLocaleString("vi-VN");
+
+  const handleFilter = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFilters({ ...tempFilters });
-    setCurrentPage(1); // Reset về trang 1 khi filter
+    setCurrentPage(1);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    setSidebarOpen(false);
+  };
+
+  const [topBrands, setTopBrands] = useState<TopBrand[]>([]);
+  const buildBrandLogo = (logo?: string) => {
+    if (!logo) return "/assets/images/thumbs/placeholder.png";
+    if (logo.startsWith("http://") || logo.startsWith("https://") || logo.startsWith("/")) {
+      return logo;
+    }
+
+    const api = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+    return `${api}/${logo.replace(/^\/+/g, "")}`;
   };
 
   return (
     <>
-      {/* Sử dụng FullHeader giống trang chủ */}
       <FullHeader showClassicTopBar={false} showTopNav={true} showCategoriesBar={false} />
 
       <div className="breadcrumb mb-0 pt-40 bg-main-two-60">
@@ -591,151 +672,174 @@ export default function ShopPage() {
         <div className="container container-lg">
           <div className="row">
             <div className="col-lg-3">
-              <form className="shop-sidebar" onSubmit={handleFilter}>
-                <button
-                  type="button"
-                  title="Đóng bộ lọc"
-                  className="shop-sidebar__close d-lg-none d-flex w-32 h-32 flex-center border border-gray-100 rounded-circle hover-bg-main-600 position-absolute inset-inline-end-0 me-10 mt-8 hover-text-white hover-border-main-600"
-                >
-                  <i className="ph ph-x"></i>
-                </button>
-
-                <div className="shop-sidebar__box border border-gray-100 rounded-8 p-26 pb-0 mb-32">
-                  <h6 className="text-xl border-bottom border-gray-100 pb-16 mb-16">
-                    Danh mục sản phẩm
-                  </h6>
-                  <ul className="max-h-540 overflow-y-auto scroll-sm">
-                    {[
-                      { value: "", label: "Tất cả" },
-                      { value: "suc-khoe", label: "Sức khỏe" },
-                      { value: "thuc-pham-chuc-nang", label: "Thực phẩm chức năng" },
-                      { value: "cham-soc-ca-nhan", label: "Chăm sóc cá nhân" },
-                      { value: "lam-dep", label: "Làm đẹp" },
-                      { value: "dien-may", label: "Điện máy" },
-                      { value: "thiet-bi-y-te", label: "Thiết bị y tế" },
-                      { value: "bach-hoa", label: "Bách hóa" },
-                      { value: "noi-that-trang-tri", label: "Nội thất - Trang trí" },
-                      { value: "me-va-be", label: "Mẹ & bé" },
-                      { value: "thoi-trang", label: "Thời trang" },
-                      { value: "thuc-pham-do-an", label: "Thực phẩm - đồ ăn" },
-                      { value: "do-uong", label: "Đồ uống" }
-                    ].map((cat) => (
-                      <li key={cat.value} className="mb-20">
-                        <div className="form-check common-check common-radio">
-                          <input
-                            className="form-check-input"
-                            type="radio"
-                            name="danhmuc"
-                            id={cat.value}
-                            value={cat.value}
-                            checked={tempFilters.danhmuc === cat.value}
-                            onChange={(e) => setTempFilters({ ...tempFilters, danhmuc: e.target.value })}
-                          />
-                          <label className="form-check-label" htmlFor={cat.value}>
-                            {cat.label}
-                          </label>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="shop-sidebar__box border border-gray-100 rounded-8 p-26 pb-0 mb-32">
-                  <h6 className="text-xl border-bottom border-gray-100 pb-16 mb-24">
-                    Lọc theo giá tiền
-                  </h6>
-                  <ul className="max-h-540 overflow-y-auto scroll-sm">
-                    {[
-                      { value: "", label: "Tất cả" },
-                      { value: "low100", label: "Dưới 100.000đ" },
-                      { value: "to200", label: "100.000đ - 200.000đ" },
-                      { value: "to300", label: "200.000đ - 300.000đ" },
-                      { value: "to500", label: "300.000đ - 500.000đ" },
-                      { value: "to700", label: "500.000đ - 700.000đ" },
-                      { value: "to1000", label: "700.000đ - 1.000.000đ" },
-                      { value: "high1000", label: "Trên 1.000.000đ" }
-                    ].map((price) => (
-                      <li key={price.value} className="mb-24">
-                        <div className="form-check common-check common-radio">
-                          <input
-                            className="form-check-input"
-                            type="radio"
-                            name="locgia"
-                            id={price.value}
-                            value={price.value}
-                            checked={tempFilters.locgia === price.value}
-                            onChange={(e) => setTempFilters({ ...tempFilters, locgia: e.target.value })}
-                          />
-                          <label className="form-check-label" htmlFor={price.value}>
-                            {price.label}
-                          </label>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="shop-sidebar__box border border-gray-100 rounded-8 p-26 pb-0 mb-32">
-                  <h6 className="text-xl border-bottom border-gray-100 pb-16 mb-24">
-                    Lọc theo thương hiệu
-                  </h6>
-                  <ul className="max-h-540 overflow-y-auto scroll-sm">
-                    {[
-                      { value: "", label: "Tất cả" },
-                      { value: "Trung Tâm Bán Hàng Siêu Thị Vina", label: "Trung Tâm Bán Hàng Siêu Thị Vina" },
-                      { value: "C'CHOI", label: "C'CHOI" },
-                      { value: "ACACI LABS", label: "ACACI LABS" }
-                    ].map((brand) => (
-                      <li key={brand.value} className="mb-16">
-                        <div className="form-check common-check common-radio">
-                          <input
-                            className="form-check-input"
-                            type="radio"
-                            name="thuonghieu"
-                            id={`brand-${brand.value}`}
-                            value={brand.value}
-                            checked={tempFilters.thuonghieu === brand.value}
-                            onChange={(e) => setTempFilters({ ...tempFilters, thuonghieu: e.target.value })}
-                          />
-                          <label className="form-check-label" htmlFor={`brand-${brand.value}`}>
-                            {brand.label}
-                          </label>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="shop-sidebar__box rounded-8 flex-align justify-content-between mb-32">
-                  <button
-                    title="Lọc sản phẩm"
-                    type="submit"
-                    className="btn border-main-600 text-main-600 hover-bg-main-600 hover-border-main-600 hover-text-white rounded-8 px-32 py-12"
-                  >
-                    Lọc sản phẩm
-                  </button>
+              <div className={`shop-sidebar-wrapper${isSidebarOpen ? " show" : ""}`}>
+                <div
+                  className={`shop-sidebar__overlay d-lg-none${isSidebarOpen ? " active" : ""}`}
+                  onClick={() => setSidebarOpen(false)}
+                ></div>
+                <form className={`shop-sidebar${isSidebarOpen ? " open" : ""}`} onSubmit={handleFilter}>
                   <button
                     type="button"
-                    className="btn border-gray-400 text-gray-700 hover-bg-gray-100 rounded-8 px-32 py-12 ms-8"
-                    onClick={() => {
-                      setTempFilters({ danhmuc: "", locgia: "", thuonghieu: "", rating: "" });
-                      setFilters({ danhmuc: "", locgia: "", thuonghieu: "", rating: "" });
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
+                    title="Đóng bộ lọc"
+                    onClick={() => setSidebarOpen(false)}
+                    className="shop-sidebar__close d-lg-none d-flex w-32 h-32 flex-center border border-gray-100 rounded-circle hover-bg-main-600 position-absolute inset-inline-end-0 me-10 mt-8 hover-text-white hover-border-main-600"
                   >
-                    Xóa lọc
+                    <i className="ph ph-x"></i>
                   </button>
-                </div>
 
-                <div className="shop-sidebar__box rounded-8">
-                  <a href="https://shopee.tw">
-                    <img className="rounded-8 w-100" src="/assets/images/bg/shoppe.jpg" alt="Shopee Banner" />
-                  </a>
-                </div>
-              </form>
+                  <div className="shop-sidebar__box border border-gray-100 rounded-8 p-26 pb-0 mb-32">
+                    <h6 className="text-xl border-bottom border-gray-100 pb-16 mb-16">
+                      Danh mục sản phẩm
+                    </h6>
+                    <ul className="max-h-540 overflow-y-auto scroll-sm">
+                      {categoryOptionsWithCount.map((cat) => (
+                        <li key={cat.value || "all"} className="mb-20">
+                          <div className="form-check common-check common-radio">
+                            <input
+                              className="form-check-input"
+                              type="radio"
+                              name="danhmuc"
+                              id={cat.value || "all"}
+                              value={cat.value}
+                              checked={tempFilters.danhmuc === cat.value}
+                              onChange={(e) => setTempFilters({ ...tempFilters, danhmuc: e.target.value })}
+                            />
+                            <label className="form-check-label" htmlFor={cat.value || "all"}>
+                              {cat.label}{cat.value ? ` (${cat.count})` : ""}
+                            </label>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="shop-sidebar__box border border-gray-100 rounded-8 p-26 pb-0 mb-32">
+                    <h6 className="text-xl border-bottom border-gray-100 pb-16 mb-24">
+                      Lọc theo giá tiền
+                    </h6>
+                    <ul className="max-h-540 overflow-y-auto scroll-sm">
+                      {PRICE_OPTIONS.map((price) => (
+                        <li key={price.value || "all-price"} className="mb-24">
+                          <div className="form-check common-check common-radio">
+                            <input
+                              className="form-check-input"
+                              type="radio"
+                              name="locgia"
+                              id={price.value || "all-price"}
+                              value={price.value}
+                              checked={tempFilters.locgia === price.value}
+                              onChange={(e) => setTempFilters({ ...tempFilters, locgia: e.target.value })}
+                            />
+                            <label className="form-check-label" htmlFor={price.value || "all-price"}>
+                              {price.label}
+                            </label>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="shop-sidebar__box border border-gray-100 rounded-8 p-26 pb-0 mb-32">
+                    <h6 className="text-xl border-bottom border-gray-100 pb-16 mb-24">
+                      Lọc theo thương hiệu
+                    </h6>
+                    <ul className="max-h-540 overflow-y-auto scroll-sm">
+                      {BRAND_OPTIONS.map((brand) => (
+                        <li key={brand.value || "all-brand"} className="mb-16">
+                          <div className="form-check common-check common-radio">
+                            <input
+                              className="form-check-input"
+                              type="radio"
+                              name="thuonghieu"
+                              id={`brand-${brand.value || "all"}`}
+                              value={brand.value}
+                              checked={tempFilters.thuonghieu === brand.value}
+                              onChange={(e) => setTempFilters({ ...tempFilters, thuonghieu: e.target.value })}
+                            />
+                            <label className="form-check-label" htmlFor={`brand-${brand.value || "all"}`}>
+                              {brand.label}{brand.value ? ` (${brandCounts[brand.value] || 0})` : ""}
+                            </label>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="shop-sidebar__box rounded-8 flex-column flex-sm-row flex-align gap-12 gap-sm-16 mb-32">
+                    <button
+                      title="Lọc sản phẩm trong bộ lọc của bạn"
+                      type="submit"
+                      className="btn border-main-600 text-main-600 hover-bg-main-600 hover-border-main-600 hover-text-white rounded-8 px-32 py-12 w-100"
+                    >
+                      Lọc sản phẩm
+                    </button>
+                    <button
+                      type="button"
+                      className="btn border-gray-400 text-gray-700 hover-bg-gray-100 rounded-8 px-32 py-12 w-100"
+                      onClick={() => {
+                        setTempFilters({ danhmuc: "", locgia: "", thuonghieu: "", rating: "" });
+                        setFilters({ danhmuc: "", locgia: "", thuonghieu: "", rating: "" });
+                        setSidebarOpen(false);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    >
+                      Xóa lọc
+                    </button>
+                  </div>
+
+                  <div className="shop-sidebar__box rounded-8">
+                    <a href="https://shopee.tw" target="_blank" rel="noreferrer">
+                      <img className="rounded-8 w-100" src="/assets/images/bg/shoppe.jpg" alt="Shopee Banner" />
+                    </a>
+                  </div>
+                  {topBrands.length > 0 && (
+                    <div className="shop-sidebar__box border border-gray-100 rounded-8 p-26 pb-0 mb-32">
+                      <h6 className="text-xl border-bottom border-gray-100 pb-16 mb-24">Thương hiệu hàng đầu</h6>
+                      <div className="row g-12">
+                        {topBrands.map((brand) => (
+                          <div key={brand.id} className="col-6">
+                            <a href={`/products?brand=${brand.slug}`} className="d-block p-12 border border-gray-100 rounded-8 flex-center" style={{ minHeight: 90 }}>
+                              <img
+                                src={buildBrandLogo(brand.logo)}
+                                alt={brand.ten}
+                                className="h-100"
+                                style={{ objectFit: "contain", maxHeight: 60 }}
+                                onError={(e) => {
+                                  const img = e.currentTarget as HTMLImageElement;
+                                  img.onerror = null;
+                                  img.src = "/assets/images/thumbs/placeholder.png";
+                                }}
+                              />
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </form>
+              </div>
             </div>
 
             <div className="col-lg-9">
+              <div className="flex-between gap-16 flex-wrap mb-40">
+                <div className="position-relative flex-align gap-16 flex-wrap">
+                  <button
+                    type="button"
+                    className="w-44 h-44 d-lg-none d-flex flex-center border border-gray-100 rounded-6 text-2xl sidebar-btn"
+                    onClick={() => setSidebarOpen(true)}
+                  >
+                    <i className="ph-bold ph-funnel"></i>
+                  </button>
+                  <div>
+                    <p className="mb-0 text-gray-600 text-sm">
+                      Hiển thị {currentProducts.length} / {filteredProducts.length} sản phẩm
+                    </p>
+                    {!!searchQuery && (
+                      <span className="text-xs text-gray-500">Nguồn dữ liệu tìm kiếm trực tiếp từ API</span>
+                    )}
+                  </div>
+                </div>
+              </div>
               {loading ? (
                 <p className="text-center">Đang tải sản phẩm...</p>
               ) : (
@@ -746,129 +850,116 @@ export default function ShopPage() {
                         <p className="text-center">Không có sản phẩm nào phù hợp với bộ lọc của bạn.</p>
                       </div>
                     ) : (
-                      (() => {
-                        // Tính toán sản phẩm hiển thị cho trang hiện tại
-                        const indexOfLastProduct = currentPage * productsPerPage;
-                        const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-                        const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
-
-                        return currentProducts.map((p) => (
-                          <div key={p.id} className="col-xxl-3 col-xl-3 col-lg-4 col-xs-6">
-                            <div className="product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                              <Link
-                                href={p.slug ? `/product-details/${p.slug}` : `/product-details/${p.id}`}
-                                className="flex-center rounded-8 bg-gray-50 position-relative"
-                                style={{ minHeight: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                <img src={p.image} alt={p.name} className="w-100 rounded-top-2" style={{ objectFit: 'cover', maxHeight: '250px' }} />
-                              </Link>
-                              <div className="product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex mt-10 px-10 pb-8">
-                                <div>
-                                  <div className="flex-align justify-content-between mt-5">
-                                    <div className="flex-align gap-4 w-100">
-                                      <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                      <span className="text-gray-500 text-xs" title={p.brand} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", display: "inline-block" }}>
-                                        {p.brand}
-                                      </span>
-                                    </div>
+                      currentProducts.map((p) => (
+                        <div key={`${p.id}-${p.category}`} className="col-xxl-3 col-xl-3 col-lg-4 col-xs-6">
+                          <div className="product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2">
+                            <Link
+                              href={p.slug ? `/product-details/${p.slug}` : `/product-details/${p.id}`}
+                              className="flex-center rounded-8 bg-gray-50 position-relative"
+                            >
+                              <img
+                                src={p.image}
+                                alt={p.name}
+                                className="w-100 rounded-top-2"
+                              />
+                            </Link>
+                            <div className="product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex mt-10 px-10 pb-8">
+                              <div>
+                                <h6 className="title text-lg fw-semibold mt-2 mb-2">
+                                  <Link
+                                    href={p.slug ? `/product-details/${p.slug}` : `/product-details/${p.id}`}
+                                    className="link text-line-2"
+                                    tabIndex={0}
+                                  >
+                                    {p.name}
+                                  </Link>
+                                </h6>
+                                <div className="flex-align justify-content-between mt-10">
+                                  <div className="flex-align gap-6">
+                                    <span className="text-xs fw-medium text-gray-500">Đánh giá</span>
+                                    <span className="text-xs fw-medium text-gray-500">{formatRating(p.rating)} <i className="ph-fill ph-star text-warning-600"></i></span>
                                   </div>
-                                  <h6 className="title text-lg fw-semibold mt-2 mb-2">
-                                    <Link
-                                      href={p.slug ? `/product-details/${p.slug}` : `/product-details/${p.id}`}
-                                      className="link text-line-2"
-                                      tabIndex={0}
-                                    >
-                                      {p.name}
-                                    </Link>
-                                  </h6>
-                                  <div className="flex-align justify-content-between mt-2">
-                                    <div className="flex-align gap-6">
-                                      <span className="text-xs fw-medium text-gray-500">Đánh giá</span>
-                                      <span className="text-xs fw-medium text-gray-500">
-                                        {p.rating} <i className="ph-fill ph-star text-warning-600"></i>
-                                      </span>
-                                    </div>
-                                    <div className="flex-align gap-4">
-                                      <span className="text-xs fw-medium text-gray-500">{p.sold || 0}</span>
-                                      <span className="text-xs fw-medium text-gray-500">Đã bán</span>
-                                    </div>
+                                  <div className="flex-align gap-4">
+                                    <span className="text-xs fw-medium text-gray-500">{formatSold(p.sold)}</span>
+                                    <span className="text-xs fw-medium text-gray-500">Đã bán</span>
                                   </div>
                                 </div>
-
-                                <div className="product-card__price mt-5">
-                                  {(p.discount ?? 0) > 0 && (p.originalPrice ?? 0) > 0 && (
-                                    <div className="flex-align gap-4 text-main-two-600">
-                                      <i className="ph-fill ph-seal-percent text-sm"></i> -{p.discount}%
-                                      <span className="text-gray-400 text-sm fw-semibold text-decoration-line-through">
-                                        {p.originalPrice!.toLocaleString()} đ
-                                      </span>
-                                    </div>
-                                  )}
-                                  <span className="text-heading text-lg fw-semibold">
-                                    {p.price.toLocaleString()} đ
-                                  </span>
-                                </div>
+                              </div>
+                              <div className="product-card__price mt-5">
+                                {(p.discount ?? 0) > 0 && (p.originalPrice ?? 0) > 0 && (
+                                  <div className="flex-align gap-4 text-main-two-600">
+                                    <i className="ph-fill ph-seal-percent text-sm"></i> -{p.discount}%
+                                    <span className="text-gray-400 text-sm fw-semibold text-decoration-line-through">
+                                      {formatCurrency(p.originalPrice)}
+                                    </span>
+                                  </div>
+                                )}
+                                <span className="text-heading text-lg fw-semibold">
+                                  {formatCurrency(p.price)}
+                                </span>
                               </div>
                             </div>
                           </div>
-                        ));
-                      })()
+                        </div>
+                      ))
                     )}
                   </div>
 
-                  {filteredProducts.length > 0 && (
-                    <ul className="pagination flex-center flex-wrap gap-12 mt-40">
-                      {/* Nút Previous */}
-                      <li className="page-item">
-                        <button
-                          className="page-link"
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                          disabled={currentPage === 1}
-                          title="Trang trước"
-                        >
-                          <i className="ph ph-caret-left"></i>
-                        </button>
-                      </li>
+                  {
+                    filteredProducts.length > 0 && (
+                      <ul className="pagination flex-center flex-wrap gap-12 mt-40">
+                        {/* Nút Previous */}
+                        <li className="page-item">
+                          <button
+                            className="page-link"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                            title="Trang trước"
+                          >
+                            <i className="ph ph-caret-left"></i>
+                          </button>
+                        </li>
 
-                      {/* Các nút số trang */}
-                      {(() => {
-                        const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
-                        const pages = [];
-                        for (let i = 1; i <= totalPages; i++) {
-                          pages.push(
-                            <li key={i} className={`page-item${currentPage === i ? ' active' : ''}`}>
-                              <button
-                                className="page-link"
-                                onClick={() => {
-                                  setCurrentPage(i);
-                                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                                }}
-                                title={`Trang ${i}`}
-                              >
-                                {i}
-                              </button>
-                            </li>
-                          );
-                        }
-                        return pages;
-                      })()}
+                        {/* Các nút số trang */}
+                        {(() => {
+                          const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+                          const pages = [];
+                          for (let i = 1; i <= totalPages; i++) {
+                            pages.push(
+                              <li key={i} className={`page-item${currentPage === i ? ' active' : ''}`}>
+                                <button
+                                  className="page-link"
+                                  onClick={() => {
+                                    setCurrentPage(i);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                  }}
+                                  title={`Trang ${i}`}
+                                >
+                                  {i}
+                                </button>
+                              </li>
+                            );
+                          }
+                          return pages;
+                        })()}
 
-                      {/* Nút Next */}
-                      <li className="page-item">
-                        <button
-                          className="page-link"
-                          onClick={() => {
-                            const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
-                            setCurrentPage(prev => Math.min(prev + 1, totalPages));
-                          }}
-                          disabled={currentPage === Math.ceil(filteredProducts.length / productsPerPage)}
-                          title="Trang sau"
-                        >
-                          <i className="ph ph-caret-right"></i>
-                        </button>
-                      </li>
-                    </ul>
-                  )}
+                        {/* Nút Next */}
+                        <li className="page-item">
+                          <button
+                            className="page-link"
+                            onClick={() => {
+                              const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+                              setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                            }}
+                            disabled={currentPage === Math.ceil(filteredProducts.length / productsPerPage)}
+                            title="Trang sau"
+                          >
+                            <i className="ph ph-caret-right"></i>
+                          </button>
+                        </li>
+                      </ul>
+                    )
+                  }
                 </>
               )}
             </div>

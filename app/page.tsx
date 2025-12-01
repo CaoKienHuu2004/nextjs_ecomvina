@@ -16,7 +16,6 @@ import MobileMenu from "@/components/MobileMenu";
 import TopDealsSection from "@/components/TopDealsSection";
 import GiftEventsSection from "@/components/GiftEventsSection";
 import TopCategoriesProducts from "@/components/TopCategoriesProducts";
-import CouponSection from "@/components/CouponSection";
 import BlogSection from "@/components/BlogSection";
 import { HomeDataProvider } from "@/hooks/useHomeData";
 
@@ -182,10 +181,6 @@ export default function Home() {
 
         {/* ========================= Featured Products ============================ */}
         <FeaturedProductsStaticSection />
-
-        {/* ========================= MÃ GIẢM GIÁ ================================ */}
-        <CouponSection />
-        {/* ========================= MÃ GIẢM GIÁ End ================================ */}
 
         {/* Hàng mới chào sân */}
         <LatestProductsSection />
