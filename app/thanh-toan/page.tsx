@@ -1,483 +1,399 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import FullHeader from "@/components/FullHeader";
 import BenefitsStrip from "@/components/BenefitsStrip";
 import { useAuth } from "@/hooks/useAuth";
-import { api } from "@/lib/api";
+import { useCart, Gia } from "@/hooks/useCart";
+import Cookies from "js-cookie";
 
-/** Types */
-/** Thông tin Giá */
-type ThongTinGia = {
-  hien_tai?: number; // current
-  truoc_giam_gia?: number | null; // before_discount
+type Address = {
+  id?: number | string;
+  ten_nguoinhan?: string;
+  sodienthoai?: string;
+  diachi?: string;
+  tinhthanh?: string;
+  trangthai?: string;
+  [key: string]: unknown;
+};
+type UserWithAddress = {
+  hoten?: string;
+  diachi?: Address[];
+  [key: string]: unknown;
+};
+// --- Helper Price ---
+type PriceInput = number | Gia | undefined | null;
+const getDefaultAddress = (user: UserWithAddress | null) => {
+  if (!user?.diachi || user.diachi.length === 0) return null;
+  return user.diachi.find((d) => d.trangthai === "Mặc định") || user.diachi[0];
+};
+const getPrice = (gia: PriceInput): number => {
+  if (typeof gia === "number") return gia;
+  return Number(gia?.current ?? 0);
 };
 
-/** Vật phẩm trong giỏ hàng */
-type VatPhamGioHang = {
-  id_bienthesp?: number | string; // ID biến thể sản phẩm (được dùng để POST /giohang)
-  id?: number | string; // ID giỏ hàng (nếu có)
-  ten?: string; // name / ten
-  product?: {
-    id?: number | string;
-    ten?: string; // ten/name
-    mediaurl?: string;
-    gia?: ThongTinGia; // Sử dụng ThongTinGia mới
-    [k: string]: unknown;
-  };
-  soluong?: number; // quantity / qty
-  gia?: ThongTinGia; // Sử dụng ThongTinGia mới
-  [k: string]: unknown;
-};
-
-type ApiCartResponse = {
-  status?: boolean;
-  data?: VatPhamGioHang[];
-};
-
-type ItemThanhToan = VatPhamGioHang & { id_bienthesp?: number | string }; // Dùng VatPhamGioHang mới
-// type PriceInfo = {
-//   current?: number;
-//   before_discount?: number | null;
-// };
-
-// type CartItem = {
-//   id?: number;
-//   ten?: string;
-//   name?: string;
-//   product?: {
-//     id?: number | string;
-//     ten?: string;
-//     name?: string;
-//     mediaurl?: string;
-//     gia?: PriceInfo;
-//     [k: string]: unknown;
-//   };
-//   quantity?: number;
-//   qty?: number;
-//   gia?: PriceInfo;
-//   price?: number;
-//   selling_price?: number;
-//   unit_price?: number;
-//   [k: string]: unknown;
-// };
-
-// type ApiCartResponse = {
-//   status?: boolean;
-//   data?: CartItem[];
-// };
-
-// type CheckoutItem = CartItem & { id_bienthesp?: number | string };
-
-export default function Page() {
-  const { isLoggedIn, user } = useAuth();
-  const [cartItems, setCartItems] = useState<VatPhamGioHang[]>([]);
-  const [loadingCart, setLoadingCart] = useState<boolean>(true);
-  const [paymentMethod, setPaymentMethod] = useState<"online" | "cod">("online");
-  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
+export default function ThanhToanPage() {
   const router = useRouter();
+  const { user, isLoggedIn } = useAuth();
+  const { items, subtotal, total, discountAmount, clearCart } = useCart();
+  
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("cod"); // 1: COD, 3: QR
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
 
-  const API = useMemo(() => process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215", []);
-
-  // Redirect nếu chưa đăng nhập
+  // 1. Load địa chỉ mặc định khi user load xong
   useEffect(() => {
-    if (!isLoggedIn) {
-      const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
-      router.push(`/account?redirect=${encodeURIComponent(currentPath)}`);
+    if (user) {
+        const def = getDefaultAddress(user);
+        setSelectedAddress(def);
     }
-  }, [isLoggedIn, router]);
+  }, [user]);
 
-  // Load profile (address) để hiển thị trên trang thanh toán
+  // Redirect nếu chưa login hoặc giỏ hàng trống
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const res = await fetch(`${API}/api/auth/thong-tin-nguoi-dung`, { credentials: "include" });
-        const j = await res.json();
-        if (!alive) return;
-        setProfile((j?.data as Record<string, unknown>) ?? null);
-      } catch {
-        // ignore
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [API, isLoggedIn]);
+    if (!isLoggedIn && typeof window !== 'undefined') {
+        // router.push("/dang-nhap?redirect=/thanh-toan");
+    }
+    if (items.length === 0 && typeof window !== 'undefined') {
+        // router.push("/gio-hang");
+    }
+  }, [isLoggedIn, items, router]);
 
-  // Load giỏ hàng — ưu tiên snapshot từ sessionStorage (Cart → checkout_cart)
-  useEffect(() => {
-    let alive = true;
+  // Tách sản phẩm chính và quà tặng (để render giống UI mẫu)
+  const mainItems = items.filter(it => getPrice(it.product?.gia) > 0);
+  const giftItems = items.filter(it => getPrice(it.product?.gia) === 0);
 
-    if (typeof window !== "undefined") {
-      try {
-        const raw = sessionStorage.getItem("checkout_cart");
-        if (raw) {
-          const parsed = JSON.parse(raw) as VatPhamGioHang[];
-          if (Array.isArray(parsed)) {
-            setCartItems(parsed);
-            setLoadingCart(false);
-            return () => {
-              alive = false;
-            };
-          }
-        }
-      } catch {
-        // ignore
-      }
+  // Xử lý đặt hàng
+  const handlePlaceOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAddress) {
+        alert("Vui lòng chọn địa chỉ nhận hàng.");
+        return;
     }
 
-    (async () => {
-      try {
-        setLoadingCart(true);
-        const res = await api.get<ApiCartResponse>("/api/toi/giohang", { credentials: "include" });
-        if (!alive) return;
-        const items = Array.isArray(res?.data) ? res.data : Array.isArray(res as unknown as VatPhamGioHang[]) ? (res as unknown as VatPhamGioHang[]) : [];
-        setCartItems(items);
-      } catch {
-        setCartItems([]);
-      } finally {
-        if (alive) setLoadingCart(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [isLoggedIn]);
-
-  const computeTotals = (): { tamtinh: number; giam_gia: number; thanhtien: number } => {
-    let tamtinh = 0;
-    let giam_gia = 0;
-    for (const it of cartItems) {
-      const soluong = Number(it.soluong ?? it.qty ?? it.quantity ?? 1) || 1;
-      const gia_hien_tai =
-        Number(it.product?.gia?.hien_tai ?? it.gia?.hien_tai ?? it.price ?? it.selling_price ?? it.unit_price ?? 0) || 0;
-      const gia_truoc_giam = Number(it.product?.gia?.truoc_giam_gia ?? it.gia?.truoc_giam_gia ?? 0) || 0;
-      tamtinh += gia_hien_tai * soluong;
-      if (gia_truoc_giam > gia_hien_tai) giam_gia += (gia_truoc_giam - gia_hien_tai) * soluong;
-    }
-    const thanhtien = tamtinh - giam_gia;
-    return { tamtinh, giam_gia, thanhtien };
-  };
-
-  // const { tamtinh, giam_gia, thanhtien } = computeTotals();
-  const { tamtinh: subtotal, giam_gia: discount, thanhtien: total } = computeTotals();
-
-  const createVnPayAndRedirect = async () => {
+    setIsSubmitting(true);
     try {
-      const toCheckoutRaw = typeof window !== "undefined" ? sessionStorage.getItem("checkout_cart") : null;
-      const toCheckout: VatPhamGioHang[] = toCheckoutRaw ? (JSON.parse(toCheckoutRaw) as VatPhamGioHang[]) : cartItems;
-      const amount = toCheckout.reduce((s: number, it: ItemThanhToan) => {
-        const price = Number(it.product?.gia?.hien_tai ?? it.gia?.hien_tai ?? it.price ?? 0) || 0;
-        const soluong = Number(it.soluong ?? it.qty ?? 1) || 1;
-        return s + price * soluong;
-      }, 0);
+        const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+        const token = Cookies.get("access_token");
 
-      const resp = await fetch(`${API}/api/vnpay/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          gio_hang: toCheckout,
-          tong_tien: amount,
-          returnUrl: `${window.location.origin}/hoan-tat-thanh-toan`
-        })
-      });
-      const j = (await resp.json()) as { data?: { vnpUrl?: string } };
-      if (!resp.ok || !j?.data?.vnpUrl) throw new Error("Không tạo được payment");
-      window.location.href = j.data.vnpUrl!;
-    } catch (err) {
-      console.error(err);
-      alert("Không thể khởi tạo thanh toán. Vui lòng thử lại.");
-    }
-  };
+        const payload = {
+            id_diachigiaohang: selectedAddress.id,
+            ma_phuongthuc: paymentMethod, // 1 hoặc 3
+            //{
+            // "ma_phuongthuc": "cod",
+            // "ma_magiamgia": null
+            // }
+            
+        };
 
-  const createOrderCOD = async () => {
-    type CreatedResp = { data?: { orderId?: string; id?: string | number; order_id?: string } };
-    try {
-      const toCheckoutRaw = typeof window !== "undefined" ? sessionStorage.getItem("checkout_cart") : null;
-      const toCheckout: ItemThanhToan[] = toCheckoutRaw ? (JSON.parse(toCheckoutRaw) as ItemThanhToan[]) : (cartItems as ItemThanhToan[]);
-      const amount = toCheckout.reduce((s: number, it: ItemThanhToan) => {
-        const price = Number(it.product?.gia?.hien_tai ?? it.gia?.hien_tai ?? it.price ?? 0) || 0;
-        const soluong = Number(it.soluong ?? it.qty ?? 1) || 1;
-        return s + price * soluong;
-      }, 0);
-
-      const payload = {
-        gio_hang: toCheckout,
-        tong_tien: amount,
-        phuong_thuc_thanhtoan: "cod",
-        returnUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/hoan-tat-thanh-toan`
-      };
-
-      const endpoints = [
-        `${API}/api/toi/donhang`,
-        `${API}/api/donhang/create`,
-        `${API}/api/orders`,
-        `${API}/api/vnpay/create`
-      ];
-
-      let created: CreatedResp | null = null;
-
-      // try endpoints via fetch first (broader compatibility)
-      for (const url of endpoints) {
-        try {
-          const resp = await fetch(url, {
+        const res = await fetch(`${API}/api/toi/donhangs`, { 
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
             body: JSON.stringify(payload)
-          });
-          const j = await resp.json().catch(() => null) as CreatedResp | null;
-          if (j && j.data && (j.data.orderId || j.data.id || j.data.order_id)) {
-            created = j;
-            break;
-          }
-        } catch {
-          // ignore and try next
+        });
+
+        if (res.ok) {
+            const json = await res.json();
+            // Xóa giỏ hàng client
+            clearCart();
+            // Chuyển trang thành công (hoặc trang thanh toán QR nếu cần)
+            router.push(`/hoan-tat-thanh-toan?order_id=${json.data?.id || json.id}`);
+        } else {
+            alert("Đặt hàng thất bại. Vui lòng thử lại.");
         }
-      }
-
-      // fallback: use api helper if available
-      if (!created) {
-        try {
-          const j = await api.post("/api/toi/donhang", payload, { credentials: "include" }) as CreatedResp;
-          if (j?.data && (j.data.orderId || j.data.id || j.data.order_id)) created = j;
-        } catch {
-          // ignore
-        }
-      }
-
-      if (!created) throw new Error("Không tạo được đơn hàng");
-
-      // extract id
-      const orderId =
-        (created.data?.orderId as string | undefined) ??
-        (created.data?.id as string | number | undefined) ??
-        (created.data?.order_id as string | undefined);
-
-      // collect ids of items to remove from cart
-      const idsToRemove = toCheckout
-        .map((it) => (it.id_bienthesp ?? it.product?.id))
-        .filter((v): v is string | number => Boolean(v));
-
-      // Attempt to clear cart on server (best-effort)
-      if (idsToRemove.length > 0) {
-        try {
-          // try bulk clear endpoint
-          await api.post("/api/toi/giohang/clear", { ids: idsToRemove }, { credentials: "include" });
-        } catch {
-          // fallback: try deleting each item individually
-          for (const id of idsToRemove) {
-            try {
-              // many mock APIs use DELETE /api/toi/giohang/:id or /api/giohang/:id
-              await fetch(`${API}/api/toi/giohang/${encodeURIComponent(String(id))}`, {
-                method: "DELETE",
-                credentials: "include"
-              });
-            } catch {
-              // ignore per-item failures
-            }
-          }
-        }
-      } else {
-        // no ids available — try best-effort server-side clear
-        try {
-          await api.post("/api/toi/giohang/clear", {}, { credentials: "include" });
-        } catch {
-          // ignore
-        }
-      }
-
-      // clear local snapshot + state
-      try {
-        sessionStorage.removeItem("checkout_cart");
-      } catch { }
-      setCartItems([]);
-
-      // navigate to orders/status page so orders/page.tsx can fetch & show the order
-      const idForUrl = typeof orderId === "number" ? String(orderId) : (orderId ?? "");
-      const target = idForUrl ? `/orders?order_id=${encodeURIComponent(idForUrl)}` : "/orders";
-      router.push(target);
-    } catch (err) {
-      console.error(err);
-      alert("Không thể tạo đơn hàng COD. Vui lòng thử lại.");
+    } catch (error) {
+        console.error(error);
+        alert("Lỗi kết nối.");
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
-  const itemCount = cartItems.length;
-  const giftCount = cartItems.filter((it) => {
-    const price =
-      Number(it.product?.gia?.hien_tai ?? it.gia?.hien_tai ?? it.price ?? it.selling_price ?? it.unit_price ?? 0) || 0;
-    return price === 0;
-  }).length;
+  // Render 1 dòng sản phẩm trong bảng tóm tắt
+  const renderSummaryRow = (item: typeof items[0], isGift = false) => {
+    const sp = item.product || {};
+    const price = getPrice(sp.gia);
+    const totalRow = price * item.quantity;
+    const img = sp.mediaurl || "/assets/images/thumbs/placeholder.png";
+    const name = sp.ten || sp.name || "Sản phẩm";
 
-  // khi chưa đăng nhập — loading UI
-  if (!isLoggedIn) {
     return (
-      <>
-        <FullHeader showClassicTopBar={true} showTopNav={false} />
-        <div className="container py-20 text-center">
-          <p className="text-lg">Đang kiểm tra đăng nhập...</p>
-        </div>
-      </>
+        <tr key={item.id_giohang}>
+            <td className="px-5 py-10 rounded-4">
+                {isGift && (
+                     <span className="mb-10 text-sm flex-align fw-medium">
+                        <i className="text-lg ph-bold ph-gift text-main-600 pe-4"></i>Quà tặng nhận được
+                     </span>
+                )}
+                <div className="gap-12 d-flex align-items-center">
+                    <div className="border border-gray-100 rounded-8 flex-center" style={{maxWidth: 80, maxHeight: 80, width: "100%", height: "100%"}}>
+                        <Image src={img} alt={name} width={80} height={80} className="w-100 rounded-8 object-fit-contain" />
+                    </div>
+                    <div className="table-product__content text-start">
+                        <h6 className="mb-0 text-sm title fw-semibold">
+                            <span className="link text-line-2" title={name}>{name}</span>
+                        </h6>
+                        <div className="gap-16 mb-6 flex-align">
+                            <span className="gap-8 px-6 py-4 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">
+                                {sp.category || "Sản phẩm"}
+                            </span>
+                        </div>
+                        <div className="mb-6 product-card__price">
+                            <div className="gap-12 flex-align">
+                                <span className="px-6 py-4 text-xs bg-gray-100 text-heading fw-medium rounded-4">x {item.quantity}</span>
+                                <span className="text-sm text-main-600 fw-bold">{totalRow.toLocaleString("vi-VN")} ₫</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
     );
-  }
-
-  // address fallback (from profile or user)
-  const addrName = (profile?.name as string) ?? (user?.name as unknown as string) ?? "Khách hàng";
-  const addrPhone = (profile?.phone as string) ?? (user?.phone as unknown as string) ?? "";
-  const addrStreet = (profile?.address_street as string) ?? "";
-  const addrDistrict = (profile?.address_district as string) ?? "";
-  const addrCity = (profile?.address_city as string) ?? "";
-  const addrPostal = (profile?.address_postal as string) ?? "";
+  };
 
   return (
     <>
       <FullHeader showClassicTopBar={true} showTopNav={false} />
 
-      <div className="mb-0 breadcrumb py-26 bg-main-two-50">
+      <section className="py-20 cart bg-white-50">
         <div className="container container-lg">
-          <div className="flex-wrap gap-16 breadcrumb-wrapper flex-between">
-            <h6 className="mb-0">Thanh toán</h6>
-            <ul className="flex-wrap gap-8 flex-align">
-              <li className="text-sm">
-                <Link href="/" className="gap-8 text-gray-900 flex-align hover-text-main-600">
-                  <i className="ph ph-house"></i> Trang chủ
-                </Link>
-              </li>
-              <li className="flex-align">
-                <i className="ph ph-caret-right"></i>
-              </li>
-              <li className="text-sm text-main-600"> Thanh toán </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <section className="py-40 checkout">
-        <div className="container">
-          <div className="row">
-            {/* Left: Address + items */}
-            <div className="col-xl-8 col-lg-8">
-              {/* Address */}
-              <div className="px-20 py-16 mb-16 border border-gray-100 rounded-8">
-                <div className="d-flex justify-content-between align-items-start">
-                  <div>
-                    <div className="fw-semibold">{addrName} {addrPhone && <span className="text-neutral-600 ms-8">({addrPhone})</span>}</div>
-                    <div className="mt-6 text-neutral-600">
-                      {addrStreet}{addrStreet && (addrDistrict || addrCity) ? ", " : ""}{addrDistrict}{addrDistrict && addrCity ? ", " : ""}{addrCity}{addrPostal ? ` — ${addrPostal}` : ""}
+          <form onSubmit={handlePlaceOrder} className="row gy-4">
+            
+            {/* LEFT: Thông tin giao hàng + Sản phẩm */}
+            <div className="col-xl-7 col-lg-8">
+                
+                {/* 1. ĐỊA CHỈ NHẬN HÀNG */}
+                <div className="px-20 py-20 pb-20 bg-white border border-gray-100 shadow-sm cart-sidebar rounded-8">
+                    <div className="gap-8 mb-20 flex-align flex-between">
+                        <h6 className="gap-4 m-0 text-lg flex-align">
+                            <i className="text-xl ph-bold ph-map-pin-area text-main-600"></i>Người nhận hàng
+                        </h6>
+                        <button 
+                            type="button"
+                            onClick={() => setShowAddressModal(true)}
+                            className="gap-1 p-0 text-xs bg-transparent border-0 text-primary-700 flex-align fw-normal" 
+                        >
+                            <i className="ph-bold ph-pencil-simple"></i> Thay đổi
+                        </button>
                     </div>
-                  </div>
-                  <div>
-                    <Link href="/account?tab=profile" className="text-main-600">Thay đổi</Link>
-                  </div>
+
+                    {selectedAddress ? (
+                        <>
+                            <div className="flex-wrap flex-align">
+                                <span className="text-gray-600 border-gray-600 text-md fw-semibold border-end me-8 pe-10">
+                                    {selectedAddress.ten_nguoinhan || user?.hoten}
+                                </span>
+                                <span className="text-gray-600 text-md fw-medium">
+                                    {selectedAddress.sodienthoai}
+                                </span>
+                            </div>
+                            <div className="flex-wrap gap-4 mt-10 flex-align">
+                                <span className="text-sm text-gray-600 fw-normal">
+                                    {selectedAddress.trangthai === "Mặc định" && (
+                                        <span className="px-6 text-xs text-white fw-semibold rounded-4 bg-success-400 me-2">Mặc định</span>
+                                    )}
+                                    {selectedAddress.diachi}, {selectedAddress.tinhthanh}
+                                </span>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="py-4 text-center">
+                            <p className="mb-2 text-sm text-gray-500">Bạn chưa có địa chỉ nhận hàng.</p>
+                            <Link href="/dia-chi" className="text-sm text-main-600 fw-medium hover-underline">
+                                + Thêm địa chỉ mới
+                            </Link>
+                        </div>
+                    )}
+                    
+                    {!selectedAddress && (
+                        <div className="px-8 py-4 mt-20 border border-warning-400 bg-warning-100 rounded-4 text-warning-900">
+                            <span className="gap-8 text-sm fw-medium flex-align">
+                                <i className="text-2xl ph-bold ph-warning-circle"></i> Vui lòng chọn địa chỉ để tiếp tục.
+                            </span>
+                        </div>
+                    )}
                 </div>
-              </div>
 
-              <div className="px-20 py-20 border border-gray-100 rounded-8">
-                <h5 className="mb-16">Mặt hàng thanh toán</h5>
+                {/* 2. TÓM TẮT ĐƠN HÀNG */}
+                <div className="pb-0 mt-20 bg-white border border-gray-100 shadow-sm cart-table rounded-8 p-30">
+                    <div className="overflow-x-auto scroll-sm scroll-sm-horizontal">
+                        <table className="table mb-20 style-three">
+                            <thead>
+                                <tr className="py-10 my-10">
+                                    <th className="gap-24 p-0 pb-10 mb-0 text-lg h6 fw-bold flex-align" colSpan={2}>
+                                        <div>
+                                            <i className="text-lg ph-bold ph-shopping-cart text-main-600 pe-6"></i>
+                                            Tóm tắt đơn hàng ( {items.length} sản phẩm )
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {mainItems.map(item => renderSummaryRow(item, false))}
+                                {giftItems.map(item => renderSummaryRow(item, true))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-                {loadingCart ? (
-                  <div className="py-24 text-center">Đang tải giỏ hàng...</div>
-                ) : cartItems.length === 0 ? (
-                  <div className="py-24 text-center">Không có sản phẩm để thanh toán.</div>
-                ) : (
-                  cartItems.map((it, idx) => {
-                    const qty = Number(it.quantity ?? it.qty ?? 1) || 1;
-                    const title =
-                      (it.ten as string) ??
-                      (it.name as string) ??
-                      (it.product && ((it.product.ten as string) || (it.product.name as string))) ??
-                      "Sản phẩm";
-                    const price =
-                      Number(
-                        it.product?.gia?.hien_tai ??
-                        it.gia?.hien_tai ??
-                        it.price ??
-                        it.selling_price ??
-                        it.unit_price ??
-                        0
-                      ) || 0;
-                    const img = (it.product?.mediaurl as string) || "/assets/images/default-avatar.png";
-
-                    return (
-                      <div key={idx} className="gap-12 py-12 d-flex align-items-center border-bottom">
-                        <div style={{ width: 88, height: 88, flexShrink: 0 }}>
-                          <img src={img} alt={title} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
+                {/* 3. PHƯƠNG THỨC THANH TOÁN */}
+                <div className="px-20 py-20 pb-20 mt-20 bg-white border border-gray-100 shadow-sm cart-sidebar rounded-8">
+                    <h6 className="mb-20 flex-between flex-align">
+                        <span className="gap-8 text-lg flex-align">
+                            <i className="text-xl ph-bold ph-wallet text-main-600"></i>Phương thức thanh toán
+                        </span>
+                    </h6>
+                    
+                    <label 
+                        className={`w-100 mt-10 border ${paymentMethod === "cod" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
+                        onClick={() => setPaymentMethod("cod")}
+                    >
+                        <div className="mb-0 form-check common-check common-radio">
+                            <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "cod"} readOnly />
+                            <label className="text-sm form-check-label fw-medium text-neutral-600 w-100">
+                                Thanh toán khi nhận hàng (COD)
+                            </label>
                         </div>
-                        <div className="flex-grow-1 text-start">
-                          <div className="d-flex justify-content-between align-items-start">
-                            <div>
-                              <h6 className="mb-8">{title}</h6>
-                              <div className="text-sm text-neutral-600">Số lượng: {qty}</div>
-                            </div>
-                            <div className="text-end">
-                              <div className="fw-semibold">{price.toLocaleString("vi-VN")} đ</div>
-                              <div className="text-sm text-neutral-600">Thành: {(price * qty).toLocaleString("vi-VN")} đ</div>
-                            </div>
-                          </div>
+                    </label>
+
+                    <label 
+                        className={`w-100 mt-10 border ${paymentMethod === "3" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
+                        onClick={() => setPaymentMethod("3")}
+                    >
+                        <div className="mb-0 form-check common-check common-radio">
+                            <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "3"} readOnly />
+                            <label className="text-sm form-check-label fw-medium text-neutral-600 w-100">
+                                Thanh toán qua QR Code (VNPAY/VietQR)
+                            </label>
                         </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+                    </label>
+                </div>
             </div>
 
-            {/* Right: Summary & payment */}
-            <div className="col-xl-4 col-lg-4">
-              <div className="px-24 py-40 border border-gray-100 rounded-8">
-                <h6 className="mb-12">Thông tin giỏ hàng</h6>
-                <div className="mb-12 text-sm text-neutral-600">
-                  Đang thanh toán: <span className="fw-semibold">{itemCount} sản phẩm</span>
-                  {giftCount > 0 && <span className="ms-8 text-neutral-600"> + {giftCount} quà tặng</span>}
-                </div>
+            {/* RIGHT: Sidebar Tổng tiền */}
+            <div className="col-xl-5 col-lg-4">
+                 {/* Voucher (Read-only hoặc Link về giỏ hàng) */}
+                 <div className="px-20 py-20 pb-20 mb-20 bg-white border border-gray-100 shadow-sm cart-sidebar rounded-8">
+                    <h6 className="mb-20 flex-between flex-align">
+                        <span className="gap-8 text-lg flex-align">
+                            <i className="text-xl ph-bold ph-ticket text-main-600"></i>Áp dụng Voucher
+                        </span>
+                        <Link href="/gio-hang" className="gap-1 text-xs text-primary-700 flex-align fw-normal">
+                            <i className="ph-bold ph-pencil-simple"></i> Thay đổi
+                        </Link>
+                    </h6>
+                    <div className="gap-8 px-12 py-10 mt-10 flex-align flex-center rounded-4 bg-gray-50">
+                        <span className="text-sm text-gray-900">
+                            {discountAmount > 0 ? `Đã giảm ${discountAmount.toLocaleString()}đ` : "Không có áp dụng Voucher !"}
+                        </span>
+                    </div>
+                 </div>
 
-                <div className="gap-8 mb-12 flex-between">
-                  <span className="text-gray-700">Tạm tính</span>
-                  <span className="text-gray-900 fw-bold">{subtotal.toLocaleString()} đ</span>
-                </div>
-                <div className="gap-8 mb-12 flex-between">
-                  <span className="text-gray-700">Giảm giá</span>
-                  <span className="fw-bold" style={{ color: "#1ca56e" }}>-{discount.toLocaleString()} đ</span>
-                </div>
-                <div className="gap-8 mb-0 flex-between">
-                  <span className="text-xl text-gray-900 fw-semibold">Tổng</span>
-                  <span className="text-xl text-main-600 fw-bold">{total.toLocaleString()} đ</span>
-                </div>
+                 {/* Tổng tiền & Nút Đặt hàng */}
+                 <div className="px-20 py-20 bg-white border border-gray-100 shadow-sm cart-sidebar rounded-8">
+                    <div className="mb-20">
+                        <h6 className="gap-4 mb-6 text-lg flex-align">
+                            <i className="text-xl ph-bold ph-notepad text-main-600"></i>Đơn hàng
+                        </h6>
+                        <span className="gap-1 text-sm text-gray-600 flex-align fw-medium">
+                            {mainItems.length} sản phẩm {giftItems.length > 0 && `+ ${giftItems.length} quà tặng`}
+                        </span>
+                    </div>
 
-                <div className="mt-24">
-                  <div className="my-12 form-check">
-                    <input id="pm-online" type="radio" name="pm" checked={paymentMethod === "online"} onChange={() => setPaymentMethod("online")} />
-                    <label htmlFor="pm-online" className="ms-8">Thanh toán trực tuyến</label>
-                  </div>
-                  <div className="my-12 form-check">
-                    <input id="pm-cod" type="radio" name="pm" checked={paymentMethod === "cod"} onChange={() => setPaymentMethod("cod")} />
-                    <label htmlFor="pm-cod" className="ms-8">Thanh toán khi nhận hàng (COD)</label>
-                  </div>
+                    <div className="gap-8 mb-20 flex-between">
+                        <span className="text-gray-900 font-heading-two">Tổng tiền hàng:</span>
+                        <span className="text-gray-900 fw-semibold">{subtotal.toLocaleString("vi-VN")} ₫</span>
+                    </div>
+                    
+                    {/* Phí ship (Mock tạm = 0 hoặc tính toán sau) */}
+                    <div className="gap-8 mb-20 flex-between">
+                        <span className="text-gray-900 font-heading-two d-flex flex-column">
+                            <span>Phí vận chuyển:</span>
+                            {/* <span className="text-xs">- Nội tỉnh (TP.HCM)</span> */}
+                        </span>
+                        <span className="text-gray-900 fw-semibold">0 ₫</span>
+                    </div>
 
-                  {paymentMethod === "online" ? (
-                    <button onClick={createVnPayAndRedirect} className="mt-16 btn btn-main w-100 py-14 rounded-8">
-                      Tiến hành thanh toán
+                    <div className="pt-24 my-20 border-gray-100 border-top">
+                        <div className="gap-8 flex-between">
+                            <span className="text-lg text-gray-900 fw-semibold">Tổng thanh toán:</span>
+                            <span className="text-lg text-main-600 fw-semibold">{total.toLocaleString("vi-VN")} ₫</span>
+                        </div>
+                        {discountAmount > 0 && (
+                            <div className="gap-8 text-end">
+                                <span className="text-sm text-success-600 fw-normal">Tiết kiệm: </span>
+                                <span className="text-sm text-success-600 fw-normal">{discountAmount.toLocaleString("vi-VN")} ₫</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        className="btn btn-main py-14 w-100 rounded-8"
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? "Đang xử lý..." : "Đặt hàng"}
                     </button>
-                  ) : (
-                    <button onClick={createOrderCOD} className="mt-16 btn btn-main w-100 py-14 rounded-8">
-                      Tiến hành thanh toán
-                    </button>
-                  )}
+                 </div>
 
-                  <Link href="/" className="mt-12 text-center d-block text-main-600">← Tiếp tục mua sắm</Link>
-                </div>
-              </div>
+                 <span className="mt-20 text-center w-100 d-block">
+                    <Link href="/gio-hang" className="text-sm text-main-600 fw-medium flex-align d-flex flex-center transition-1 link">
+                        <i className="ph-bold ph-arrow-fat-lines-left text-main-600 text-md pe-10"></i> <span>Quay lại giỏ hàng</span>
+                    </Link>
+                </span>
             </div>
-          </div>
+
+          </form>
         </div>
       </section>
 
+      {/* MODAL CHỌN ĐỊA CHỈ */}
+      {showAddressModal && (
+        <div className="modal" style={{display: 'block', background: 'rgba(0,0,0,0.5)'}}>
+            <div className="container modal-content container-lg" style={{maxWidth: 600}}>
+                <div className="mb-20 flex-align flex-between">
+                    <span className="pb-10 text-lg text-gray-900 fw-semibold">Chọn địa chỉ giao hàng</span>
+                    <button onClick={() => setShowAddressModal(false)} className="pb-10 text-2xl text-gray-900 bg-transparent border-0" style={{cursor: 'pointer'}}>&times;</button>
+                </div>
+                <div className="overflow-y-auto row gy-4 max-h-400">
+                    {user?.diachi?.map((addr: Address) => (
+                <div key={addr.id} className="col-12" onClick={() => { setSelectedAddress(addr); setShowAddressModal(false); }}>
+                    <div className={`border rounded-8 p-16 cursor-pointer hover-bg-gray-50 ${selectedAddress?.id === addr.id ? 'border-main-600 bg-main-50' : 'border-gray-200'}`}>
+                        <div className="gap-12 mb-2 flex-align">
+                            <span className="text-gray-900 border-gray-600 fw-semibold text-md border-end pe-10">
+                                {addr.ten_nguoinhan || user.hoten}
+                            </span>
+                            <span className="text-gray-900 fw-semibold text-md">
+                                {addr.sodienthoai}
+                            </span>
+                            {addr.trangthai === "Mặc định" && <span className="px-6 text-xs text-white rounded bg-success-500">Mặc định</span>}
+                        </div>
+                        <p className="m-0 text-sm text-gray-600">{addr.diachi}, {addr.tinhthanh}</p>
+                    </div>
+                </div>
+            ))}
+                    <div className="mt-3 text-center col-12">
+                         <Link href="/dia-chi" className="px-24 btn btn-outline-main rounded-pill">+ Thêm địa chỉ mới</Link>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
       <BenefitsStrip />
+      
+      {/* Styles Modal (Giữ nguyên hoặc đưa vào CSS global) */}
+      <style jsx>{`
+        .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; }
+        .modal-content { background-color: #fefefe; margin: 50px auto; padding: 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+      `}</style>
     </>
   );
 }

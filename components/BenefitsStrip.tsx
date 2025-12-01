@@ -2,10 +2,10 @@
 import React from "react";
 
 const items: { icon: string; title: string; subtitle: string }[] = [
-  { icon: "ph ph-truck", title: "Free Shipping", subtitle: "Free shipping all over the US" },
-  { icon: "ph ph-handshake", title: "100% Satisfaction", subtitle: "Free shipping all over the US" },
-  { icon: "ph ph-credit-card", title: "Secure Payments", subtitle: "Free shipping all over the US" },
-  { icon: "ph ph-headset", title: "24/7 Support", subtitle: "Free shipping all over the US" },
+  // { icon: "ph ph-truck", title: "Free Shipping", subtitle: "Free shipping all over the US" },
+  // { icon: "ph ph-handshake", title: "100% Satisfaction", subtitle: "Free shipping all over the US" },
+  // { icon: "ph ph-credit-card", title: "Secure Payments", subtitle: "Free shipping all over the US" },
+  // { icon: "ph ph-headset", title: "24/7 Support", subtitle: "Free shipping all over the US" },
 ];
 
 export default function BenefitsStrip() {
@@ -16,11 +16,11 @@ export default function BenefitsStrip() {
           {items.map((it, idx) => (
             <div className="col-12 col-sm-6 col-lg-3" key={idx}>
               <div
-                className="benefit-tile d-flex align-items-center gap-12 w-100"
+                className="gap-12 benefit-tile d-flex align-items-center w-100"
                 style={{ borderRadius: 12, padding: "18px 20px", minHeight: 92, boxShadow: "0 1px 0 rgba(0,0,0,0.02)" }}
               >
                 <span
-                  className="icon-circle flex-center text-white"
+                  className="text-white icon-circle flex-center"
                   style={{ width: 40, height: 40, borderRadius: 9999, background: "#e6583e", display: "inline-flex", transition: "background-color 220ms ease, transform 220ms ease" }}
                 >
                   <i className={`${it.icon}`}></i>
