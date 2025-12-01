@@ -1,11 +1,12 @@
 "use client";
 import Link from 'next/link';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useCart } from '@/hooks/useCart';
+import { useCart, Gia } from '@/hooks/useCart';
 import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData';
 import Image from 'next/image';
 import FullHeader from '@/components/FullHeader';
 
+type PriceInput = number | Gia | undefined | null;
 // Helper format giá tiền
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -63,7 +64,7 @@ function QuantityControl({
   }, []);
 
   return (
-    <div className="d-flex rounded-4 overflow-hidden" style={{ transition: 'all 0.2s ease' }}>
+    <div className="overflow-hidden d-flex rounded-4" style={{ transition: 'all 0.2s ease' }}>
       <button
         type="button"
         className={`quantity__minus border border-end border-gray-100 flex-shrink-0 h-48 w-48 flex-center hover-bg-main-600 hover-text-white ${localQty <= 1 ? 'text-gray-300 cursor-not-allowed' : 'text-neutral-600'}`}
@@ -82,7 +83,7 @@ function QuantityControl({
       </button>
       <input
         type="number"
-        className="quantity__input flex-grow-1 border border-gray-100 border-start-0 border-end-0 text-center w-32 px-4"
+        className="w-32 px-4 text-center border border-gray-100 quantity__input flex-grow-1 border-start-0 border-end-0"
         value={localQty}
         min="1"
         onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
@@ -93,7 +94,7 @@ function QuantityControl({
       />
       <button
         type="button"
-        className="quantity__plus border border-end border-gray-100 flex-shrink-0 h-48 w-48 text-neutral-600 flex-center hover-bg-main-600 hover-text-white"
+        className="flex-shrink-0 w-48 h-48 border border-gray-100 quantity__plus border-end text-neutral-600 flex-center hover-bg-main-600 hover-text-white"
         onClick={() => handleQuantityChange(localQty + 1)}
         style={{
           transition: 'all 0.15s ease',
@@ -342,43 +343,43 @@ function CartPageContent() {
     <>
       <FullHeader showClassicTopBar={true} showTopNav={false} />
 
-      <section className="cart py-20 mb-60">
+      <section className="py-20 cart mb-60">
         <div className="container container-lg">
           {/* Thông báo xóa sản phẩm */}
           {deleteMessage && (
             <div
-              className="bg-success-200 border border-success-600 text-success-900 fw-medium mb-20 p-10 rounded-8"
+              className="p-10 mb-20 border bg-success-200 border-success-600 text-success-900 fw-medium rounded-8"
               style={{
                 animation: 'fadeIn 0.3s ease',
               }}
             >
-              <div className="d-flex align-items-center gap-8">
-                <i className="ph ph-check-circle text-success-600 text-xl"></i>
+              <div className="gap-8 d-flex align-items-center">
+                <i className="text-xl ph ph-check-circle text-success-600"></i>
                 {deleteMessage}
               </div>
             </div>
           )}
           <div className="row gy-4">
             <div className="col-xl-9 col-lg-8">
-              <div className="cart-table border border-gray-100 rounded-8 p-30 pb-0">
+              <div className="pb-0 border border-gray-100 cart-table rounded-8 p-30">
                 <div className="overflow-x-auto scroll-sm scroll-sm-horizontal">
                   <table className="table style-three">
                     <thead>
-                      <tr className="border-bottom border-gray-500 my-10 py-10">
-                        <th className="h6 mb-0 p-0 pb-10 text-lg fw-bold flex-align gap-24" colSpan={2}>
+                      <tr className="py-10 my-10 border-gray-500 border-bottom">
+                        <th className="gap-24 p-0 pb-10 mb-0 text-lg h6 fw-bold flex-align" colSpan={2}>
                           <div>
-                            <i className="ph-bold ph-shopping-cart text-main-600 text-lg pe-6"></i>
+                            <i className="text-lg ph-bold ph-shopping-cart text-main-600 pe-6"></i>
                             Giỏ hàng ( {totalItems} sản phẩm )
                           </div>
                         </th>
-                        <th className="h6 mb-0 p-0 pb-10 text-lg fw-bold">Số lượng</th>
-                        <th className="h6 mb-0 p-0 pb-10 text-lg fw-bold">Thành tiền</th>
+                        <th className="p-0 pb-10 mb-0 text-lg h6 fw-bold">Số lượng</th>
+                        <th className="p-0 pb-10 mb-0 text-lg h6 fw-bold">Thành tiền</th>
                       </tr>
                     </thead>
                     <tbody>
                       {loading ? (
                         <tr>
-                          <td colSpan={4} className="text-center py-40">
+                          <td colSpan={4} className="py-40 text-center">
                             <div className="spinner-border text-main-600" role="status">
                               <span className="visually-hidden">Đang tải...</span>
                             </div>
@@ -386,9 +387,9 @@ function CartPageContent() {
                         </tr>
                       ) : items.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="text-center py-40">
+                          <td colSpan={4} className="py-40 text-center">
                             <div className="text-gray-500">
-                              <i className="ph ph-shopping-cart text-6xl mb-16 d-block"></i>
+                              <i className="mb-16 text-6xl ph ph-shopping-cart d-block"></i>
                               <p className="mb-16">Giỏ hàng của bạn đang trống</p>
                               <Link href="/" className="btn btn-main rounded-8">
                                 Tiếp tục mua sắm
@@ -405,14 +406,14 @@ function CartPageContent() {
 
                           return (
                             <tr key={item.id_giohang}>
-                              <td className="py-20 px-5">
-                                <div className="d-flex align-items-center gap-12">
+                              <td className="px-5 py-20">
+                                <div className="gap-12 d-flex align-items-center">
                                   <button
                                     type="button"
-                                    className="flex-align gap-8 hover-text-danger-600 pe-10"
+                                    className="gap-8 flex-align hover-text-danger-600 pe-10"
                                     onClick={() => openDeleteModal(item.id_giohang, productName)}
                                   >
-                                    <i className="ph ph-trash text-2xl d-flex"></i> Xóa
+                                    <i className="text-2xl ph ph-trash d-flex"></i> Xóa
                                   </button>
                                   <div className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: '120px', maxHeight: '120px', width: '100%', height: '100%' }}>
                                     <Image
@@ -425,25 +426,25 @@ function CartPageContent() {
                                     />
                                   </div>
                                   <div className="table-product__content text-start">
-                                    <h6 className="title text-lg fw-semibold mb-0">
+                                    <h6 className="mb-0 text-lg title fw-semibold">
                                       <span className="link text-line-2" title={productName} style={{ maxWidth: '350px', display: 'inline-block' }}>
                                         {productName}
                                       </span>
                                     </h6>
-                                    <div className="product-card__price mb-6 mt-8">
+                                    <div className="mt-8 mb-6 product-card__price">
                                       <span className="text-heading text-md fw-bold">{formatPrice(productPrice)}</span>
                                     </div>
                                   </div>
                                 </div>
                               </td>
-                              <td className="py-20 px-5">
+                              <td className="px-5 py-20">
                                 <QuantityControl
                                   quantity={item.quantity}
                                   onUpdate={(qty) => updateQuantity(item.id_giohang, qty)}
                                 />
                               </td>
-                              <td className="py-20 px-5">
-                                <span className="text-lg h6 mb-0 fw-semibold text-main-600">{formatPrice(itemTotal)}</span>
+                              <td className="px-5 py-20">
+                                <span className="mb-0 text-lg h6 fw-semibold text-main-600">{formatPrice(itemTotal)}</span>
                               </td>
                             </tr>
                           );
@@ -455,14 +456,14 @@ function CartPageContent() {
               </div>
             </div>
             <div className="col-xl-3 col-lg-4">
-              <div className="cart-sidebar border border-gray-100 rounded-8 px-24 py-30 pb-20">
-                <h6 className="text-lg mb-20 flex-align gap-8"><i className="ph-bold ph-ticket text-main-600 text-xl"></i>Áp dụng Voucher</h6>
+              <div className="px-24 pb-20 border border-gray-100 cart-sidebar rounded-8 py-30">
+                <h6 className="gap-8 mb-20 text-lg flex-align"><i className="text-xl ph-bold ph-ticket text-main-600"></i>Áp dụng Voucher</h6>
 
                 {/* Hiển thị voucher đã áp dụng */}
                 {appliedVoucher && (
-                  <div className="flex-align flex-between gap-8 mt-10 border border-success-200 bg-success-50 py-10 px-12 rounded-4 mb-16">
-                    <span className="flex-align gap-8 text-sm fw-medium text-success-700 pe-10">
-                      <i className="ph-bold ph-check-circle text-success-600 text-2xl"></i>
+                  <div className="gap-8 px-12 py-10 mt-10 mb-16 border flex-align flex-between border-success-200 bg-success-50 rounded-4">
+                    <span className="gap-8 text-sm flex-align fw-medium text-success-700 pe-10">
+                      <i className="text-2xl ph-bold ph-check-circle text-success-600"></i>
                       <div className="text-sm d-flex flex-column">
                         <span className="text-sm text-success-700 w-100">
                           {appliedVoucher.mota}
@@ -472,10 +473,10 @@ function CartPageContent() {
                         </span>
                       </div>
                     </span>
-                    <span className="flex-align gap-8 text-xs fw-medium text-success-700">
+                    <span className="gap-8 text-xs flex-align fw-medium text-success-700">
                       <button
                         onClick={() => removeVoucher()}
-                        className="btn bg-danger-100 hover-bg-danger-200 text-danger-700 p-6 rounded-4 text-xs"
+                        className="p-6 text-xs btn bg-danger-100 hover-bg-danger-200 text-danger-700 rounded-4"
                         style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}
                       >
                         Hủy
@@ -506,9 +507,9 @@ function CartPageContent() {
                     // Các điều kiện khác có thể thêm vào đây
                     return false;
                   }).map((voucher) => (
-                    <div key={voucher.id} className="flex-align flex-between gap-8 mt-10 border-dashed border-gray-200 py-10 px-12 rounded-4">
-                      <span className="flex-align gap-8 text-sm fw-medium text-gray-900" style={{ flex: '1', minWidth: 0 }}>
-                        <i className="ph-bold ph-ticket text-main-600 text-2xl" style={{ flexShrink: 0 }}></i>
+                    <div key={voucher.id} className="gap-8 px-12 py-10 mt-10 border-gray-200 border-dashed flex-align flex-between rounded-4">
+                      <span className="gap-8 text-sm text-gray-900 flex-align fw-medium" style={{ flex: '1', minWidth: 0 }}>
+                        <i className="text-2xl ph-bold ph-ticket text-main-600" style={{ flexShrink: 0 }}></i>
                         <div className="text-sm d-flex flex-column" style={{ flex: '1', minWidth: 0 }}>
                           <span className="text-sm text-gray-900" style={{ wordBreak: 'break-word' }}>
                             {voucher.mota}
@@ -525,7 +526,7 @@ function CartPageContent() {
                       </span>
                       <button
                         onClick={() => applyVoucher(voucher)}
-                        className="btn bg-main-600 hover-bg-main-100 text-white hover-text-main-600 rounded-4 text-xs"
+                        className="text-xs text-white btn bg-main-600 hover-bg-main-100 hover-text-main-600 rounded-4"
                         style={{
                           cursor: 'pointer',
                           padding: '8px 16px',
@@ -540,27 +541,27 @@ function CartPageContent() {
                   ))}
 
                   {(!homeData?.data?.new_coupon || homeData.data.new_coupon.length === 0) && (
-                    <p className="text-gray-500 text-sm text-center py-16">
+                    <p className="py-16 text-sm text-center text-gray-500">
                       Không có voucher khả dụng
                     </p>
                   )}
                 </div>
               </div>
-              <div className="cart-sidebar border border-gray-100 rounded-8 px-20 py-20 mt-20">
+              <div className="px-20 py-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
                 <div className="mb-20">
-                  <h6 className="text-lg mb-6 flex-align gap-4"><i className="ph-bold ph-shopping-cart text-main-600 text-xl"></i>Thông tin giỏ hàng</h6>
-                  <span className="text-sm text-gray-600 flex-align gap-1 fw-medium">
+                  <h6 className="gap-4 mb-6 text-lg flex-align"><i className="text-xl ph-bold ph-shopping-cart text-main-600"></i>Thông tin giỏ hàng</h6>
+                  <span className="gap-1 text-sm text-gray-600 flex-align fw-medium">
                     {totalItems} sản phẩm
                   </span>
                 </div>
-                <div className="mb-20 flex-between gap-8">
+                <div className="gap-8 mb-20 flex-between">
                   <span className="text-gray-900 font-heading-two">Tạm tính:</span>
                   <span className="text-gray-900 fw-semibold">{formatPrice(subtotal)}</span>
                 </div>
 
                 {/* Hiển thị giảm giá từ giá gốc sản phẩm */}
                 {productDiscount > 0 && (
-                  <div className="mb-20 flex-between gap-8">
+                  <div className="gap-8 mb-20 flex-between">
                     <span className="text-success-600 font-heading-two">Giảm giá sản phẩm:</span>
                     <span className="text-success-600 fw-semibold">
                       -{formatPrice(productDiscount)}
@@ -570,10 +571,10 @@ function CartPageContent() {
 
                 {/* Hiển thị giảm giá voucher */}
                 {appliedVoucher && discountAmount > 0 && (
-                  <div className="mb-20 flex-between gap-8">
+                  <div className="gap-8 mb-20 flex-between">
                     <span className="text-success-600 font-heading-two">
                       Giảm giá Voucher:
-                      <span className="text-xs ms-2 text-gray-600">{appliedVoucher.magiamgia}</span>
+                      <span className="text-xs text-gray-600 ms-2">{appliedVoucher.magiamgia}</span>
                     </span>
                     <span className="text-success-600 fw-semibold">
                       -{formatPrice(discountAmount)}
@@ -581,10 +582,10 @@ function CartPageContent() {
                   </div>
                 )}
 
-                <div className="border-top border-gray-100 my-20 pt-24">
-                  <div className="flex-between gap-8">
-                    <span className="text-gray-900 text-lg fw-semibold">Tổng giá trị:</span>
-                    <span className="text-main-600 text-lg fw-semibold">
+                <div className="pt-24 my-20 border-gray-100 border-top">
+                  <div className="gap-8 flex-between">
+                    <span className="text-lg text-gray-900 fw-semibold">Tổng giá trị:</span>
+                    <span className="text-lg text-main-600 fw-semibold">
                       {formatPrice(total)}
                     </span>
                   </div>

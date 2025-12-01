@@ -115,7 +115,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     if (loading) {
         return (
             <>
-                <FullHeader showClassicTopBar={false} showTopNav={true} showCategoriesBar={false} />
+                <FullHeader showClassicTopBar={true} showTopNav={false} showCategoriesBar={false} />
                 <div className="container text-center py-80">
                     <div className="spinner-border text-main-600" role="status">
                         <span className="visually-hidden">Đang tải...</span>

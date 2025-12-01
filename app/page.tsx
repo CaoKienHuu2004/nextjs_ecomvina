@@ -100,7 +100,7 @@ export default function Home() {
         {/* ========================= QUÀ TẶNG End ================================ */}
 
         {/* ========================= 3 Small Banners ============================== */}
-        <div className="container container-lg mt-10 mb-70 px-0">
+        <div className="container px-0 mt-10 container-lg mb-70">
           <div className="row">
             <div className="col-lg-4">
               <div className="rounded-5">
@@ -110,7 +110,7 @@ export default function Home() {
                     alt="Banner 1"
                     width={400}
                     height={200}
-                    className="banner-img w-100 h-100 object-fit-cover rounded-10 mb-10"
+                    className="mb-10 banner-img w-100 h-100 object-fit-cover rounded-10"
                   />
                 </a>
               </div>
@@ -123,7 +123,7 @@ export default function Home() {
                     alt="Banner 2"
                     width={400}
                     height={200}
-                    className="banner-img w-100 h-100 object-fit-cover rounded-10 mb-10"
+                    className="mb-10 banner-img w-100 h-100 object-fit-cover rounded-10"
                   />
                 </a>
               </div>
@@ -136,7 +136,7 @@ export default function Home() {
                     alt="Banner 3"
                     width={400}
                     height={200}
-                    className="banner-img w-100 h-100 object-fit-cover rounded-10 mb-10"
+                    className="mb-10 banner-img w-100 h-100 object-fit-cover rounded-10"
                   />
                 </a>
               </div>
@@ -146,10 +146,10 @@ export default function Home() {
 
 
         {/* ========================= DANH MỤC HÀNG ĐẦU ================================ */}
-        <section className="trending-productss overflow-hidden mt-10 fix-scale-80" style={{ marginBottom: 0 }}>
-          <div className="container container-lg px-0">
+        <section className="mt-10 overflow-hidden trending-productss fix-scale-80" style={{ marginBottom: 0 }}>
+          <div className="container px-0 container-lg">
             <div
-              className="border border-gray-100 p-24 rounded-8"
+              className="p-24 border border-gray-100 rounded-8"
               style={{ paddingBottom: 0, marginBottom: -64 }}
             >
               <TopCategoriesProducts />
@@ -159,7 +159,7 @@ export default function Home() {
         {/* ========================= DANH MỤC HÀNG ĐẦU End ================================ */}
 
         {/* ========================= Banner Image ============================== */}
-        <div className="container container-lg mt-0 mb-24" style={{ marginTop: -220 }}>
+        <div className="container mt-0 mb-24 container-lg" style={{ marginTop: -220 }}>
           <div className="text-center">
             <a href="#" className="p-0 m-0 w-100 d-block">
               <Image
@@ -167,7 +167,7 @@ export default function Home() {
                 alt="Banner"
                 width={1920}
                 height={600}
-                className="banner-img w-100 h-auto object-fit-cover rounded-10"
+                className="h-auto banner-img w-100 object-fit-cover rounded-10"
               />
             </a>
           </div>
