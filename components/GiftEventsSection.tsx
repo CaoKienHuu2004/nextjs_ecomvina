@@ -9,7 +9,7 @@ export default function GiftEventsSection() {
   const [gifts, setGifts] = useState<GiftEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const itemsPerPage = 5;
+  const itemsPerPage = 4;
 
   useEffect(() => {
     if (!homeData) return;
@@ -57,7 +57,7 @@ export default function GiftEventsSection() {
     setCurrentIndex((prev) => {
       const newIndex = prev - 1;
       // Quay vòng: nếu < 0 thì về cuối
-      return newIndex < 0 ? gifts.length - 1 : newIndex;
+      return newIndex < 0 ? Math.max(0, gifts.length - itemsPerPage) : newIndex;
     });
   };
 
@@ -111,7 +111,7 @@ export default function GiftEventsSection() {
           </div>
 
           <div className="gift-event-slider arrow-style-two">
-            <div className="d-flex flex-wrap justify-content-center" style={{ gap: "12px" }}>
+            <div className="d-flex flex-wrap justify-content-center" style={{ gap: "12px", marginLeft: "40px" }}>
               {displayedGifts.map((gift) => (
                 <div key={gift.id} style={{ width: "244px", display: "inline-block" }}>
                   <div className="product-card p-card border border-gray-100 rounded-16 position-relative transition-2" style={{ height: "340px" }}>
