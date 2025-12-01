@@ -360,7 +360,7 @@ export default function ShopPage() {
                     image: imageUrl,
                     discount: discountPercent,
                     originalPrice: beforeDiscount,
-                    sold: parseInt(item.sold_count) || 0,
+                    sold: parseInt(item.sold_count || "0") || 0,
                   };
 
                   return product;
