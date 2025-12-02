@@ -7,6 +7,7 @@ import FullHeader from "@/components/FullHeader";
 import BenefitsStrip from "@/components/BenefitsStrip";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart, Gia } from "@/hooks/useCart";
+import LoadingRedirect from "@/components/LoadingRedirect";
 import Cookies from "js-cookie";
 
 type Address = {
@@ -43,6 +44,7 @@ export default function ThanhToanPage() {
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod"); // 1: COD, 3: QR
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   
 
   // 1. Load địa chỉ mặc định khi user load xong
@@ -101,10 +103,43 @@ export default function ThanhToanPage() {
 
         if (res.ok) {
             const json = await res.json();
-            // Xóa giỏ hàng client
-            clearCart();
-            // Chuyển trang thành công (hoặc trang thanh toán QR nếu cần)
-            router.push(`/hoan-tat-thanh-toan?order_id=${json.data?.id || json.id}`);
+            const orderId = json.data?.id || json.id;
+
+            // COD
+            if (paymentMethod === "cod") {
+                clearCart();
+                router.push(`/hoan-tat-thanh-toan?order_id=${orderId}`);
+                return;
+            }
+
+            // VNPay / QR
+            if (paymentMethod === "dbt") {
+                const resPay = await fetch(`${API}/api/toi/donhangs/${orderId}/create-payment-url`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                const payJson = await resPay.json();
+
+                if (payJson.status && payJson.payment_url) {
+                    clearCart();
+
+                    // Hiện animation loading
+                    setRedirecting(true);
+
+                    // Delay 500ms cho UI kịp hiển thị
+                    setTimeout(() => {
+                        window.location.href = payJson.payment_url;
+                    }, 500);
+
+                    return;
+                } else {
+                    alert(payJson.message || "Không tạo được liên kết VNPay");
+                }
+            }
         } else {
             alert("Đặt hàng thất bại. Vui lòng thử lại.");
         }
@@ -115,6 +150,10 @@ export default function ThanhToanPage() {
         setIsSubmitting(false);
     }
   };
+
+  if (redirecting) {
+    return <LoadingRedirect message="Đang chuyển sang VNPay..." />;
+    }
 
   // Render 1 dòng sản phẩm trong bảng tóm tắt
   const renderSummaryRow = (item: typeof items[0], isGift = false) => {
@@ -264,11 +303,11 @@ export default function ThanhToanPage() {
                     </label>
 
                     <label 
-                        className={`w-100 mt-10 border ${paymentMethod === "3" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
-                        onClick={() => setPaymentMethod("3")}
+                        className={`w-100 mt-10 border ${paymentMethod === "dbt" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
+                        onClick={() => setPaymentMethod("dbt")}
                     >
                         <div className="mb-0 form-check common-check common-radio">
-                            <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "3"} readOnly />
+                            <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "dbt"} readOnly />
                             <label className="text-sm form-check-label fw-medium text-neutral-600 w-100">
                                 Thanh toán qua QR Code (VNPAY/VietQR)
                             </label>
