@@ -1,12 +1,11 @@
 "use client";
 import Link from 'next/link';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useCart, Gia } from '@/hooks/useCart';
+import { useCart, parseVoucherCondition, isVoucherInDateRange, VoucherConditionType } from '@/hooks/useCart';
 import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData';
 import Image from 'next/image';
 import FullHeader from '@/components/FullHeader';
 
-type PriceInput = number | Gia | undefined | null;
 // Helper format giá tiền
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -14,6 +13,31 @@ const formatPrice = (price: number) => {
     currency: 'VND',
     minimumFractionDigits: 0,
   }).format(price);
+};
+
+// Helper format ngày
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+// Helper lấy label điều kiện voucher
+const getConditionLabel = (conditionType: VoucherConditionType, minOrderValue: number): string => {
+  switch (conditionType) {
+    case 'tatca':
+      return 'Áp dụng tất cả đơn hàng';
+    case 'don_toi_thieu':
+      return `Đơn tối thiểu ${minOrderValue.toLocaleString('vi-VN')}đ`;
+    case 'khachhang_moi':
+      return 'Dành cho khách hàng mới';
+    case 'khachhang_than_thiet':
+      return 'Dành cho khách hàng thân thiết';
+    case 'freeship':
+      return minOrderValue > 0 ? `Freeship cho đơn từ ${minOrderValue.toLocaleString('vi-VN')}đ` : 'Miễn phí vận chuyển';
+    default:
+      return '';
+  }
 };
 
 // Component QuantityControl với optimistic update và debounce
@@ -25,7 +49,6 @@ function QuantityControl({
   onUpdate: (qty: number) => void;
 }) {
   const [localQty, setLocalQty] = useState(quantity);
-  const [isUpdating, setIsUpdating] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync local state khi prop thay đổi từ bên ngoài
@@ -41,7 +64,6 @@ function QuantityControl({
 
     // Cập nhật UI ngay lập tức
     setLocalQty(newQty);
-    setIsUpdating(true);
 
     // Debounce API call
     if (debounceRef.current) {
@@ -50,7 +72,6 @@ function QuantityControl({
 
     debounceRef.current = setTimeout(() => {
       onUpdate(newQty);
-      setIsUpdating(false);
     }, 300);
   }, [onUpdate]);
 
@@ -67,17 +88,11 @@ function QuantityControl({
     <div className="overflow-hidden d-flex rounded-4" style={{ transition: 'all 0.2s ease' }}>
       <button
         type="button"
+        title="Giảm số lượng"
+        aria-label="Giảm số lượng"
         className={`quantity__minus border border-end border-gray-100 flex-shrink-0 h-48 w-48 flex-center hover-bg-main-600 hover-text-white ${localQty <= 1 ? 'text-gray-300 cursor-not-allowed' : 'text-neutral-600'}`}
         onClick={() => handleQuantityChange(localQty - 1)}
         disabled={localQty <= 1}
-        style={{
-          transition: 'all 0.15s ease',
-          transform: 'scale(1)',
-          opacity: localQty <= 1 ? 0.5 : 1,
-        }}
-        onMouseDown={(e) => localQty > 1 && (e.currentTarget.style.transform = 'scale(0.95)')}
-        onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
       >
         <i className="ph ph-minus"></i>
       </button>
@@ -86,23 +101,16 @@ function QuantityControl({
         className="w-32 px-4 text-center border border-gray-100 quantity__input flex-grow-1 border-start-0 border-end-0"
         value={localQty}
         min="1"
+        aria-label="Số lượng sản phẩm"
+        title="Số lượng"
         onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
-        style={{
-          transition: 'all 0.2s ease',
-          backgroundColor: isUpdating ? '#f8f9fa' : 'white',
-        }}
       />
       <button
         type="button"
+        title="Tăng số lượng"
+        aria-label="Tăng số lượng"
         className="flex-shrink-0 w-48 h-48 border border-gray-100 quantity__plus border-end text-neutral-600 flex-center hover-bg-main-600 hover-text-white"
         onClick={() => handleQuantityChange(localQty + 1)}
-        style={{
-          transition: 'all 0.15s ease',
-          transform: 'scale(1)',
-        }}
-        onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.95)')}
-        onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
       >
         <i className="ph ph-plus"></i>
       </button>
@@ -293,7 +301,7 @@ function DeleteConfirmModal({
 }
 
 function CartPageContent() {
-  const { items, loading, updateQuantity, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total } = useCart();
+  const { items, loading, updateQuantity, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total, gifts, totalGifts } = useCart();
   const { data: homeData } = useHomeData();
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: number | string; name: string }>({
@@ -301,6 +309,8 @@ function CartPageContent() {
     id: 0,
     name: '',
   });
+
+  const API_URL = process.env.NEXT_PUBLIC_SERVER_API || 'http://148.230.100.215';
 
   // Tính giảm giá từ giá gốc sản phẩm
   const productDiscount = items.reduce((sum, item) => {
@@ -343,7 +353,7 @@ function CartPageContent() {
     <>
       <FullHeader showClassicTopBar={true} showTopNav={false} />
 
-      <section className="py-20 cart mb-60">
+      <section className="py-20 cart">
         <div className="container container-lg">
           {/* Thông báo xóa sản phẩm */}
           {deleteMessage && (
@@ -361,103 +371,225 @@ function CartPageContent() {
           )}
           <div className="row gy-4">
             <div className="col-xl-9 col-lg-8">
-              <div className="pb-0 border border-gray-100 cart-table rounded-8 p-30">
-                <div className="overflow-x-auto scroll-sm scroll-sm-horizontal">
-                  <table className="table style-three">
-                    <thead>
-                      <tr className="py-10 my-10 border-gray-500 border-bottom">
-                        <th className="gap-24 p-0 pb-10 mb-0 text-lg h6 fw-bold flex-align" colSpan={2}>
-                          <div>
-                            <i className="text-lg ph-bold ph-shopping-cart text-main-600 pe-6"></i>
-                            Giỏ hàng ( {totalItems} sản phẩm )
-                          </div>
-                        </th>
-                        <th className="p-0 pb-10 mb-0 text-lg h6 fw-bold">Số lượng</th>
-                        <th className="p-0 pb-10 mb-0 text-lg h6 fw-bold">Thành tiền</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loading ? (
-                        <tr>
-                          <td colSpan={4} className="py-40 text-center">
-                            <div className="spinner-border text-main-600" role="status">
-                              <span className="visually-hidden">Đang tải...</span>
+              <div className="pb-0 border border-gray-100 cart-table rounded-8 p-30" aria-busy={loading}>
+                <form>
+                  <div
+                    className="overflow-x-auto scroll-sm scroll-sm-horizontal"
+                    style={{
+                      maxHeight: items.length > 5 ? '750px' : 'none',
+                      overflowY: items.length > 5 ? 'auto' : 'visible',
+                    }}
+                  >
+                    <table className="table style-three">
+                      <thead>
+                        <tr className="py-10 my-10 border-gray-500 border-bottom">
+                          <th className="gap-24 p-0 pb-10 mb-0 text-lg h6 fw-bold flex-align" colSpan={2}>
+                            <div>
+                              <i className="text-lg ph-bold ph-shopping-cart text-main-600 pe-6"></i>
+                              Giỏ hàng ( {totalItems} sản phẩm )
                             </div>
-                          </td>
+                          </th>
+                          <th className="p-0 pb-10 mb-0 text-lg h6 fw-bold">Số lượng</th>
+                          <th className="p-0 pb-10 mb-0 text-lg h6 fw-bold">Thành tiền</th>
                         </tr>
-                      ) : items.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="py-40 text-center">
-                            <div className="text-gray-500">
-                              <i className="mb-16 text-6xl ph ph-shopping-cart d-block"></i>
-                              <p className="mb-16">Giỏ hàng của bạn đang trống</p>
-                              <Link href="/" className="btn btn-main rounded-8">
-                                Tiếp tục mua sắm
-                              </Link>
-                            </div>
-                          </td>
+                      </thead>
+                      <tbody>
+                        {loading ? (
+                          <tr>
+                            <td colSpan={4} className="py-20 text-center">
+                              <div className="spinner-border text-main-600" role="status">
+                                <span className="visually-hidden">Đang tải...</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : items.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="py-20 text-center">
+                              Giỏ hàng không có sản phẩm nào.
+                            </td>
+                          </tr>
+                        ) : (
+                          items.map((item) => {
+                            const productName = item.product?.ten || `Sản phẩm #${item.id_giohang}`;
+                            const productImage = item.product?.mediaurl || '/assets/images/thumbs/product-placeholder.png';
+                            const productPrice = Number(item.product?.gia?.current) || 0;
+                            const originalPrice = Number(item.product?.gia?.before_discount) || 0;
+                            const discountPercent = item.product?.gia?.discount_percent || 0;
+                            const itemTotal = productPrice * item.quantity;
+                            const brandName = item.product?.thuonghieu || '';
+                            const variantName = item.product?.loaibienthe || '';
+                            const productSlug = item.product?.slug || '';
+
+                            return (
+                              <tr key={item.id_giohang}>
+                                <td className="px-5 py-20">
+                                  <div className="gap-12 d-flex align-items-center">
+                                    <button
+                                      type="button"
+                                      className="gap-8 flex-align hover-text-danger-600 pe-10"
+                                      onClick={() => openDeleteModal(item.id_giohang, productName)}
+                                    >
+                                      <i className="text-2xl ph ph-trash d-flex"></i> Xóa
+                                    </button>
+                                    <Link href={`/san-pham/${productSlug}`} className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: '120px', maxHeight: '120px', width: '100%', height: '100%' }}>
+                                      <Image
+                                        src={productImage}
+                                        alt={productName}
+                                        width={120}
+                                        height={120}
+                                        className="w-100 rounded-8"
+                                        style={{ objectFit: 'cover' }}
+                                      />
+                                    </Link>
+                                    <div className="table-product__content text-start">
+                                      {/* Thương hiệu */}
+                                      {brandName && (
+                                        <div className="gap-16 flex-align">
+                                          <div className="gap-4 mb-5 flex-align">
+                                            <span className="text-main-two-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
+                                            <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '250px', display: 'inline-block' }} title={brandName}>{brandName}</span>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {/* Tên sản phẩm */}
+                                      <h6 className="mb-0 text-lg title fw-semibold">
+                                        <Link href={`/san-pham/${productSlug}`} className="link text-line-2" title={productName} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '350px', display: 'inline-block' }}>
+                                          {productName}
+                                        </Link>
+                                      </h6>
+                                      {/* Loại biến thể */}
+                                      {variantName && (
+                                        <div className="gap-16 mb-6 flex-align">
+                                          <Link href={`/san-pham/${productSlug}`} className="gap-8 px-8 py-6 text-sm btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">
+                                            {variantName}
+                                          </Link>
+                                        </div>
+                                      )}
+                                      {/* Giá */}
+                                      <div className="mb-6 product-card__price">
+                                        {discountPercent > 0 && originalPrice > productPrice && (
+                                          <div className="gap-4 text-sm flex-align text-main-two-600">
+                                            <i className="text-sm ph-fill ph-seal-percent"></i> -{discountPercent}%
+                                            <span className="text-xs text-gray-400 fw-semibold text-decoration-line-through">{formatPrice(originalPrice)}</span>
+                                          </div>
+                                        )}
+                                        <span className="text-heading text-md fw-bold">{formatPrice(productPrice)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-5 py-20">
+                                  <QuantityControl
+                                    quantity={item.quantity}
+                                    onUpdate={(qty) => updateQuantity(item.id_giohang, qty)}
+                                  />
+                                </td>
+                                <td className="px-5 py-20">
+                                  <span className="mb-0 text-lg h6 fw-semibold text-main-600">{formatPrice(itemTotal)}</span>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </form>
+              </div>
+
+              {/* Thông báo quà tặng - Hiển thị khi có quà tặng */}
+              {gifts.length > 0 && (
+                <div className="p-10 mt-48 text-center border-2 border-dashed rounded-lg bg-yellow-50 text-yellow-800 fw-semibold border-yellow-500">
+                  🎉 Bạn nhận được thêm {totalGifts} sản phẩm Quà Tặng miễn phí trong đơn hàng này!
+                </div>
+              )}
+
+              {/* Bảng quà tặng nhận được */}
+              {gifts.length > 0 && (
+                <div className="pb-0 mt-20 border border-gray-100 cart-table rounded-8 p-30">
+                  <div className="overflow-x-auto scroll-sm scroll-sm-horizontal">
+                    <table className="table style-three">
+                      <thead>
+                        <tr className="py-10 my-10 border-gray-500 border-bottom">
+                          <th className="gap-6 p-0 pb-10 mb-0 text-lg h6 fw-bold flex-align" colSpan={2}>
+                            <i className="text-lg ph-bold ph-gift text-main-600"></i> Quà tặng nhận được ( {totalGifts} sản phẩm )
+                          </th>
+                          <th className="px-60"></th>
+                          <th className="px-60"></th>
                         </tr>
-                      ) : (
-                        items.map((item) => {
-                          const productName = item.product?.ten || `Sản phẩm #${item.id_giohang}`;
-                          const productImage = item.product?.mediaurl || '/assets/images/thumbs/product-placeholder.png';
-                          const productPrice = Number(item.product?.gia?.current) || 0;
-                          const itemTotal = productPrice * item.quantity;
+                      </thead>
+                      <tbody>
+                        {gifts.map((gift, index) => {
+                          const giftImage = gift.hinhanh
+                            ? `${API_URL}/assets/client/images/thumbs/${gift.hinhanh}`
+                            : '/assets/images/thumbs/product-placeholder.png';
+                          const giftLink = gift.slug ? `/san-pham/${gift.slug}` : '#';
 
                           return (
-                            <tr key={item.id_giohang}>
+                            <tr key={`gift-${index}-${gift.id_bienthe}`}>
                               <td className="px-5 py-20">
                                 <div className="gap-12 d-flex align-items-center">
-                                  <button
-                                    type="button"
-                                    className="gap-8 flex-align hover-text-danger-600 pe-10"
-                                    onClick={() => openDeleteModal(item.id_giohang, productName)}
-                                  >
-                                    <i className="text-2xl ph ph-trash d-flex"></i> Xóa
-                                  </button>
-                                  <div className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: '120px', maxHeight: '120px', width: '100%', height: '100%' }}>
+                                  <Link href={giftLink} className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: '100px', maxHeight: '100px', width: '100%', height: '100%' }}>
                                     <Image
-                                      src={productImage}
-                                      alt={productName}
-                                      width={120}
-                                      height={120}
+                                      src={giftImage}
+                                      alt={gift.ten_sanpham || 'Quà tặng'}
+                                      width={100}
+                                      height={100}
                                       className="w-100 rounded-8"
-                                      style={{ objectFit: 'cover' }}
                                     />
-                                  </div>
+                                  </Link>
                                   <div className="table-product__content text-start">
-                                    <h6 className="mb-0 text-lg title fw-semibold">
-                                      <span className="link text-line-2" title={productName} style={{ maxWidth: '350px', display: 'inline-block' }}>
-                                        {productName}
-                                      </span>
+                                    {gift.thuonghieu && (
+                                      <div className="gap-16 flex-align">
+                                        <div className="gap-4 mb-5 flex-align">
+                                          <span className="text-sm text-main-two-600 d-flex"><i className="ph-fill ph-storefront"></i></span>
+                                          <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '250px', display: 'inline-block' }}>{gift.thuonghieu}</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                    <h6 className="mb-0 title text-md fw-semibold">
+                                      <Link href={giftLink} className="link text-line-2 fw-medium" title={gift.ten_sanpham || 'Quà tặng'} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '350px', display: 'inline-block' }}>
+                                        {gift.ten_sanpham || 'Quà tặng'}
+                                      </Link>
                                     </h6>
-                                    <div className="mt-8 mb-6 product-card__price">
-                                      <span className="text-heading text-md fw-bold">{formatPrice(productPrice)}</span>
+                                    {gift.ten_loaibienthe && (
+                                      <div className="gap-16 mb-6 flex-align">
+                                        <span className="gap-8 px-6 py-6 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">
+                                          {gift.ten_loaibienthe}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="mb-6 product-card__price">
+                                      <div className="gap-4 text-xs flex-align text-main-two-600">
+                                        {gift.giagoc && gift.giagoc > 0 && (
+                                          <span className="text-sm text-gray-400 fw-semibold text-decoration-line-through me-4">{formatPrice(gift.giagoc)}</span>
+                                        )}
+                                        <span className="gap-4 text-xs flex-align text-main-two-600"><i className="text-sm ph-fill ph-seal-percent"></i> Quà tặng miễn phí</span>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
                               </td>
                               <td className="px-5 py-20">
-                                <QuantityControl
-                                  quantity={item.quantity}
-                                  onUpdate={(qty) => updateQuantity(item.id_giohang, qty)}
-                                />
+                                <div className="overflow-hidden d-flex rounded-4">
+                                  <input type="text" className="w-32 px-4 py-8 text-center border quantity__input flex-grow-1 border-start-0 border-end-0 bg-gray-100" value={`x ${gift.soluong}`} readOnly title="Số lượng quà tặng" aria-label="Số lượng quà tặng" />
+                                </div>
                               </td>
                               <td className="px-5 py-20">
-                                <span className="mb-0 text-lg h6 fw-semibold text-main-600">{formatPrice(itemTotal)}</span>
+                                <span className="mb-0 text-lg h6 fw-semibold text-main-600">0 đ</span>
                               </td>
                             </tr>
                           );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             <div className="col-xl-3 col-lg-4">
               <div className="px-24 pb-20 border border-gray-100 cart-sidebar rounded-8 py-30">
-                <h6 className="gap-8 mb-20 text-lg flex-align"><i className="text-xl ph-bold ph-ticket text-main-600"></i>Áp dụng Voucher</h6>
+                <h6 className="gap-8 mb-20 text-lg flex-align"><i className="text-xl ph-bold ph-ticket text-main-600"></i> Áp dụng Voucher</h6>
 
                 {/* Hiển thị voucher đã áp dụng */}
                 {appliedVoucher && (
@@ -469,7 +601,7 @@ function CartPageContent() {
                           {appliedVoucher.mota}
                         </span>
                         <span className="text-xs text-success-600 w-100">
-                          Mã: {appliedVoucher.magiamgia}
+                          Mã: {appliedVoucher.code}
                         </span>
                       </div>
                     </span>
@@ -494,64 +626,122 @@ function CartPageContent() {
                     // Bỏ qua voucher đã áp dụng
                     if (appliedVoucher && voucher.id === appliedVoucher.id) return false;
 
-                    // Kiểm tra điều kiện đơn hàng tối thiểu
-                    if (voucher.dieukien.includes('500000')) {
-                      return subtotal >= 500000;
-                    }
+                    // Check ngày hết hạn
+                    if (!isVoucherInDateRange(voucher.ngaybatdau, voucher.ngayketthuc)) return false;
 
-                    // Kiểm tra điều kiện "tatca" (áp dụng cho tất cả)
-                    if (voucher.dieukien === 'tatca') {
-                      return true;
-                    }
+                    // Parse điều kiện
+                    const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
 
-                    // Các điều kiện khác có thể thêm vào đây
-                    return false;
-                  }).map((voucher) => (
-                    <div key={voucher.id} className="gap-8 px-12 py-10 mt-10 border-gray-200 border-dashed flex-align flex-between rounded-4">
-                      <span className="gap-8 text-sm text-gray-900 flex-align fw-medium" style={{ flex: '1', minWidth: 0 }}>
-                        <i className="text-2xl ph-bold ph-ticket text-main-600" style={{ flexShrink: 0 }}></i>
-                        <div className="text-sm d-flex flex-column" style={{ flex: '1', minWidth: 0 }}>
-                          <span className="text-sm text-gray-900" style={{ wordBreak: 'break-word' }}>
-                            {voucher.mota}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            Mã: {voucher.magiamgia}
-                          </span>
-                          {voucher.dieukien.includes('500000') && (
-                            <span className="text-xs text-warning-600">
-                              Đơn tối thiểu 500.000đ
+                    // Kiểm tra theo loại điều kiện
+                    switch (type) {
+                      case 'tatca':
+                        return true;
+                      case 'don_toi_thieu':
+                      case 'freeship':
+                        return subtotal >= minOrderValue;
+                      case 'khachhang_moi':
+                        // Chỉ hiển thị khi giỏ hàng có sản phẩm
+                        return items.length > 0;
+                      case 'khachhang_than_thiet':
+                        // Chỉ hiển thị khi giỏ hàng có sản phẩm
+                        return items.length > 0;
+                      default:
+                        return true;
+                    }
+                  }).map((voucher) => {
+                    const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
+                    const conditionLabel = getConditionLabel(type, minOrderValue);
+                    const isEligible = type === 'tatca' ||
+                      type === 'khachhang_moi' ||
+                      type === 'khachhang_than_thiet' ||
+                      subtotal >= minOrderValue;
+
+                    return (
+                      <div key={voucher.id} className={`gap-8 px-12 py-10 mt-10 border-dashed flex-align flex-between rounded-4 ${isEligible ? 'border-gray-200' : 'border-warning-300 bg-warning-50'}`}>
+                        <span className="gap-8 text-sm text-gray-900 flex-align fw-medium" style={{ flex: '1', minWidth: 0 }}>
+                          <i className="text-2xl ph-bold ph-ticket text-main-600" style={{ flexShrink: 0 }}></i>
+                          <div className="text-sm d-flex flex-column" style={{ flex: '1', minWidth: 0 }}>
+                            <span className="text-sm text-gray-900" style={{ wordBreak: 'break-word' }}>
+                              {voucher.mota}
                             </span>
-                          )}
-                        </div>
-                      </span>
-                      <button
-                        onClick={() => applyVoucher(voucher)}
-                        className="text-xs text-white btn bg-main-600 hover-bg-main-100 hover-text-main-600 rounded-4"
-                        style={{
-                          cursor: 'pointer',
-                          padding: '8px 16px',
-                          flexShrink: 0,
-                          whiteSpace: 'nowrap',
-                          minWidth: '60px'
-                        }}
-                      >
-                        Chọn
-                      </button>
-                    </div>
-                  ))}
+                            <span className="text-xs text-gray-500">
+                              Mã: {voucher.magiamgia}
+                            </span>
+                            {conditionLabel && (
+                              <span className={`text-xs ${isEligible ? 'text-success-600' : 'text-warning-600'}`}>
+                                {conditionLabel}
+                                {!isEligible && minOrderValue > 0 && ` (còn thiếu ${formatPrice(minOrderValue - subtotal)})`}
+                              </span>
+                            )}
+                            {voucher.ngayketthuc && (
+                              <span className="text-xs text-gray-400">
+                                HSD: {formatDate(voucher.ngayketthuc)}
+                              </span>
+                            )}
+                          </div>
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (!isEligible) {
+                              alert(`Đơn hàng chưa đạt giá trị tối thiểu ${minOrderValue.toLocaleString('vi-VN')}đ`);
+                              return;
+                            }
+                            applyVoucher({
+                              id: voucher.id,
+                              code: String(voucher.magiamgia),
+                              giatri: voucher.giatri,
+                              mota: voucher.mota,
+                              min_order_value: minOrderValue,
+                              dieukien: voucher.dieukien,
+                              condition_type: type,
+                              ngaybatdau: voucher.ngaybatdau,
+                              ngayketthuc: voucher.ngayketthuc
+                            });
+                          }}
+                          disabled={!isEligible}
+                          className={`text-xs btn rounded-4 ${isEligible ? 'text-white bg-main-600 hover-bg-main-100 hover-text-main-600' : 'text-gray-500 bg-gray-200 cursor-not-allowed'}`}
+                        >
+                          {isEligible ? 'Chọn' : 'Chưa đủ ĐK'}
+                        </button>
+                      </div>
+                    )
+                  })}
 
-                  {(!homeData?.data?.new_coupon || homeData.data.new_coupon.length === 0) && (
-                    <p className="py-16 text-sm text-center text-gray-500">
-                      Không có voucher khả dụng
-                    </p>
-                  )}
+                  {(!homeData?.data?.new_coupon || homeData.data.new_coupon.filter(v => {
+                    if (v.trangthai !== 'Hoạt động') return false;
+                    if (appliedVoucher && v.id === appliedVoucher.id) return false;
+                    if (!isVoucherInDateRange(v.ngaybatdau, v.ngayketthuc)) return false;
+
+                    // Cùng logic với filter hiển thị voucher
+                    const { type, minOrderValue } = parseVoucherCondition(v.dieukien, v.mota);
+                    switch (type) {
+                      case 'tatca':
+                        return true;
+                      case 'don_toi_thieu':
+                      case 'freeship':
+                        return subtotal >= minOrderValue;
+                      case 'khachhang_moi':
+                      case 'khachhang_than_thiet':
+                        return items.length > 0;
+                      default:
+                        return true;
+                    }
+                  }).length === 0) && !appliedVoucher && (
+                      <div className="gap-8 px-12 py-10 mt-10 flex-align flex-center rounded-4">
+                        <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
+                          <div className="text-sm d-flex flex-column">
+                            <span className="text-sm text-gray-900 w-100">Chưa có voucher nào phù hợp !</span>
+                          </div>
+                        </span>
+                      </div>
+                    )}
                 </div>
               </div>
               <div className="px-20 py-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
                 <div className="mb-20">
-                  <h6 className="gap-4 mb-6 text-lg flex-align"><i className="text-xl ph-bold ph-shopping-cart text-main-600"></i>Thông tin giỏ hàng</h6>
+                  <h6 className="gap-4 mb-6 text-lg flex-align"><i className="text-xl ph-bold ph-shopping-cart text-main-600"></i> Thông tin giỏ hàng</h6>
                   <span className="gap-1 text-sm text-gray-600 flex-align fw-medium">
-                    {totalItems} sản phẩm
+                    {totalItems} sản phẩm {totalGifts > 0 && <span> + {totalGifts} quà tặng</span>}
                   </span>
                 </div>
                 <div className="gap-8 mb-20 flex-between">
@@ -559,26 +749,10 @@ function CartPageContent() {
                   <span className="text-gray-900 fw-semibold">{formatPrice(subtotal)}</span>
                 </div>
 
-                {/* Hiển thị giảm giá từ giá gốc sản phẩm */}
-                {productDiscount > 0 && (
-                  <div className="gap-8 mb-20 flex-between">
-                    <span className="text-success-600 font-heading-two">Giảm giá sản phẩm:</span>
-                    <span className="text-success-600 fw-semibold">
-                      -{formatPrice(productDiscount)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Hiển thị giảm giá voucher */}
-                {appliedVoucher && discountAmount > 0 && (
-                  <div className="gap-8 mb-20 flex-between">
-                    <span className="text-success-600 font-heading-two">
-                      Giảm giá Voucher:
-                      <span className="text-xs text-gray-600 ms-2">{appliedVoucher.magiamgia}</span>
-                    </span>
-                    <span className="text-success-600 fw-semibold">
-                      -{formatPrice(discountAmount)}
-                    </span>
+                {discountAmount > 0 && (
+                  <div className="gap-8 flex-between">
+                    <span className="text-gray-900 font-heading-two">Giảm giá Voucher:</span>
+                    <span className="text-success-600 fw-semibold">-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
 
@@ -589,33 +763,23 @@ function CartPageContent() {
                       {formatPrice(total)}
                     </span>
                   </div>
+                  <div className="gap-8 mt-6 text-end">
+                    <span className="text-sm text-success-600 fw-normal">Tiết kiệm:</span>
+                    <span className="text-sm text-success-600 fw-normal ms-2">{formatPrice(productDiscount + discountAmount)}</span>
+                  </div>
                 </div>
                 <Link
                   href="/thanh-toan"
-                  className={`btn py-14 w-100 rounded-8 ${items.length === 0 ? 'disabled opacity-50' : ''}`}
+                  className={`btn btn-main py-14 w-100 rounded-8 ${items.length === 0 ? 'disabled opacity-50' : ''}`}
                   style={{
                     pointerEvents: items.length === 0 ? 'none' : 'auto',
-                    background: 'rgb(229, 57, 53)',
-                    color: 'white',
-                    fontWeight: '600',
-                    border: 'none',
-                    boxShadow: '0 4px 12px rgba(229, 57, 53, 0.4)',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(229, 57, 53, 0.5)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(229, 57, 53, 0.4)';
                   }}
                 >
                   Tiến hành thanh toán
                 </Link>
               </div>
-              <span className="mt-20 w-100">
-                <Link href="/" className="text-sm text-main-600 fw-medium flex-align d-flex flex-center transtional-2 link" style={{ cursor: 'pointer' }}>
+              <span className="mt-20 w-100 d-block">
+                <Link href="/shop" className="text-sm text-main-600 fw-medium flex-align d-flex flex-center">
                   <i className="ph-bold ph-arrow-fat-lines-left text-main-600 text-md pe-10"></i> <span>Tiếp tục mua hàng</span>
                 </Link>
               </span>

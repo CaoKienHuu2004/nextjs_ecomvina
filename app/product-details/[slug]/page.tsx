@@ -7,7 +7,7 @@ import Link from "next/link";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { fetchHomePage, type HomeHotSaleProduct, ProductDetail } from "@/lib/api";
+import { fetchProductDetail, type ProductDetail, type SimilarProduct } from "@/lib/api";
 import Image from "next/image";
 import { useCart } from "@/hooks/useCart";
 
@@ -21,14 +21,37 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     const { addToCart } = useCart();
 
     const [product, setProduct] = useState<ProductDetail | null>(null);
+    const [similarProducts, setSimilarProducts] = useState<SimilarProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState("description");
-    const [selectedVariant, setSelectedVariant] = useState("30");
+    const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
     const [selectedImage, setSelectedImage] = useState(0);
     const [addingToCart, setAddingToCart] = useState(false);
     const [addedSuccess, setAddedSuccess] = useState(false);
+
+    // Lấy biến thể đang chọn (hoặc biến thể đầu tiên nếu chưa chọn)
+    const selectedVariant = product?.bienthe_khichon_loaibienthe_themvaogio?.find(
+        v => v.id_bienthe === selectedVariantId
+    ) || product?.bienthe_khichon_loaibienthe_themvaogio?.[0];
+
+    // Lấy giá hiển thị (ưu tiên biến thể, fallback sang product.gia)
+    const firstVariant = product?.bienthe_khichon_loaibienthe_themvaogio?.[0];
+    const displayPrice = selectedVariant?.giahientai || firstVariant?.giahientai || product?.gia?.current || 0;
+    const originalPrice = selectedVariant?.giagoc || firstVariant?.giagoc || product?.gia?.before_discount || displayPrice;
+    const discountPercent = selectedVariant?.giamgia || firstVariant?.giamgia || product?.gia?.discount_percent || 0;
+
+    // Debug log
+    console.log("=== Price Debug ===", {
+        selectedVariant,
+        firstVariant,
+        displayPrice,
+        originalPrice,
+        discountPercent,
+        productGia: product?.gia,
+        bienthe: product?.bienthe_khichon_loaibienthe_themvaogio
+    });
 
     // Xử lý thêm vào giỏ hàng
     const handleAddToCart = async () => {
@@ -36,20 +59,21 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
         setAddingToCart(true);
         try {
-            // Chuẩn bị dữ liệu đúng chuẩn AddToCartInput của useCart mới
-            // Lưu ý: ProductDetail hiện tại dùng 'hinh_anh', cần map sang 'hinhanh' hoặc 'mediaurl'
+            const mainImage = product.anh_san_pham?.[0]?.hinhanh || product.hinh_anh;
+
             const productInput = {
-                id_bienthe: product.id, // ID sản phẩm
+                id_bienthe: selectedVariant?.id_bienthe || product.id,
                 ten: product.ten,
-                // Map hình ảnh để hiển thị ngay (Optimistic UI)
-                mediaurl: product.hinh_anh,
-                hinhanh: product.hinh_anh,
-                // Map giá (quan trọng để tính tiền ở client trước khi sync)
-                gia: product.gia,
-                price: typeof product.gia === 'object' ? product.gia?.current : Number(product.gia),
+                mediaurl: mainImage,
+                hinhanh: mainImage,
+                gia: {
+                    current: displayPrice,
+                    before_discount: originalPrice,
+                    discount_percent: discountPercent
+                },
+                price: displayPrice,
             };
 
-            // GỌI HÀM MỚI: Chỉ truyền 2 tham số (product object, quantity)
             await addToCart(productInput, quantity);
 
             setAddedSuccess(true);
@@ -66,51 +90,67 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
         if (!slug) return;
 
         setLoading(true);
-        fetchHomePage()
+        fetchProductDetail(slug)
             .then((res) => {
-                // Gộp tất cả sản phẩm từ trang chủ
-                const allProducts: HomeHotSaleProduct[] = [
-                    ...(res.data.hot_sales || []),
-                    ...(res.data.best_products || []),
-                    ...(res.data.new_launch || []),
-                    ...(res.data.most_watched || []),
-                ];
-
-                // Tìm sản phẩm theo slug
-                const foundProduct = allProducts.find(p => p.slug === slug);
-
-                if (foundProduct) {
-                    // Convert sang ProductDetail format
-                    const productDetail: ProductDetail = {
-                        id: foundProduct.id,
-                        slug: foundProduct.slug,
-                        ten: foundProduct.ten,
-                        hinh_anh: foundProduct.hinh_anh,
-                        thuonghieu: foundProduct.thuonghieu,
-                        rating: foundProduct.rating,
-                        sold_count: foundProduct.sold_count,
-                        gia: foundProduct.gia,
-                    };
-                    setProduct(productDetail);
+                console.log("=== API Response ===", res);
+                console.log("=== Product Data ===", res.data);
+                console.log("=== Bien the ===", res.data?.bienthe_khichon_loaibienthe_themvaogio);
+                if (res.data) {
+                    setProduct(res.data);
+                    setSimilarProducts(res.sanpham_tuongtu || []);
+                    // Set biến thể mặc định
+                    if (res.data.bienthe_khichon_loaibienthe_themvaogio?.length) {
+                        setSelectedVariantId(res.data.bienthe_khichon_loaibienthe_themvaogio[0].id_bienthe);
+                    }
                     setError(null);
                 } else {
                     setError("Không tìm thấy sản phẩm");
                 }
             })
             .catch((err) => {
+                console.error("=== API Error ===", err);
                 setError(err.message || "Lỗi tải dữ liệu sản phẩm");
             })
             .finally(() => setLoading(false));
     }, [slug]);
 
-    // Xử lý danh sách hình ảnh
-    const productImages = product?.images && product.images.length > 0
-        ? product.images
-        : product?.hinh_anh
-            ? [product.hinh_anh]
-            : product?.mediaurl
-                ? [product.mediaurl]
-                : ["/assets/images/thumbs/product-two-img1.png"];
+    // Xử lý danh sách hình ảnh từ API mới
+    const productImages = product?.anh_san_pham && product.anh_san_pham.length > 0
+        ? product.anh_san_pham.map(img => img.hinhanh)
+        : product?.images && product.images.length > 0
+            ? product.images
+            : product?.hinh_anh
+                ? [product.hinh_anh]
+                : product?.mediaurl
+                    ? [product.mediaurl]
+                    : ["/assets/images/thumbs/product-two-img1.png"];
+
+    // Helper format giá
+    const formatPrice = (price: number) => {
+        return new Intl.NumberFormat('vi-VN').format(Math.round(price)) + ' đ';
+    };
+
+    // Lấy số đã bán
+    const getSoldCount = () => {
+        if (typeof product?.sold === 'object' && product.sold?.total_sold !== undefined) {
+            return product.sold.total_sold;
+        }
+        if (typeof product?.sold === 'number') {
+            return product.sold;
+        }
+        if (product?.sold_count) {
+            return parseInt(product.sold_count);
+        }
+        return 0;
+    };
+
+    // Lấy rating
+    const getRating = () => {
+        if (product?.rating) {
+            return product.rating.average || 0;
+        }
+        return 0;
+    };
 
     if (loading) {
         return (
@@ -340,29 +380,17 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                         {/* Price */}
                                         <div className="flex-wrap gap-16 mb-32 flex-align">
                                             <div className="gap-8 flex-align">
-                                                {(() => {
-                                                    // Xử lý cả 2 cấu trúc: product.gia (top_categories) và product.discount_percent (latest/most_interested)
-                                                    const prod = product as { gia?: { discount_percent?: number; before_discount?: number; current?: number }; discount_percent?: number; original_price?: number; selling_price?: number };
-                                                    const discountPercent = Number(prod.gia?.discount_percent || prod.discount_percent || 0);
-                                                    const beforeDiscount = Number(prod.gia?.before_discount || prod.original_price || 0);
-                                                    const currentPrice = Number(prod.gia?.current || prod.selling_price || 0);
-
-                                                    return (
-                                                        <>
-                                                            {discountPercent > 0 && (
-                                                                <>
-                                                                    <span className="text-gray-400 text-md fw-semibold text-decoration-line-through">
-                                                                        {beforeDiscount.toLocaleString()} ₫
-                                                                    </span>
-                                                                    <span className="px-8 py-4 text-xs text-white bg-main-600 rounded-pill">
-                                                                        -{discountPercent}%
-                                                                    </span>
-                                                                </>
-                                                            )}
-                                                            <h6 className="mb-0 text-2xl text-main-600 mt-30">{currentPrice.toLocaleString()} ₫</h6>
-                                                        </>
-                                                    );
-                                                })()}
+                                                {discountPercent > 0 && (
+                                                    <>
+                                                        <span className="text-gray-400 text-md fw-semibold text-decoration-line-through">
+                                                            {originalPrice.toLocaleString()} ₫
+                                                        </span>
+                                                        <span className="px-8 py-4 text-xs text-white bg-main-600 rounded-pill">
+                                                            -{discountPercent}%
+                                                        </span>
+                                                    </>
+                                                )}
+                                                <h6 className="mb-0 text-2xl text-main-600 mt-30">{displayPrice.toLocaleString()} ₫</h6>
                                             </div>
                                         </div>
 
@@ -467,7 +495,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                 <div className="flex-wrap gap-8 pb-16 mb-16 border-gray-100 flex-between border-bottom">
                                     <span className="text-gray-500">Tổng giá</span>
                                     <h6 className="mb-0 text-lg">
-                                        {((product?.gia?.current || 0) * quantity).toLocaleString('vi-VN')} đ
+                                        {(displayPrice * quantity).toLocaleString('vi-VN')} đ
                                     </h6>
                                 </div>
                             </div>
@@ -739,433 +767,151 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                 </div>
             </section >
 
-            {/* Similar Products Section */}
-            <section className="new-arrival pb-120">
-                <div className="container container-lg">
-                    <div className="section-heading">
-                        <div className="flex-wrap gap-8 flex-between">
-                            <h5 className="mb-0">Sản phẩm tương tự</h5>
-                            <div className="gap-16 flex-align">
-                                <div className="gap-8 flex-align">
-                                    <button
-                                        type="button"
-                                        className="text-xl border border-gray-100 slick-prev flex-center rounded-circle hover-border-main-600 hover-bg-main-600 hover-text-white transition-1"
-                                        onClick={() => sliderRef.current?.slickPrev()}
-                                        style={{ width: '40px', height: '40px' }}
-                                    >
-                                        <i className="ph ph-caret-left"></i>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="text-xl border border-gray-100 slick-next flex-center rounded-circle hover-border-main-600 hover-bg-main-600 hover-text-white transition-1"
-                                        onClick={() => sliderRef.current?.slickNext()}
-                                        style={{ width: '40px', height: '40px' }}
-                                    >
-                                        <i className="ph ph-caret-right"></i>
-                                    </button>
+            {/* Similar Products Section - Dynamic */}
+            {similarProducts.length > 0 && (
+                <section className="new-arrival pb-120">
+                    <div className="container container-lg">
+                        <div className="section-heading">
+                            <div className="flex-wrap gap-8 flex-between">
+                                <h5 className="mb-0">Sản phẩm tương tự</h5>
+                                <div className="gap-16 flex-align">
+                                    <div className="gap-8 flex-align">
+                                        <button
+                                            type="button"
+                                            title="Sản phẩm trước"
+                                            aria-label="Xem sản phẩm trước"
+                                            className="text-xl border border-gray-100 slick-prev flex-center rounded-circle hover-border-main-600 hover-bg-main-600 hover-text-white transition-1 similar-nav-btn"
+                                            onClick={() => sliderRef.current?.slickPrev()}
+                                        >
+                                            <i className="ph ph-caret-left"></i>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            title="Sản phẩm tiếp"
+                                            aria-label="Xem sản phẩm tiếp theo"
+                                            className="text-xl border border-gray-100 slick-next flex-center rounded-circle hover-border-main-600 hover-bg-main-600 hover-text-white transition-1 similar-nav-btn"
+                                            onClick={() => sliderRef.current?.slickNext()}
+                                        >
+                                            <i className="ph ph-caret-right"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        <Slider
+                            ref={sliderRef}
+                            className="similar-products-slider arrow-style-two"
+                            dots={false}
+                            infinite={similarProducts.length > 5}
+                            speed={500}
+                            slidesToShow={Math.min(5, similarProducts.length)}
+                            slidesToScroll={1}
+                            arrows={false}
+                            responsive={[
+                                {
+                                    breakpoint: 1400,
+                                    settings: {
+                                        slidesToShow: Math.min(4, similarProducts.length),
+                                        slidesToScroll: 1,
+                                    }
+                                },
+                                {
+                                    breakpoint: 1024,
+                                    settings: {
+                                        slidesToShow: Math.min(3, similarProducts.length),
+                                        slidesToScroll: 1,
+                                    }
+                                },
+                                {
+                                    breakpoint: 768,
+                                    settings: {
+                                        slidesToShow: Math.min(2, similarProducts.length),
+                                        slidesToScroll: 1,
+                                    }
+                                },
+                                {
+                                    breakpoint: 480,
+                                    settings: {
+                                        slidesToShow: 1,
+                                        slidesToScroll: 1,
+                                    }
+                                }
+                            ]}
+                        >
+                            {similarProducts.map((similarProduct) => (
+                                <div key={similarProduct.id}>
+                                    <div className="border border-gray-100 product-card h-100 hover-border-main-600 rounded-6 position-relative transition-2">
+                                        <Link href={`/product-details/${similarProduct.slug}`} className="flex-center rounded-8 bg-gray-50 position-relative">
+                                            <img
+                                                src={similarProduct.hinh_anh}
+                                                alt={similarProduct.ten}
+                                                className="w-100 rounded-top-2"
+                                                onError={(e) => {
+                                                    const img = e.currentTarget as HTMLImageElement;
+                                                    img.onerror = null;
+                                                    img.src = "/assets/images/thumbs/placeholder.png";
+                                                }}
+                                            />
+                                            {similarProduct.have_gift && (
+                                                <span className="product-card__badge bg-success-600 px-8 py-4 text-sm text-white position-absolute inset-inline-start-0 inset-block-start-0">
+                                                    Có quà
+                                                </span>
+                                            )}
+                                        </Link>
+                                        <div className="px-10 pb-8 mt-10 product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex">
+                                            <div>
+                                                <div className="mt-5 flex-align justify-content-between">
+                                                    <div className="gap-4 flex-align w-100">
+                                                        <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
+                                                        <span className="text-xs text-gray-500 text-truncate">Siêu Thị Vina</span>
+                                                    </div>
+                                                </div>
+                                                <h6 className="mt-2 mb-2 text-lg title fw-semibold">
+                                                    <Link href={`/product-details/${similarProduct.slug}`} className="link text-line-2">
+                                                        {similarProduct.ten}
+                                                    </Link>
+                                                </h6>
+                                                <div className="mt-2 flex-align justify-content-between">
+                                                    <div className="gap-6 flex-align">
+                                                        <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
+                                                        <span className="text-xs text-gray-500 fw-medium">
+                                                            {similarProduct.rating.average.toFixed(1)} <i className="ph-fill ph-star text-warning-600"></i>
+                                                        </span>
+                                                    </div>
+                                                    <div className="gap-4 flex-align">
+                                                        <span className="text-xs text-gray-500 fw-medium">{similarProduct.sold.total_sold}</span>
+                                                        <span className="text-xs text-gray-500 fw-medium">Đã bán</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="mt-5 product-card__price">
+                                                {similarProduct.gia.discount_percent > 0 ? (
+                                                    <>
+                                                        <div className="gap-4 flex-align text-main-two-600">
+                                                            <i className="text-sm ph-fill ph-seal-percent"></i> -{similarProduct.gia.discount_percent}%
+                                                            <span className="text-sm text-gray-400 fw-semibold text-decoration-line-through">
+                                                                {formatPrice(similarProduct.gia.before_discount)}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-lg text-heading fw-semibold">
+                                                            {formatPrice(similarProduct.gia.current)}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-lg text-heading fw-semibold">
+                                                        {formatPrice(similarProduct.gia.current)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </Slider>
                     </div>
-
-                    <Slider
-                        ref={sliderRef}
-                        className="similar-products-slider arrow-style-two"
-                        dots={false}
-                        infinite={true}
-                        speed={500}
-                        slidesToShow={5}
-                        slidesToScroll={1}
-                        arrows={false}
-                        responsive={[
-                            {
-                                breakpoint: 1400,
-                                settings: {
-                                    slidesToShow: 4,
-                                    slidesToScroll: 1,
-                                }
-                            },
-                            {
-                                breakpoint: 1024,
-                                settings: {
-                                    slidesToShow: 3,
-                                    slidesToScroll: 1,
-                                }
-                            },
-                            {
-                                breakpoint: 768,
-                                settings: {
-                                    slidesToShow: 2,
-                                    slidesToScroll: 1,
-                                }
-                            },
-                            {
-                                breakpoint: 480,
-                                settings: {
-                                    slidesToShow: 1,
-                                    slidesToScroll: 1,
-                                }
-                            }
-                        ]}
-                    >
-                        <div>
-                            <div className="border border-gray-100 product-card h-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                                <Link href="/product-details/nuoc-yen-sao-dong-trung" className="flex-center rounded-8 bg-gray-50 position-relative">
-                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/banh-trung-thu-2025-thu-an-nhien-banh-chay-hop-2-banh-1-tra-4.webp" alt="Nước Yến sào Đông trùng hạ thảo Nest100 - Có đường" className="w-100 rounded-top-2" />
-                                </Link>
-                                <div className="px-10 pb-8 mt-10 product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex">
-                                    <div>
-                                        <div className="mt-5 flex-align justify-content-between">
-                                            <div className="gap-4 flex-align w-100">
-                                                <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                                <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}>Trung Tâm Bán Hàng Siêu Thị Vina</span>
-                                            </div>
-                                        </div>
-                                        <h6 className="mt-2 mb-2 text-lg title fw-semibold">
-                                            <Link href="/product-details/nuoc-yen-sao-dong-trung" className="link text-line-2">Nước Yến sào Đông trùng hạ thảo Nest100 - Có đường</Link>
-                                        </h6>
-                                        <div className="mt-2 flex-align justify-content-between">
-                                            <div className="gap-6 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
-                                                <span className="text-xs text-gray-500 fw-medium">4.8 <i className="ph-fill ph-star text-warning-600"></i></span>
-                                            </div>
-                                            <div className="gap-4 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">2386</span>
-                                                <span className="text-xs text-gray-500 fw-medium">Đã bán</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-5 product-card__price">
-                                        <span className="text-lg text-heading fw-semibold">43.000 đ</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="border border-gray-100 product-card h-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                                <Link href="/product-details/nuoc-yen-sao-nest100-hop-5" className="flex-center rounded-8 bg-gray-50 position-relative">
-                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/nuoc-yen-sao-nest100-lon-190ml-hop-5-lon-1.webp" alt="Nước Yến Sào NEST100 - Lon 190ml Hộp 5 Lon" className="w-100 rounded-top-2" />
-                                </Link>
-                                <div className="px-10 pb-8 mt-10 product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex">
-                                    <div>
-                                        <div className="mt-5 flex-align justify-content-between">
-                                            <div className="gap-4 flex-align w-100">
-                                                <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                                <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}>Trung Tâm Bán Hàng Siêu Thị Vina</span>
-                                            </div>
-                                        </div>
-                                        <h6 className="mt-2 mb-2 text-lg title fw-semibold">
-                                            <Link href="/product-details/nuoc-yen-sao-nest100-hop-5" className="link text-line-2">Nước Yến Sào NEST100 - Lon 190ml Hộp 5 Lon</Link>
-                                        </h6>
-                                        <div className="mt-2 flex-align justify-content-between">
-                                            <div className="gap-6 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
-                                                <span className="text-xs text-gray-500 fw-medium">4.8 <i className="ph-fill ph-star text-warning-600"></i></span>
-                                            </div>
-                                            <div className="gap-4 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">10800</span>
-                                                <span className="text-xs text-gray-500 fw-medium">Đã bán</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-5 product-card__price">
-                                        <span className="text-lg text-heading fw-semibold">51.000 đ</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="border border-gray-100 product-card h-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                                <Link href="/product-details/nuoc-yen-sao-nest100-sang-khoang" className="flex-center rounded-8 bg-gray-50 position-relative">
-                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/banh-trung-thu-2025-thu-an-nhien-banh-chay-hop-2-banh-1-tra-1.webp" alt="Nước yến sào Nest100 lon 190ml - Sáng khoáng" className="w-100 rounded-top-2" />
-                                </Link>
-                                <div className="px-10 pb-8 mt-10 product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex">
-                                    <div>
-                                        <div className="mt-5 flex-align justify-content-between">
-                                            <div className="gap-4 flex-align w-100">
-                                                <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                                <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}>Trung Tâm Bán Hàng Siêu Thị Vina</span>
-                                            </div>
-                                        </div>
-                                        <h6 className="mt-2 mb-2 text-lg title fw-semibold">
-                                            <Link href="/product-details/nuoc-yen-sao-nest100-sang-khoang" className="link text-line-2">Nước yến sào Nest100 lon 190ml - Sáng khoáng</Link>
-                                        </h6>
-                                        <div className="mt-2 flex-align justify-content-between">
-                                            <div className="gap-6 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
-                                                <span className="text-xs text-gray-500 fw-medium">4.8 <i className="ph-fill ph-star text-warning-600"></i></span>
-                                            </div>
-                                            <div className="gap-4 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">3245</span>
-                                                <span className="text-xs text-gray-500 fw-medium">Đã bán</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-5 product-card__price">
-                                        <span className="text-lg text-heading fw-semibold">52.000 đ</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="border border-gray-100 product-card h-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                                <Link href="/product-details/nuoc-yen-sao-nest100-khay-30" className="flex-center rounded-8 bg-gray-50 position-relative">
-                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/nuoc-yen-sao-nest100-lon-190ml-khay-30-lon-1.webp" alt="Nước yến sào Nest100 lon 190ml - Khay 30 lon" className="w-100 rounded-top-2" />
-                                </Link>
-                                <div className="px-10 pb-8 mt-10 product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex">
-                                    <div>
-                                        <div className="mt-5 flex-align justify-content-between">
-                                            <div className="gap-4 flex-align w-100">
-                                                <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                                <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}>Trung Tâm Bán Hàng Siêu Thị Vina</span>
-                                            </div>
-                                        </div>
-                                        <h6 className="mt-2 mb-2 text-lg title fw-semibold">
-                                            <Link href="/product-details/nuoc-yen-sao-nest100-khay-30" className="link text-line-2">Nước yến sào Nest100 lon 190ml - Khay 30 lon</Link>
-                                        </h6>
-                                        <div className="mt-2 flex-align justify-content-between">
-                                            <div className="gap-6 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
-                                                <span className="text-xs text-gray-500 fw-medium">4.8 <i className="ph-fill ph-star text-warning-600"></i></span>
-                                            </div>
-                                            <div className="gap-4 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">1568</span>
-                                                <span className="text-xs text-gray-500 fw-medium">Đã bán</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-5 product-card__price">
-                                        <span className="text-lg text-heading fw-semibold">285.000 đ</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="border border-gray-100 product-card h-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                                <Link href="/product-details/nuoc-yen-sam-ginnest" className="flex-center rounded-8 bg-gray-50 position-relative">
-                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/nuoc-yen-sam-ginnest-co-duong-1.webp" alt="Nước Yến Sâm Ginnest – Có đường" className="w-100 rounded-top-2" />
-                                </Link>
-                                <div className="px-10 pb-8 mt-10 product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex">
-                                    <div>
-                                        <div className="mt-5 flex-align justify-content-between">
-                                            <div className="gap-4 flex-align w-100">
-                                                <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                                <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}>Trung Tâm Bán Hàng Siêu Thị Vina</span>
-                                            </div>
-                                        </div>
-                                        <h6 className="mt-2 mb-2 text-lg title fw-semibold">
-                                            <Link href="/product-details/nuoc-yen-sam-ginnest" className="link text-line-2">Nước Yến Sâm Ginnest – Có đường</Link>
-                                        </h6>
-                                        <div className="mt-2 flex-align justify-content-between">
-                                            <div className="gap-6 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
-                                                <span className="text-xs text-gray-500 fw-medium">4.8 <i className="ph-fill ph-star text-warning-600"></i></span>
-                                            </div>
-                                            <div className="gap-4 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">1253</span>
-                                                <span className="text-xs text-gray-500 fw-medium">Đã bán</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-5 product-card__price">
-                                        <span className="text-lg text-heading fw-semibold">44.000 đ</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="border border-gray-100 product-card h-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                                <Link href="/product-details/ca-phe-sam-canada" className="flex-center rounded-8 bg-gray-50 position-relative">
-                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/ca-phe-sam-canada-1.webp" alt="Cà Phê Sâm Canada" className="w-100 rounded-top-2" />
-                                </Link>
-                                <div className="px-10 pb-8 mt-10 product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex">
-                                    <div>
-                                        <div className="mt-5 flex-align justify-content-between">
-                                            <div className="gap-4 flex-align w-100">
-                                                <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                                <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}>Trung Tâm Bán Hàng Siêu Thị Vina</span>
-                                            </div>
-                                        </div>
-                                        <h6 className="mt-2 mb-2 text-lg title fw-semibold">
-                                            <Link href="/product-details/ca-phe-sam-canada" className="link text-line-2">Cà Phê Sâm Canada</Link>
-                                        </h6>
-                                        <div className="mt-2 flex-align justify-content-between">
-                                            <div className="gap-6 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
-                                                <span className="text-xs text-gray-500 fw-medium">4.8 <i className="ph-fill ph-star text-warning-600"></i></span>
-                                            </div>
-                                            <div className="gap-4 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">13600</span>
-                                                <span className="text-xs text-gray-500 fw-medium">Đã bán</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-5 product-card__price">
-                                        <span className="text-lg text-heading fw-semibold">110.000 đ</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="border border-gray-100 product-card h-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                                <Link href="/product-details/ca-phe-linh-chi" className="flex-center rounded-8 bg-gray-50 position-relative">
-                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/ca-phe-bao-tu-linh-chi-pha-vach-giup-tinh-tao-1.webp" alt="Cà phê bào tử Linh Chi phá vách" className="w-100 rounded-top-2" />
-                                </Link>
-                                <div className="px-10 pb-8 mt-10 product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex">
-                                    <div>
-                                        <div className="mt-5 flex-align justify-content-between">
-                                            <div className="gap-4 flex-align w-100">
-                                                <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                                <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}>Trung Tâm Bán Hàng Siêu Thị Vina</span>
-                                            </div>
-                                        </div>
-                                        <h6 className="mt-2 mb-2 text-lg title fw-semibold">
-                                            <Link href="/product-details/ca-phe-linh-chi" className="link text-line-2">Cà phê bào tử Linh Chi phá vách – Giúp tỉnh táo</Link>
-                                        </h6>
-                                        <div className="mt-2 flex-align justify-content-between">
-                                            <div className="gap-6 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
-                                                <span className="text-xs text-gray-500 fw-medium">4.8 <i className="ph-fill ph-star text-warning-600"></i></span>
-                                            </div>
-                                            <div className="gap-4 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">10300</span>
-                                                <span className="text-xs text-gray-500 fw-medium">Đã bán</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-5 product-card__price">
-                                        <div className="gap-4 flex-align text-main-two-600">
-                                            <i className="text-sm ph-fill ph-seal-percent"></i> -10%
-                                            <span className="text-sm text-gray-400 fw-semibold text-decoration-line-through">340.000 đ</span>
-                                        </div>
-                                        <span className="text-lg text-heading fw-semibold">306.000 đ</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="border border-gray-100 product-card h-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                                <Link href="/product-details/hat-dieu-rang-muoi" className="flex-center rounded-8 bg-gray-50 position-relative">
-                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/hat-dieu-rang-muoi-loai-1-con-vo-lua-happy-nuts-500g-1.webp" alt="Hạt điều rang muối Happy Nuts 500g" className="w-100 rounded-top-2" />
-                                </Link>
-                                <div className="px-10 pb-8 mt-10 product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex">
-                                    <div>
-                                        <div className="mt-5 flex-align justify-content-between">
-                                            <div className="gap-4 flex-align w-100">
-                                                <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                                <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}>Trung Tâm Bán Hàng Siêu Thị Vina</span>
-                                            </div>
-                                        </div>
-                                        <h6 className="mt-2 mb-2 text-lg title fw-semibold">
-                                            <Link href="/product-details/hat-dieu-rang-muoi" className="link text-line-2">Hạt điều rang muối loại 1 (còn vỏ lụa) Happy Nuts 500g</Link>
-                                        </h6>
-                                        <div className="mt-2 flex-align justify-content-between">
-                                            <div className="gap-6 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
-                                                <span className="text-xs text-gray-500 fw-medium">4.8 <i className="ph-fill ph-star text-warning-600"></i></span>
-                                            </div>
-                                            <div className="gap-4 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">782</span>
-                                                <span className="text-xs text-gray-500 fw-medium">Đã bán</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-5 product-card__price">
-                                        <div className="gap-4 flex-align text-main-two-600">
-                                            <i className="text-sm ph-fill ph-seal-percent"></i> -10%
-                                            <span className="text-sm text-gray-400 fw-semibold text-decoration-line-through">282.000 đ</span>
-                                        </div>
-                                        <span className="text-lg text-heading fw-semibold">253.800 đ</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="border border-gray-100 product-card h-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                                <Link href="/product-details/banh-trung-thu" className="flex-center rounded-8 bg-gray-50 position-relative">
-                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/banh-trung-thu-2025-thu-an-nhien-banh-chay-hop-2-banh-1-tra-1.webp" alt="Bánh Trung Thu 2025" className="w-100 rounded-top-2" />
-                                </Link>
-                                <div className="px-10 pb-8 mt-10 product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex">
-                                    <div>
-                                        <div className="mt-5 flex-align justify-content-between">
-                                            <div className="gap-4 flex-align w-100">
-                                                <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                                <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}>Trung Tâm Bán Hàng Siêu Thị Vina</span>
-                                            </div>
-                                        </div>
-                                        <h6 className="mt-2 mb-2 text-lg title fw-semibold">
-                                            <Link href="/product-details/banh-trung-thu" className="link text-line-2">Bánh Trung Thu 2025 - Thu An Nhiên (bánh chay hộp 2 bánh 1 trà)</Link>
-                                        </h6>
-                                        <div className="mt-2 flex-align justify-content-between">
-                                            <div className="gap-6 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
-                                                <span className="text-xs text-gray-500 fw-medium">4.8 <i className="ph-fill ph-star text-warning-600"></i></span>
-                                            </div>
-                                            <div className="gap-4 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">472</span>
-                                                <span className="text-xs text-gray-500 fw-medium">Đã bán</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-5 product-card__price">
-                                        <div className="gap-4 flex-align text-main-two-600">
-                                            <i className="text-sm ph-fill ph-seal-percent"></i> -70%
-                                            <span className="text-sm text-gray-400 fw-semibold text-decoration-line-through">369.000 đ</span>
-                                        </div>
-                                        <span className="text-lg text-heading fw-semibold">110.700 đ</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="border border-gray-100 product-card h-100 hover-border-main-600 rounded-6 position-relative transition-2">
-                                <Link href="/product-details/keo-qua-sam" className="flex-center rounded-8 bg-gray-50 position-relative">
-                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/keo-qua-sam-khong-duong-free-suger-ginseng-berry-s-candy-200g-1.webp" alt="Kẹo Quả Sâm không đường" className="w-100 rounded-top-2" />
-                                </Link>
-                                <div className="px-10 pb-8 mt-10 product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex">
-                                    <div>
-                                        <div className="mt-5 flex-align justify-content-between">
-                                            <div className="gap-4 flex-align w-100">
-                                                <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                                <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}>Trung Tâm Bán Hàng Siêu Thị Vina</span>
-                                            </div>
-                                        </div>
-                                        <h6 className="mt-2 mb-2 text-lg title fw-semibold">
-                                            <Link href="/product-details/keo-qua-sam" className="link text-line-2">Kẹo Quả Sâm không đường Free Suger Ginseng Berry S candy 200g</Link>
-                                        </h6>
-                                        <div className="mt-2 flex-align justify-content-between">
-                                            <div className="gap-6 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
-                                                <span className="text-xs text-gray-500 fw-medium">4.8 <i className="ph-fill ph-star text-warning-600"></i></span>
-                                            </div>
-                                            <div className="gap-4 flex-align">
-                                                <span className="text-xs text-gray-500 fw-medium">187</span>
-                                                <span className="text-xs text-gray-500 fw-medium">Đã bán</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-5 product-card__price">
-                                        <div className="gap-4 flex-align text-main-two-600">
-                                            <i className="text-sm ph-fill ph-seal-percent"></i> -25%
-                                            <span className="text-sm text-gray-400 fw-semibold text-decoration-line-through">249.000 đ</span>
-                                        </div>
-                                        <span className="text-lg text-heading fw-semibold">186.750 đ</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </Slider>
-                </div>
-            </section>
+                </section>
+            )}
 
             <FullFooter />
         </>

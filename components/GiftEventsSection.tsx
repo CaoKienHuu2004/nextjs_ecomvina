@@ -90,17 +90,19 @@ export default function GiftEventsSection() {
                   <div className="flex-align gap-8">
                     <button
                       type="button"
+                      title="Quà trước"
+                      aria-label="Xem quà trước"
                       onClick={handlePrev}
-                      className="slick-prev flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1"
-                      style={{ width: "36px", height: "36px" }}
+                      className="slick-prev flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1 gift-nav-btn"
                     >
                       <i className="ph ph-caret-left"></i>
                     </button>
                     <button
                       type="button"
+                      title="Quà tiếp"
+                      aria-label="Xem quà tiếp theo"
                       onClick={handleNext}
-                      className="slick-next flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1"
-                      style={{ width: "36px", height: "36px" }}
+                      className="slick-next flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1 gift-nav-btn"
                     >
                       <i className="ph ph-caret-right"></i>
                     </button>
@@ -115,7 +117,7 @@ export default function GiftEventsSection() {
               {displayedGifts.map((gift) => (
                 <div key={gift.id} style={{ width: "244px", display: "inline-block" }}>
                   <div className="product-card p-card border border-gray-100 rounded-16 position-relative transition-2" style={{ height: "340px" }}>
-                    <Link href={`/chi-tiet-qt?id=${gift.id}`}>
+                    <Link href={gift.slug ? `/chi-tiet-qt?slug=${gift.slug}` : `/chi-tiet-qt?id=${gift.id}`}>
                       <div
                         className="rounded-16"
                         style={{
@@ -152,7 +154,7 @@ export default function GiftEventsSection() {
                     >
                       <div className="title text-lg fw-semibold mt-5 mb-5 text-center w-100">
                         <Link
-                          href={`/chi-tiet-qt?id=${gift.id}`}
+                          href={gift.slug ? `/chi-tiet-qt?slug=${gift.slug}` : `/chi-tiet-qt?id=${gift.id}`}
                           className="link text-line-2"
                           style={{ color: "white", display: "block" }}
                         >

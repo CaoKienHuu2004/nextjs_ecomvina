@@ -3,8 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { fetchSearchProducts, fetchHomePage } from "@/lib/api";
-import type { SearchProduct, TopBrand } from "@/lib/api";
+import { fetchShopProducts, fetchHomePage, fetchSearchProducts, type ShopCategory, type ShopBrand, type ShopPriceRange, type HomeHotSaleProduct } from "@/lib/api";
+import type { TopBrand } from "@/lib/api";
 import FullHeader from "@/components/FullHeader";
 
 const slugify = (text: string) =>
@@ -31,6 +31,7 @@ const CATEGORY_OPTIONS = [
   { value: "do-uong", label: "Đồ uống" }
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const CATEGORY_NAME_TO_SLUG: Record<string, string> = {
   "Bách hóa": "bach-hoa",
   "Sức khỏe": "suc-khoe",
@@ -91,7 +92,6 @@ export default function ShopPage() {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(queryParam);
-  const [inputValue, setInputValue] = useState(queryParam); // Giá trị input tạm
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   // State cho phân trang
@@ -114,32 +114,8 @@ export default function ShopPage() {
     rating: ""
   });
 
-  const categoryOptionsWithCount = useMemo(() => {
-    const counts = allProducts.reduce<Record<string, number>>((acc, product) => {
-      if (product.category) {
-        acc[product.category] = (acc[product.category] || 0) + 1;
-      }
-      return acc;
-    }, {});
-
-    return CATEGORY_OPTIONS.map((opt) => ({
-      ...opt,
-      count: opt.value ? counts[opt.value] || 0 : allProducts.length
-    }));
-  }, [allProducts]);
-
-  const brandCounts = useMemo(() => {
-    return allProducts.reduce<Record<string, number>>((acc, product) => {
-      if (product.brandSlug) {
-        acc[product.brandSlug] = (acc[product.brandSlug] || 0) + 1;
-      }
-      return acc;
-    }, {});
-  }, [allProducts]);
-
-  // Sync inputValue khi queryParam thay đổi
+  // Sync searchQuery khi queryParam thay đổi
   useEffect(() => {
-    setInputValue(queryParam);
     setSearchQuery(queryParam);
   }, [queryParam]);
 
@@ -232,325 +208,239 @@ export default function ShopPage() {
     return ""; // Không xác định
   };
 
-  // useEffect 1: Fetch products từ API (khi searchQuery thay đổi HOẶC khi có filters)
+  // State để lưu filters từ API
+  const [apiCategories, setApiCategories] = useState<ShopCategory[]>([]);
+  const [apiBrands, setApiBrands] = useState<ShopBrand[]>([]);
+  const [apiPriceRanges, setApiPriceRanges] = useState<ShopPriceRange[]>([]);
+
+  // useEffect 1: Fetch products từ API sanphams-all
   useEffect(() => {
     async function fetchProducts() {
       setLoading(true);
       try {
         let products: Product[] = [];
 
-        // Kiểm tra xem có filter nào được áp dụng không
-        const hasActiveFilters = filters.danhmuc !== "" || filters.locgia !== "" ||
-          filters.thuonghieu !== "" || filters.rating !== "";
+        // Nếu có source param (hot_sales, best_products, new_launch, most_watched) → Lấy từ trang chủ
+        if (sourceParam === "hot_sales" || sourceParam === "best_products" ||
+          sourceParam === "new_launch" || sourceParam === "most_watched") {
 
-        // Nếu có filters → Luôn fetch từ shop API (bỏ qua search)
-        // Nếu có search query NHƯNG KHÔNG có filters → Dùng search API
-        if (searchQuery.trim() && !hasActiveFilters) {
           try {
-            const searchResults = await fetchSearchProducts(searchQuery);
+            const homeData = await fetchHomePage();
+            const allProductsFromAPI: (HomeHotSaleProduct & { categoryFromAPI?: string; categoryName?: string })[] = [];
 
-            // Kiểm tra nếu API trả về mảng rỗng hoặc không có data
-            if (!searchResults || searchResults.length === 0) {
-              products = [];
-            } else {
-              // Chuẩn hóa dữ liệu từ API tìm kiếm thành Product
+            console.log(`🔍 Shop - Đang lấy sản phẩm từ source="${sourceParam}"`);
+
+            if (sourceParam === "hot_sales") {
+              const hotSales = (homeData.data.hot_sales || [])
+                .slice()
+                .sort((a, b) => {
+                  const soldA = parseInt(a.sold_count || "0");
+                  const soldB = parseInt(b.sold_count || "0");
+                  return soldB - soldA;
+                });
+              console.log('🔥 Shop - Hot Sales từ API:', hotSales.length, 'sản phẩm');
+              hotSales.forEach((product: any) => {
+                allProductsFromAPI.push({
+                  ...product,
+                  categoryFromAPI: inferCategory(product.ten),
+                  categoryName: "Top deal • Siêu rẻ"
+                });
+              });
+            } else if (sourceParam === "best_products") {
+              const bestProducts = (homeData.data.best_products || [])
+                .slice()
+                .sort((a, b) => {
+                  const soldA = parseInt(a.sold_count || "0");
+                  const soldB = parseInt(b.sold_count || "0");
+                  return soldB - soldA;
+                });
+              console.log('⭐ Shop - Best Products từ API:', bestProducts.length, 'sản phẩm');
+              bestProducts.forEach((product: any) => {
+                allProductsFromAPI.push({
+                  ...product,
+                  categoryFromAPI: inferCategory(product.ten),
+                  categoryName: "Sản phẩm hàng đầu"
+                });
+              });
+            } else if (sourceParam === "new_launch") {
+              const newLaunch = (homeData.data.new_launch || [])
+                .slice()
+                .sort((a, b) => {
+                  const soldA = parseInt(a.sold_count || "0");
+                  const soldB = parseInt(b.sold_count || "0");
+                  return soldB - soldA;
+                });
+              console.log('🆕 Shop - New Launch từ API:', newLaunch.length, 'sản phẩm');
+              newLaunch.forEach((product: any) => {
+                allProductsFromAPI.push({
+                  ...product,
+                  categoryFromAPI: inferCategory(product.ten),
+                  categoryName: "Hàng mới chào sân",
+                });
+              });
+            } else if (sourceParam === "most_watched") {
+              const mostWatchedOnly = (homeData.data.most_watched || [])
+                .slice()
+                .sort((a, b) => {
+                  const soldA = parseInt(a.sold_count || "0");
+                  const soldB = parseInt(b.sold_count || "0");
+                  return soldB - soldA;
+                });
+              console.log('👀 Shop - Most Watched từ API:', mostWatchedOnly.length, 'sản phẩm');
+              mostWatchedOnly.forEach((product: any) => {
+                allProductsFromAPI.push({
+                  ...product,
+                  categoryFromAPI: inferCategory(product.ten),
+                  categoryName: "Được quan tâm nhiều nhất",
+                });
+              });
+            }
+
+            // Chuyển đổi sang định dạng Product
+            products = allProductsFromAPI
+              .filter((item: any) => item.hinh_anh && item.hinh_anh.trim() !== "")
+              .map((item: any) => {
+                const ratingValue = item.rating?.average || 0;
+                const currentPrice = item.gia?.current || 0;
+                const beforeDiscount = item.gia?.before_discount || 0;
+                const discountPercent = item.gia?.discount_percent || 0;
+
+                let imageUrl = item.hinh_anh || "/assets/images/thumbs/default-product.png";
+                if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/assets/')) {
+                  imageUrl = `/assets/images/thumbs/${imageUrl}`;
+                }
+
+                const brandName = item.thuonghieu || "Không rõ";
+
+                return {
+                  id: item.id,
+                  name: item.ten,
+                  slug: item.slug,
+                  category: item.categoryFromAPI || "",
+                  brand: brandName,
+                  brandSlug: slugify(brandName || ""),
+                  price: currentPrice,
+                  rating: ratingValue,
+                  image: imageUrl,
+                  discount: discountPercent,
+                  originalPrice: beforeDiscount,
+                  sold: parseInt(item.sold_count || "0") || 0,
+                };
+              });
+
+          } catch (err) {
+            console.error("Home API error:", err);
+            products = [];
+          }
+        } else {
+          // Nếu có searchQuery → dùng fetchSearchProducts (giống gợi ý tìm kiếm)
+          // Nếu không → dùng fetchShopProducts với category filter
+          if (searchQuery.trim()) {
+            // === TÌM KIẾM: Dùng fetchSearchProducts ===
+            try {
+              console.log('🔍 Shop - Searching with fetchSearchProducts:', searchQuery);
+
+              const searchResults = await fetchSearchProducts(searchQuery.trim());
+
+              console.log(`✅ Shop - Search found ${searchResults.length} products`);
+
+              // Chuyển đổi từ SearchProduct sang Product format
               products = searchResults
-                .filter((item: SearchProduct) => item.hinh_anh && item.hinh_anh.trim() !== "") // Lọc bỏ sản phẩm không có hình
-                .map((item: SearchProduct) => {
-                  // Xử lý rating - lấy average từ object
+                .filter((item) => item.hinh_anh && item.hinh_anh.trim() !== "")
+                .map((item) => {
                   const ratingValue = item.rating?.average || 0;
-
-                  // Tính giá sau giảm
                   const currentPrice = item.gia?.current || 0;
                   const beforeDiscount = item.gia?.before_discount || 0;
                   const discountPercent = item.gia?.discount_percent || 0;
 
-                  // Normalize URL ảnh: Giữ nguyên relative path từ mock server (đã có /assets/...)
                   let imageUrl = item.hinh_anh || "/assets/images/thumbs/default-product.png";
-
-                  // Nếu là relative path và bắt đầu bằng /assets/ -> giữ nguyên (từ mock server)
-                  // Nếu là http -> giữ nguyên (từ external API)
-                  // Nếu không có gì -> thêm /assets/images/thumbs/
                   if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/assets/')) {
                     imageUrl = `/assets/images/thumbs/${imageUrl}`;
                   }
 
-                  // Đoán category dựa trên tên sản phẩm và thương hiệu
-                  const inferCategory = (name: string): string => {
-                    const lowerName = name.toLowerCase();
-
-                    // Bách hóa - Kiểm tra TRƯỚC (vì "nước giặt", "nước rửa chén" chứa từ "nước")
-                    if (lowerName.includes("nước giặt") || lowerName.includes("nước rửa chén") ||
-                      lowerName.includes("nước rửa bát") || lowerName.includes("bột giặt") ||
-                      lowerName.includes("nước lau") || lowerName.includes("tẩy rửa")) {
-                      return "bach-hoa";
-                    }
-
-                    // Chăm sóc cá nhân - Kiểm tra TRƯỚC đồ uống
-                    if (lowerName.includes("sữa rửa mặt") || lowerName.includes("dầu gội") ||
-                      lowerName.includes("kem dưỡng") || lowerName.includes("son môi") ||
-                      lowerName.includes("nước hoa") || lowerName.includes("sữa tắm") ||
-                      lowerName.includes("dưỡng da") || lowerName.includes("kem body")) {
-                      return "cham-soc-ca-nhan";
-                    }
-
-                    // Sức khỏe
-                    if (lowerName.includes("yến") || lowerName.includes("sâm") ||
-                      lowerName.includes("đông trùng") || lowerName.includes("ginseng") ||
-                      lowerName.includes("hồng sâm") || lowerName.includes("nhân sâm") ||
-                      lowerName.includes("tinh dầu") || lowerName.includes("cao dược liệu")) {
-                      return "suc-khoe";
-                    }
-
-                    // Thực phẩm chức năng
-                    if (lowerName.includes("vitamin") || lowerName.includes("collagen") ||
-                      lowerName.includes("omega") || lowerName.includes("canxi") ||
-                      lowerName.includes("kẽm") || lowerName.includes("sắt") ||
-                      lowerName.includes("viên uống") || lowerName.includes("thực phẩm bảo vệ")) {
-                      return "thuc-pham-chuc-nang";
-                    }
-
-                    // Làm đẹp
-                    if (lowerName.includes("dưỡng mi") || lowerName.includes("serum") ||
-                      lowerName.includes("mặt nạ") || lowerName.includes("toner")) {
-                      return "lam-dep";
-                    }
-
-                    // Thiết bị y tế
-                    if (lowerName.includes("máy xông") || lowerName.includes("máy đo") ||
-                      lowerName.includes("găng tay y tế") || lowerName.includes("khẩu trang")) {
-                      return "thiet-bi-y-te";
-                    }
-
-                    // Mẹ và bé
-                    if (lowerName.includes("sữa non") || lowerName.includes("tã") ||
-                      lowerName.includes("bỉm") || lowerName.includes("papamilk")) {
-                      return "me-va-be";
-                    }
-
-                    // Thực phẩm - đồ ăn
-                    if (lowerName.includes("gạo") || lowerName.includes("dầu ăn") ||
-                      lowerName.includes("nước mắm") || lowerName.includes("mì") ||
-                      lowerName.includes("phở") || lowerName.includes("bún") ||
-                      lowerName.includes("bánh") || lowerName.includes("hạt") ||
-                      lowerName.includes("bột")) {
-                      return "thuc-pham-do-an";
-                    }
-
-                    // Đồ uống - Kiểm tra CUỐI CÙNG
-                    if (lowerName.includes("nước") || lowerName.includes("trà") ||
-                      lowerName.includes("cà phê") || lowerName.includes("sữa uống") ||
-                      lowerName.includes("nước ép") || lowerName.includes("nước giải khát")) {
-                      return "do-uong";
-                    }
-
-                    return ""; // Không xác định
-                  };
-
                   const brandName = item.thuonghieu || "Không rõ";
-                  const product = {
+
+                  return {
                     id: item.id,
                     name: item.ten,
-                    slug: (item as any).slug,
-                    category: inferCategory(item.ten),
+                    slug: item.slug,
+                    category: "",
                     brand: brandName,
                     brandSlug: slugify(brandName || ""),
-                    price: currentPrice, // Giá hiện tại đã giảm
+                    price: currentPrice,
                     rating: ratingValue,
                     image: imageUrl,
                     discount: discountPercent,
                     originalPrice: beforeDiscount,
-                    sold: parseInt(item.sold_count || "0") || 0,
+                    sold: item.sold || 0,
                   };
-
-                  return product;
                 });
+
+              console.log(`📊 Shop - Loaded ${products.length} search results`);
+
+            } catch (err) {
+              console.error("Search API error:", err);
+              products = [];
             }
-          } catch (searchErr) {
-            console.error("Search API error:", searchErr);
-            products = [];
-          }
-        } else {
-          // Nếu không có search query, tuỳ theo source để lấy dữ liệu
-          try {
-            const homeData = await fetchHomePage(); // Lấy dữ liệu mặc định từ API
+          } else {
+            // === KHÔNG TÌM KIẾM: Dùng fetchShopProducts với category filter ===
+            try {
+              console.log('🛒 Shop - Fetching from /api/sanphams-all');
+              console.log('🏷️ Shop - Category param:', categoryParam);
 
-            const allProductsFromAPI: any[] = [];
-            const mostWatched = homeData.data.most_watched || [];
-
-            // Debug: Xem API trả về bao nhiêu sản phẩm cho mỗi category
-            const categoryCounts = homeData.data.top_categories?.map((c: any) => ({
-              ten: c.ten,
-              count: c.sanpham?.length || 0
-            }));
-            console.table(categoryCounts);
-            console.log("Shop - Sức khỏe có:", categoryCounts?.find((c: any) => c.ten === "Sức khỏe")?.count || 0, "sản phẩm");
-
-            // Nếu có source param (hot_sales, best_products, new_launch, most_watched)
-            if (sourceParam === "hot_sales" || sourceParam === "best_products" ||
-              sourceParam === "new_launch" || sourceParam === "most_watched") {
-
-              // Lấy sản phẩm từ source tương ứng
-              console.log(`🔍 Shop - Đang lấy sản phẩm từ source="${sourceParam}"`);
-
-              if (sourceParam === "hot_sales") {
-                const hotSales = (homeData.data.hot_sales || [])
-                  .slice()
-                  .sort((a, b) => {
-                    const soldA = parseInt(a.sold_count || "0");
-                    const soldB = parseInt(b.sold_count || "0");
-                    return soldB - soldA;
-                  });
-                console.log('🔥 Shop - Hot Sales từ API:', hotSales.length, 'sản phẩm');
-                hotSales.forEach((product: any) => {
-                  allProductsFromAPI.push({
-                    ...product,
-                    categoryFromAPI: inferCategory(product.ten),
-                    categoryName: "Top deal • Siêu rẻ"
-                  });
-                });
-              } else if (sourceParam === "best_products") {
-                const bestProducts = (homeData.data.best_products || [])
-                  .slice()
-                  .sort((a, b) => {
-                    const soldA = parseInt(a.sold_count || "0");
-                    const soldB = parseInt(b.sold_count || "0");
-                    return soldB - soldA;
-                  });
-                console.log('⭐ Shop - Best Products từ API:', bestProducts.length, 'sản phẩm');
-                bestProducts.forEach((product: any) => {
-                  allProductsFromAPI.push({
-                    ...product,
-                    categoryFromAPI: inferCategory(product.ten),
-                    categoryName: "Sản phẩm hàng đầu"
-                  });
-                });
-              } else if (sourceParam === "new_launch") {
-                const newLaunch = (homeData.data.new_launch || [])
-                  .slice()
-                  .sort((a, b) => {
-                    const soldA = parseInt(a.sold_count || "0");
-                    const soldB = parseInt(b.sold_count || "0");
-                    return soldB - soldA;
-                  });
-                console.log('🆕 Shop - New Launch từ API:', newLaunch.length, 'sản phẩm');
-                newLaunch.forEach((product: any) => {
-                  allProductsFromAPI.push({
-                    ...product,
-                    categoryFromAPI: inferCategory(product.ten),
-                    categoryName: "Hàng mới chào sân",
-                  });
-                });
-              } else if (sourceParam === "most_watched") {
-                const mostWatchedOnly = (homeData.data.most_watched || [])
-                  .slice()
-                  .sort((a, b) => {
-                    const soldA = parseInt(a.sold_count || "0");
-                    const soldB = parseInt(b.sold_count || "0");
-                    return soldB - soldA;
-                  });
-                console.log('👀 Shop - Most Watched từ API:', mostWatchedOnly.length, 'sản phẩm');
-                mostWatchedOnly.forEach((product: any) => {
-                  allProductsFromAPI.push({
-                    ...product,
-                    categoryFromAPI: inferCategory(product.ten),
-                    categoryName: "Được quan tâm nhiều nhất",
-                  });
-                });
-              }
-            } else {
-              // Mặc định: Lấy sản phẩm từ top_categories - ĐÚNG SỐ LƯỢNG API TRẢ VỀ
-              homeData.data.top_categories?.forEach((cat: any) => {
-                if (cat.sanpham && Array.isArray(cat.sanpham)) {
-                  const categorySlug = CATEGORY_NAME_TO_SLUG[cat.ten] || "";
-
-                  console.log(`📦 Shop - ${cat.ten} (slug: ${categorySlug}): ${cat.sanpham.length} sản phẩm từ API`);
-
-                  // Lấy ĐÚNG số lượng sản phẩm mà API trả về cho từng category
-                  cat.sanpham.forEach((product: any) => {
-                    allProductsFromAPI.push({
-                      ...product,
-                      categoryFromAPI: categorySlug, // Gán category từ API
-                      categoryName: cat.ten
-                    });
-                  });
-                }
+              const shopData = await fetchShopProducts({
+                danhmuc: categoryParam || undefined, // Truyền category vào API để lọc server-side
               });
 
-              console.log(`🔍 Shop - categoryParam: "${categoryParam}"`);
-              console.log(`🔍 Shop - Tổng sản phẩm từ API: ${allProductsFromAPI.length}`);
+              console.log('✅ Shop - API Response:', shopData);
+              console.log(`📊 Shop - Total products from API: ${shopData.data?.length || 0}`);
 
-              // Nếu KHÔNG có category filter, thêm sản phẩm từ các section khác
-              if (!categoryParam || categoryParam === "") {
-                [
-                  ...(homeData.data.hot_sales || []),
-                  ...(homeData.data.best_products || []),
-                  ...(homeData.data.new_launch || []),
-                ].forEach((product: any) => {
-                  allProductsFromAPI.push({
-                    ...product,
-                    categoryFromAPI: "", // Các sản phẩm này sẽ không có category
-                    categoryName: ""
-                  });
+              // Lưu filters từ API
+              if (shopData.filters) {
+                setApiCategories(shopData.filters.danhmucs || []);
+                setApiBrands(shopData.filters.thuonghieus || []);
+                setApiPriceRanges(shopData.filters.price_ranges || []);
+              }
+
+              // Chuyển đổi dữ liệu từ API sang format Product
+              products = (shopData.data || [])
+                .filter((item) => item.hinh_anh && item.hinh_anh.trim() !== "")
+                .map((item) => {
+                  const ratingValue = item.rating?.average || 0;
+                  const currentPrice = item.gia?.current || 0;
+                  const beforeDiscount = item.gia?.before_discount || 0;
+                  const discountPercent = item.gia?.discount_percent || 0;
+
+                  let imageUrl = item.hinh_anh || "/assets/images/thumbs/default-product.png";
+                  if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/assets/')) {
+                    imageUrl = `/assets/images/thumbs/${imageUrl}`;
+                  }
+
+                  // Lấy category từ categoryParam nếu có
+                  const categorySlug = categoryParam || "";
+
+                  return {
+                    id: item.id,
+                    name: item.ten,
+                    slug: item.slug,
+                    category: categorySlug,
+                    brand: "Không rõ", // API không trả về brand trong data
+                    brandSlug: "",
+                    price: currentPrice,
+                    rating: ratingValue,
+                    image: imageUrl,
+                    discount: discountPercent,
+                    originalPrice: beforeDiscount,
+                    sold: item.sold?.total_sold || 0,
+                  };
                 });
-              }
+
+              console.log(`📊 Shop - Loaded ${products.length} products from API`);
+
+            } catch (err) {
+              console.error("Shop API error:", err);
+              products = [];
             }
-
-            // CHO PHÉP sản phẩm xuất hiện ở NHIỀU categories
-            // Sử dụng "id-category" làm key để tạo bản sao riêng cho mỗi category
-            const uniqueProductsMap = new Map();
-
-            allProductsFromAPI.forEach((item: any) => {
-              if (item.hinh_anh && item.hinh_anh.trim() !== "") {
-                // Dùng "id-category" làm key để cho phép sản phẩm xuất hiện ở nhiều category
-                const uniqueKey = `${item.id}-${item.categoryFromAPI || 'no-category'}`;
-
-                if (!uniqueProductsMap.has(uniqueKey)) {
-                  uniqueProductsMap.set(uniqueKey, item);
-                }
-              }
-            });
-
-            // Chuyển đổi sang định dạng Product
-            products = Array.from(uniqueProductsMap.values()).map((item: any) => {
-              const ratingValue = item.rating?.average || 0;
-              const currentPrice = item.gia?.current || 0;
-              const beforeDiscount = item.gia?.before_discount || 0;
-              const discountPercent = item.gia?.discount_percent || 0;
-
-              let imageUrl = item.hinh_anh || "/assets/images/thumbs/default-product.png";
-              if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/assets/')) {
-                imageUrl = `/assets/images/thumbs/${imageUrl}`;
-              }
-
-              const brandName = item.thuonghieu || "Không rõ";
-
-              return {
-                id: item.id,
-                name: item.ten,
-                slug: item.slug,
-                category: item.categoryFromAPI || "", // Dùng category từ API
-                brand: brandName,
-                brandSlug: slugify(brandName || ""),
-                price: currentPrice,
-                rating: ratingValue,
-                image: imageUrl,
-                discount: discountPercent,
-                originalPrice: beforeDiscount,
-                sold: parseInt(item.sold_count) || 0,
-              };
-            });
-
-            console.log(`📊 Shop - Sản phẩm sau khi map: ${products.length}`);
-            console.log(`🔎 Shop - Sản phẩm có category "thuc-pham-do-an": ${products.filter(p => p.category === "thuc-pham-do-an").length}`);
-
-            // Debug: Kiểm tra số lượng sản phẩm "Sức khỏe" sau khi xử lý
-            const sucKhoeProducts = products.filter((p: any) => p.category === "suc-khoe");
-            console.log("Shop - Sau khi xử lý, Sức khỏe có:", sucKhoeProducts.length, "sản phẩm");
-            console.log("Shop - Sản phẩm Sức khỏe:", sucKhoeProducts.map((p: any) => ({ id: p.id, name: p.name })));
-          } catch (err) {
-            console.error("API error:", err);
-            products = [];
           }
         }
 
@@ -565,7 +455,52 @@ export default function ShopPage() {
     }
 
     fetchProducts();
-  }, [searchQuery, filters, sourceParam]); // Fetch lại khi search query, filters HOẶC source thay đổi
+  }, [searchQuery, sourceParam, categoryParam]); // Fetch lại khi search query, source HOẶC category thay đổi
+
+  // Tạo category options từ API
+  const dynamicCategoryOptions = useMemo(() => {
+    if (apiCategories.length > 0) {
+      return [
+        { value: "", label: "Tất cả" },
+        ...apiCategories.map(cat => ({
+          value: cat.slug,
+          label: cat.ten,
+          count: cat.tong_sanpham
+        }))
+      ];
+    }
+    return CATEGORY_OPTIONS;
+  }, [apiCategories]);
+
+  // Tạo brand options từ API
+  const dynamicBrandOptions = useMemo(() => {
+    if (apiBrands.length > 0) {
+      return [
+        { value: "", label: "Tất cả" },
+        ...apiBrands.map(brand => ({
+          value: brand.slug,
+          label: brand.ten
+        }))
+      ];
+    }
+    return BRAND_OPTIONS;
+  }, [apiBrands]);
+
+  // Tạo price range options từ API
+  const dynamicPriceOptions = useMemo(() => {
+    if (apiPriceRanges.length > 0) {
+      return [
+        { value: "", label: "Tất cả" },
+        ...apiPriceRanges.map(range => ({
+          value: range.value,
+          label: range.label,
+          min: range.min,
+          max: range.max
+        }))
+      ];
+    }
+    return PRICE_OPTIONS;
+  }, [apiPriceRanges]);
 
   // useEffect 2: Apply filters CLIENT-SIDE (không fetch lại API)
   useEffect(() => {
@@ -578,19 +513,31 @@ export default function ShopPage() {
 
     // 2. Lọc theo giá
     if (filters.locgia && filters.locgia !== "") {
-      filtered = filtered.filter(p => {
-        const price = p.price;
-        switch (filters.locgia) {
-          case "low100": return price < 100000;
-          case "to200": return price >= 100000 && price <= 200000;
-          case "to300": return price >= 200000 && price <= 300000;
-          case "to500": return price >= 300000 && price <= 500000;
-          case "to700": return price >= 500000 && price <= 700000;
-          case "to1000": return price >= 700000 && price <= 1000000;
-          case "high1000": return price > 1000000;
-          default: return true;
-        }
-      });
+      // Tìm price range từ API hoặc dùng logic cũ
+      const priceRange = apiPriceRanges.find(r => r.value === filters.locgia);
+      if (priceRange) {
+        filtered = filtered.filter(p => {
+          const price = p.price;
+          const minOk = price >= priceRange.min;
+          const maxOk = priceRange.max === null || price <= priceRange.max;
+          return minOk && maxOk;
+        });
+      } else {
+        // Fallback logic cũ
+        filtered = filtered.filter(p => {
+          const price = p.price;
+          switch (filters.locgia) {
+            case "low100": return price < 100000;
+            case "to200": return price >= 100000 && price <= 200000;
+            case "to300": return price >= 200000 && price <= 300000;
+            case "to500": return price >= 300000 && price <= 500000;
+            case "to700": return price >= 500000 && price <= 700000;
+            case "to1000": return price >= 700000 && price <= 1000000;
+            case "high1000": return price > 1000000;
+            default: return true;
+          }
+        });
+      }
     }
 
     // 3. Lọc theo thương hiệu
@@ -601,7 +548,7 @@ export default function ShopPage() {
     }
 
     setFilteredProducts(filtered);
-  }, [allProducts, filters]);
+  }, [allProducts, filters, apiPriceRanges]);
 
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
@@ -628,6 +575,7 @@ export default function ShopPage() {
     setSidebarOpen(false);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [topBrands, setTopBrands] = useState<TopBrand[]>([]);
   const buildBrandLogo = (logo?: string) => {
     if (!logo) return "/assets/images/thumbs/placeholder.png";
@@ -692,7 +640,7 @@ export default function ShopPage() {
                       Danh mục sản phẩm
                     </h6>
                     <ul className="max-h-540 overflow-y-auto scroll-sm">
-                      {categoryOptionsWithCount.map((cat) => (
+                      {dynamicCategoryOptions.map((cat) => (
                         <li key={cat.value || "all"} className="mb-20">
                           <div className="form-check common-check common-radio">
                             <input
@@ -705,7 +653,7 @@ export default function ShopPage() {
                               onChange={(e) => setTempFilters({ ...tempFilters, danhmuc: e.target.value })}
                             />
                             <label className="form-check-label" htmlFor={cat.value || "all"}>
-                              {cat.label}{cat.value ? ` (${cat.count})` : ""}
+                              {cat.label}{cat.value && 'count' in cat ? ` (${cat.count})` : ""}
                             </label>
                           </div>
                         </li>
@@ -718,7 +666,7 @@ export default function ShopPage() {
                       Lọc theo giá tiền
                     </h6>
                     <ul className="max-h-540 overflow-y-auto scroll-sm">
-                      {PRICE_OPTIONS.map((price) => (
+                      {dynamicPriceOptions.map((price) => (
                         <li key={price.value || "all-price"} className="mb-24">
                           <div className="form-check common-check common-radio">
                             <input
@@ -744,7 +692,7 @@ export default function ShopPage() {
                       Lọc theo thương hiệu
                     </h6>
                     <ul className="max-h-540 overflow-y-auto scroll-sm">
-                      {BRAND_OPTIONS.map((brand) => (
+                      {dynamicBrandOptions.map((brand) => (
                         <li key={brand.value || "all-brand"} className="mb-16">
                           <div className="form-check common-check common-radio">
                             <input
@@ -757,7 +705,7 @@ export default function ShopPage() {
                               onChange={(e) => setTempFilters({ ...tempFilters, thuonghieu: e.target.value })}
                             />
                             <label className="form-check-label" htmlFor={`brand-${brand.value || "all"}`}>
-                              {brand.label}{brand.value ? ` (${brandCounts[brand.value] || 0})` : ""}
+                              {brand.label}
                             </label>
                           </div>
                         </li>
@@ -788,7 +736,7 @@ export default function ShopPage() {
                   </div>
 
                   <div className="shop-sidebar__box rounded-8">
-                    <a href="https://shopee.tw" target="_blank" rel="noreferrer">
+                    <a href="https://shopee.tw" target="_blank" rel="noreferrer noopener">
                       <img className="rounded-8 w-100" src="/assets/images/bg/shoppe.jpg" alt="Shopee Banner" />
                     </a>
                   </div>
@@ -825,6 +773,8 @@ export default function ShopPage() {
                 <div className="position-relative flex-align gap-16 flex-wrap">
                   <button
                     type="button"
+                    title="Mở bộ lọc"
+                    aria-label="Mở bộ lọc"
                     className="w-44 h-44 d-lg-none d-flex flex-center border border-gray-100 rounded-6 text-2xl sidebar-btn"
                     onClick={() => setSidebarOpen(true)}
                   >

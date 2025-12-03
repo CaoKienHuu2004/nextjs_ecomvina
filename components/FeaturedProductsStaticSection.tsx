@@ -155,87 +155,119 @@ const FeaturedProductsStaticSection = () => {
     );
 
     return (
-        <section className="featured-products overflow-hidden py-10 fix-scale-30">
-            <div className="container container-lg px-0">
-                <div className="row g-3 align-items-stretch flex-wrap-reverse">
-                    <div className="col-xxl-9 col-lg-8">
-                        <div className="h-100">
-                            <div className="section-heading mb-24">
-                                <div className="flex-between flex-wrap gap-2">
-                                    <h6 className="mb-0 wow fadeInLeft" style={{ visibility: "visible", animationName: "fadeInLeft" }}>
-                                        <i className="ph-bold ph-package text-main-600"></i> Sản phẩm hàng đầu
-                                    </h6>
-                                    <div className="border-bottom border-2 border-main-600 mb-3 mt-4" style={{ width: "55%" }}></div>
-                                    <div className="flex-align gap-16 wow fadeInRight" style={{ visibility: "visible", animationName: "fadeInRight" }}>
-                                        <a href="/shop?source=best_products" className="text-sm fw-medium text-gray-700 hover-text-main-600 hover-text-decoration-underline">
-                                            Xem tất cả
-                                        </a>
-                                        <div className="flex-align gap-8">
-                                            <button
-                                                type="button"
-                                                id="featured-products-prev"
-                                                className="flex-center rounded-circle border border-gray-100 hover-border-neutral-600 text-xl hover-bg-neutral-600 hover-text-white transition-1"
-                                                style={{ width: "40px", height: "40px" }}
-                                                onClick={() => handleNavigate("prev")}
-                                                disabled={!canNavigate}
-                                                aria-label="Xem sản phẩm trước"
-                                            >
-                                                <i className="ph ph-caret-left"></i>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                id="featured-products-next"
-                                                className="flex-center rounded-circle border border-gray-100 hover-border-neutral-600 text-xl hover-bg-neutral-600 hover-text-white transition-1"
-                                                style={{ width: "40px", height: "40px" }}
-                                                onClick={() => handleNavigate("next")}
-                                                disabled={!canNavigate}
-                                                aria-label="Xem sản phẩm tiếp theo"
-                                            >
-                                                <i className="ph ph-caret-right"></i>
-                                            </button>
+        <>
+            <section className="featured-products overflow-hidden py-10 fix-scale-30">
+                <div className="container container-lg px-0">
+                    <div className="row g-3 align-items-stretch flex-wrap-reverse">
+                        <div className="col-xxl-9 col-lg-8">
+                            <div className="h-100">
+                                <div className="section-heading mb-24">
+                                    <div className="flex-between flex-wrap gap-2">
+                                        <h6 className="mb-0 wow fadeInLeft" style={{ visibility: "visible", animationName: "fadeInLeft" }}>
+                                            <i className="ph-bold ph-package text-main-600"></i> Sản phẩm hàng đầu
+                                        </h6>
+                                        <div className="border-bottom border-2 border-main-600 mb-3 mt-4" style={{ width: "55%" }}></div>
+                                        <div className="flex-align gap-16 wow fadeInRight" style={{ visibility: "visible", animationName: "fadeInRight" }}>
+                                            <a href="/shop?source=best_products" className="text-sm fw-medium text-gray-700 hover-text-main-600 hover-text-decoration-underline">
+                                                Xem tất cả
+                                            </a>
+                                            <div className="flex-align gap-8">
+                                                <button
+                                                    type="button"
+                                                    id="featured-products-prev"
+                                                    className="flex-center rounded-circle border border-gray-100 hover-border-neutral-600 text-xl hover-bg-neutral-600 hover-text-white transition-1"
+                                                    style={{ width: "40px", height: "40px" }}
+                                                    onClick={() => handleNavigate("prev")}
+                                                    disabled={!canNavigate}
+                                                    aria-label="Xem sản phẩm trước"
+                                                >
+                                                    <i className="ph ph-caret-left"></i>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    id="featured-products-next"
+                                                    className="flex-center rounded-circle border border-gray-100 hover-border-neutral-600 text-xl hover-bg-neutral-600 hover-text-white transition-1"
+                                                    style={{ width: "40px", height: "40px" }}
+                                                    onClick={() => handleNavigate("next")}
+                                                    disabled={!canNavigate}
+                                                    aria-label="Xem sản phẩm tiếp theo"
+                                                >
+                                                    <i className="ph ph-caret-right"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="featured-products__viewport">
-                                <div
-                                    className={`featured-products__track slide-${direction}`}
-                                    style={{ transform: `translateX(-${activeSlide * 100}%)` }}
-                                >
-                                    {slides.map((slide, slideIdx) => {
-                                        const perColumn = Math.ceil(slide.length / 2);
-                                        const columnChunks = [
-                                            slide.slice(0, perColumn),
-                                            slide.slice(perColumn)
-                                        ];
-                                        return (
-                                            <div className="featured-products__slide" key={`slide-${slideIdx}`}>
-                                                <div className="row gy-3">
-                                                    {columnChunks.map((column, columnIdx) => (
-                                                        <div className="col-xxl-6 col-lg-6" key={`slide-${slideIdx}-column-${columnIdx}`}>
-                                                            {column.map((product) => renderProduct(product))}
-                                                        </div>
-                                                    ))}
+                                <div className="featured-products__viewport">
+                                    <div
+                                        className={`featured-products__track slide-${direction}`}
+                                        style={{ transform: `translateX(-${activeSlide * 100}%)` }}
+                                    >
+                                        {slides.map((slide, slideIdx) => {
+                                            const perColumn = Math.ceil(slide.length / 2);
+                                            const columnChunks = [
+                                                slide.slice(0, perColumn),
+                                                slide.slice(perColumn)
+                                            ];
+                                            return (
+                                                <div className="featured-products__slide" key={`slide-${slideIdx}`}>
+                                                    <div className="row gy-3">
+                                                        {columnChunks.map((column, columnIdx) => (
+                                                            <div className="col-xxl-6 col-lg-6" key={`slide-${slideIdx}-column-${columnIdx}`}>
+                                                                {column.map((product) => renderProduct(product))}
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="col-xxl-3 col-lg-4">
-                        <div className="featured-products__banner position-relative rounded-16 overflow-hidden p-28 pb-0 z-1 text-center h-100 aos-init aos-animate" data-aos="fade-up" data-aos-duration="1000">
-                            <a href="https://shopee.tw" className="p-0 m-0 w-100 h-100 d-block">
-                                <img src="https://sieuthivina.com/assets/client/images/bg/shopee-09.jfif" alt="shopee-09" className="position-absolute inset-block-start-0 inset-inline-start-0 z-n1 w-100 h-100 cover-img" />
-                            </a>
+                        <div className="col-xxl-3 col-lg-4">
+                            <div className="featured-products__banner position-relative rounded-16 overflow-hidden p-28 pb-0 z-1 text-center h-100 aos-init aos-animate" data-aos="fade-up" data-aos-duration="1000">
+                                <a href="https://shopee.tw" className="p-0 m-0 w-100 h-100 d-block">
+                                    <img src="https://sieuthivina.com/assets/client/images/bg/shopee-09.jfif" alt="shopee-09" className="position-absolute inset-block-start-0 inset-inline-start-0 z-n1 w-100 h-100 cover-img" />
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </section>
+
+            {/* Coupon Banner */}
+            <div className="py-20">
+                <div className="container container-lg px-0">
+                    <div className="border border-main-500 bg-main-50 border-dashed rounded-8 py-20 d-flex align-items-center justify-content-evenly flex-wrap gap-16">
+                        <p className="h6 text-main-600 fw-normal mb-0">
+                            Áp dụng mã giảm giá ưu đãi cho
+                            <a href="#" className="fw-bold text-decoration-underline text-main-600 hover-text-decoration-none hover-text-primary-600 ms-1">
+                                thành viên mới
+                            </a>
+                        </p>
+                        <div className="position-relative">
+                            <button
+                                className="copy-coupon-btn px-32 py-10 text-white text-uppercase bg-main-600 rounded-pill border-0 hover-bg-main-800"
+                                onClick={() => {
+                                    navigator.clipboard.writeText('SIEUTHIVINA2025');
+                                    alert('Đã sao chép mã: SIEUTHIVINA2025');
+                                }}
+                            >
+                                SIEUTHIVINA2025
+                                <i className="ph ph-file-text text-lg line-height-1 ms-2"></i>
+                            </button>
+                        </div>
+                        <p className="text-md text-main-600 fw-normal mb-0">
+                            Áp dụng giảm giá đến
+                            <span className="fw-bold text-main-600 ms-1">20%</span> tổng giá trị mỗi đơn hàng
+                        </p>
+                    </div>
+                </div>
             </div>
-        </section>
+        </>
     );
 };
 

@@ -782,15 +782,48 @@
   justify-content: center;
 }
 
-/* Shop Page - Product Card Image Size Uniform */
-.shop .product-card>a.flex-center {
-  max-height: 200px;
-  overflow: hidden;
+/* Shop Page - Product Card Size (220.05x341.73 matching template) */
+.shop .row.g-12>[class*="col-"] {
+  padding: 6px;
 }
 
-.shop .product-card>a.flex-center img {
-  width: 100%;
-  height: 600px;
-  max-height: 900px;
-  object-fit: contain;
+.shop .product-card {
+  min-height: 367.2px !important;
+  height: 367.2px !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.shop .product-card>a.flex-center,
+.shop .product-card .shop-product-img-wrapper {
+  height: 230px;
+  min-height: 208px;
+  width: 230px;
+  margin: 0 auto;
+  overflow: hidden;
+  display: block;
+  background-color: #f8f9fa;
+  padding: 0 !important;
+}
+
+.shop .product-card>a.flex-center img,
+.shop .product-card .shop-product-img {
+  width: 230px !important;
+  height: 230px !important;
+  object-fit: contain !important;
+}
+
+.shop .product-card .product-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 155px;
+  padding-bottom: 12px;
+}
+
+/* Gift Events Section - Navigation Buttons */
+.gift-nav-btn {
+  width: 36px;
+  height: 36px;
 }

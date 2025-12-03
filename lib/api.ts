@@ -170,6 +170,7 @@ export interface HomeHotSaleProduct {
 export interface GiftEvent {
   id: number;
   tieude: string;
+  slug?: string;
   dieukien: string;
   thongtin: string;
   hinhanh: string;
@@ -206,6 +207,7 @@ export interface TopBrand {
 // ===== Coupons =====
 export interface Coupon {
   id: number;
+  code: string; // Alias for magiamgia for compatibility
   magiamgia: number;
   dieukien: string;
   mota: string;
@@ -264,34 +266,153 @@ export interface HomePageResponse {
  * @param perPage - Number of products per category (default: 6)
  * @returns Promise with homepage data including banners, products, and categories
  */
+
+// Cache cho homepage data
+let homePageCache: { data: HomePageResponse | null; timestamp: number } = { data: null, timestamp: 0 };
+const CACHE_DURATION = 60000; // Cache 60 giây
+
+// Retry với exponential backoff
+async function fetchWithRetry<T>(
+  fetchFn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fetchFn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Nếu là lỗi 429, chờ lâu hơn
+      const is429 = lastError.message.includes('429');
+      const delay = is429
+        ? baseDelay * Math.pow(2, attempt + 1) // 2s, 4s, 8s cho 429
+        : baseDelay * Math.pow(2, attempt); // 1s, 2s, 4s cho lỗi khác
+
+      if (attempt < maxRetries - 1) {
+        console.log(`⏳ API retry ${attempt + 1}/${maxRetries} sau ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 export async function fetchHomePage(headers?: Record<string, string>, perPage: number = 6): Promise<HomePageResponse> {
+  // Kiểm tra cache
+  const now = Date.now();
+  if (homePageCache.data && (now - homePageCache.timestamp) < CACHE_DURATION) {
+    console.log('📦 Sử dụng cache cho homepage data');
+    return homePageCache.data;
+  }
+
   const HOME_API_URL = "http://148.230.100.215";
   const url = `${HOME_API_URL}/api/trang-chu${perPage !== 6 ? `?per_page=${perPage}` : ''}`;
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      ...headers,
-    },
-    cache: "no-store",
-  });
+  const result = await fetchWithRetry(async () => {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        ...headers,
+      },
+      cache: "no-store",
+    });
 
-  if (!response.ok) {
-    throw new Error(`Home API error: ${response.status}`);
-  }
+    if (!response.ok) {
+      throw new Error(`Home API error: ${response.status}`);
+    }
 
-  return response.json() as Promise<HomePageResponse>;
+    return response.json() as Promise<HomePageResponse>;
+  }, 3, 1000);
+
+  // Lưu vào cache
+  homePageCache = { data: result, timestamp: now };
+
+  return result;
 }
 
 // ============================================
 // Product Detail API Types & Functions
 // ============================================
 
+// Danh mục sản phẩm
+export interface ProductCategory {
+  id_danhmuc: number;
+  ten: string;
+  slug: string;
+}
+
+// Loại biến thể
+export interface ProductVariantType {
+  id_loaibienthe: number;
+  ten: string;
+  trangthai: string;
+}
+
+// Biến thể sản phẩm
+export interface ProductVariant {
+  id_bienthe: number;
+  loai_bien_the: number;
+  giagoc: number;
+  giamgia: number;
+  giahientai: number;
+  luotban: number;
+}
+
+// Ảnh sản phẩm
+export interface ProductImage {
+  id: number;
+  hinhanh: string;
+  trangthai: string;
+}
+
+// Đánh giá chi tiết
+export interface ProductRatingDetail {
+  average: number;
+  count: number;
+  sao_5: number;
+  sao_4: number;
+  sao_3: number;
+  sao_2: number;
+  sao_1: number;
+}
+
+// Sản phẩm tương tự
+export interface SimilarProduct {
+  id: number;
+  ten: string;
+  slug: string;
+  have_gift: boolean;
+  hinh_anh: string;
+  rating: {
+    average: number;
+    count: number;
+  };
+  luotxem: number;
+  sold: {
+    total_sold: number;
+    total_quantity: number;
+  };
+  gia: {
+    current: number;
+    before_discount: number;
+    discount_percent: number;
+  };
+  trangthai: {
+    active: string;
+    in_stock: boolean;
+  };
+}
+
 export interface ProductDetail {
   id: number;
   slug: string;
   ten: string;
+  have_gift?: boolean;
   hinh_anh?: string;
   mediaurl?: string;
   images?: string[];
@@ -300,13 +421,18 @@ export interface ProductDetail {
   mota?: string;
   mo_ta?: string;
   thong_tin_chi_tiet?: string;
-  rating?: {
+  danhmuc?: ProductCategory[];
+  rating?: ProductRatingDetail | {
     average: number;
     count: number;
   };
   sold_count?: string;
-  sold?: number;
-  gia: {
+  sold?: {
+    total_sold: number;
+    total_quantity: number;
+  } | number;
+  luotxem?: number;
+  gia?: {
     current: number;
     before_discount?: number;
     discount_percent?: number;
@@ -314,26 +440,36 @@ export interface ProductDetail {
   selling_price?: number;
   original_price?: number;
   discount_percent?: number;
+  loai_bien_the?: ProductVariantType[];
+  bienthe_khichon_loaibienthe_themvaogio?: ProductVariant[];
+  anh_san_pham?: ProductImage[];
+  danh_gia?: unknown[];
   variants?: unknown[];
   category?: string;
   tags?: string[];
   xuatxu?: string;
   sanxuat?: string;
+  trangthai?: {
+    active: string;
+    in_stock: boolean;
+  };
 }
 
 export interface ProductDetailResponse {
-  status: boolean;
+  status?: boolean;
   data: ProductDetail;
+  sanpham_tuongtu?: SimilarProduct[];
 }
 
 /**
  * Fetch product detail by slug from the API server
+ * Uses /api/sanphams-all/{slug} endpoint
  * @param slug - Product slug
  * @returns Promise with product detail data
  */
 export async function fetchProductDetail(slug: string): Promise<ProductDetailResponse> {
   const HOME_API_URL = "http://148.230.100.215";
-  const url = `${HOME_API_URL}/api/san-pham/${slug}`;
+  const url = `${HOME_API_URL}/api/sanphams-all/${slug}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -463,4 +599,118 @@ export async function trackKeywordAccess(keyword: string): Promise<void> {
     // Silently fail - tracking shouldn't break the user experience
     console.debug('Keyword tracking failed (non-critical):', error);
   }
+}
+
+// ============================================
+// Shop Products API (sanphams-all)
+// ============================================
+
+export interface ShopCategory {
+  id: number;
+  ten: string;
+  slug: string;
+  logo: string;
+  parent: string;
+  trangthai: string;
+  tong_sanpham: number;
+}
+
+export interface ShopPriceRange {
+  label: string;
+  min: number;
+  max: number | null;
+  value: string;
+}
+
+export interface ShopBrand {
+  id: number;
+  ten: string;
+  slug: string;
+}
+
+export interface ShopProductItem {
+  id: number;
+  ten: string;
+  slug: string;
+  have_gift: boolean;
+  hinh_anh: string;
+  rating: {
+    average: number;
+    count: number;
+  };
+  luotxem: number;
+  sold: {
+    total_sold: number;
+    total_quantity: number;
+  };
+  gia: {
+    current: number;
+    before_discount: number;
+    discount_percent: number;
+  };
+  trangthai: {
+    active: string;
+    in_stock: boolean;
+  };
+}
+
+export interface ShopFilters {
+  danhmucs: ShopCategory[];
+  price_ranges: ShopPriceRange[];
+  thuonghieus: ShopBrand[];
+}
+
+export interface ShopProductsResponse {
+  status: boolean;
+  message: string;
+  filters: ShopFilters;
+  data: ShopProductItem[];
+}
+
+/**
+ * Fetch all products from shop API with filters
+ * @param params - Optional query parameters for filtering
+ * @returns Promise with shop products and filter options
+ */
+export async function fetchShopProducts(params?: {
+  danhmuc?: string;
+  min_price?: number;
+  max_price?: number;
+  thuonghieu?: string;
+  query?: string;
+  sort?: string;
+  page?: number;
+  per_page?: number;
+}): Promise<ShopProductsResponse> {
+  const HOME_API_URL = "http://148.230.100.215";
+
+  // Build query string from params
+  const queryParams = new URLSearchParams();
+  if (params?.danhmuc) queryParams.append('danhmuc', params.danhmuc);
+  if (params?.min_price !== undefined) queryParams.append('min_price', params.min_price.toString());
+  if (params?.max_price !== undefined) queryParams.append('max_price', params.max_price.toString());
+  if (params?.thuonghieu) queryParams.append('thuonghieu', params.thuonghieu);
+  if (params?.query) queryParams.append('query', params.query);
+  if (params?.sort) queryParams.append('sort', params.sort);
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+
+  const queryString = queryParams.toString();
+  const url = `${HOME_API_URL}/api/sanphams-all${queryString ? `?${queryString}` : ''}`;
+
+  console.log('🛒 Fetching shop products from:', url);
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Shop API error: ${response.status}`);
+  }
+
+  return response.json() as Promise<ShopProductsResponse>;
 }

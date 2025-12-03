@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "./useAuth";
 import Cookies from "js-cookie";
 
@@ -15,6 +15,10 @@ export type Coupon = {
   giatri: number;
   mota?: string;
   min_order_value?: number;
+  dieukien?: string;
+  condition_type?: VoucherConditionType;
+  ngaybatdau?: string;
+  ngayketthuc?: string;
 };
 
 // Interface cho dữ liệu Voucher thô từ Server
@@ -31,19 +35,89 @@ interface ServerVoucherRaw {
   min_order_value?: number;
   don_toi_thieu?: number;
   trangthai?: string;
+  ngaybatdau?: string;
+  ngayketthuc?: string;
   [key: string]: unknown;
 }
 
-const parseMinOrderValue = (condition?: string, description?: string): number => {
-  const text = (condition || "") + " " + (description || "");
-  const matches = text.match(/(\d{3,})/g);
-  if (matches && matches.length > 0) {
-    return Math.max(...matches.map(Number));
+// Loại điều kiện voucher
+export type VoucherConditionType =
+  | 'tatca'           // Tất cả đơn hàng
+  | 'don_toi_thieu'   // Đơn hàng tối thiểu X đồng
+  | 'khachhang_moi'   // Khách hàng mới
+  | 'khachhang_than_thiet' // Khách hàng thân thiết
+  | 'freeship'        // Miễn phí ship
+  | 'unknown';
+
+// Parse điều kiện voucher từ string
+export const parseVoucherCondition = (dieukien?: string, mota?: string): {
+  type: VoucherConditionType;
+  minOrderValue: number;
+} => {
+  const condition = (dieukien || '').toLowerCase();
+  const description = (mota || '').toLowerCase();
+  const fullText = condition + ' ' + description;
+
+  // Parse giá trị đơn tối thiểu từ text
+  let minOrderValue = 0;
+
+  // Tìm số có 6 chữ số (ví dụ: 500000)
+  const matches6 = fullText.match(/(\d{6,})/g);
+  if (matches6 && matches6.length > 0) {
+    minOrderValue = Math.max(...matches6.map(Number));
+  } else {
+    // Tìm pattern "500k" hoặc "500K"
+    const matchK = fullText.match(/(\d+)k/i);
+    if (matchK) {
+      minOrderValue = parseInt(matchK[1]) * 1000;
+    }
   }
-  return 0;
+
+  // Xác định loại điều kiện
+  if (condition === 'tatca') {
+    return { type: 'tatca', minOrderValue: 0 };
+  }
+
+  if (condition.includes('khachhang_moi') || condition === 'khachhang_moi') {
+    return { type: 'khachhang_moi', minOrderValue };
+  }
+
+  if (condition.includes('khachhang_than_thiet') || condition === 'khachhang_than_thiet') {
+    return { type: 'khachhang_than_thiet', minOrderValue };
+  }
+
+  if (condition.includes('donhang_toi_thieu') || condition.includes('don_toi_thieu') || minOrderValue > 0) {
+    return { type: 'don_toi_thieu', minOrderValue };
+  }
+
+  if (fullText.includes('freeship') || fullText.includes('miễn phí vận chuyển') || fullText.includes('free ship')) {
+    return { type: 'freeship', minOrderValue };
+  }
+
+  return { type: 'unknown', minOrderValue };
 };
 
-export type Gia = { current?: number; before_discount?: number };
+// Kiểm tra voucher còn hạn không
+export const isVoucherInDateRange = (ngaybatdau?: string, ngayketthuc?: string): boolean => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  if (ngaybatdau) {
+    const startDate = new Date(ngaybatdau);
+    startDate.setHours(0, 0, 0, 0);
+    if (now < startDate) return false; // Chưa đến ngày bắt đầu
+  }
+
+  if (ngayketthuc) {
+    const endDate = new Date(ngayketthuc);
+    endDate.setHours(23, 59, 59, 999);
+    if (now > endDate) return false; // Đã quá ngày kết thúc
+  }
+
+  return true;
+};
+
+export type Gia = { current?: number; before_discount?: number; discount_percent?: number };
 
 export type ProductDisplayInfo = {
   id?: number | string;
@@ -55,6 +129,9 @@ export type ProductDisplayInfo = {
   gia?: Gia;
   ratingAverage?: number;
   ratingCount?: number;
+  thuonghieu?: string;
+  loaibienthe?: string;
+  slug?: string;
 };
 
 export type CartItem = {
@@ -63,6 +140,19 @@ export type CartItem = {
   quantity: number;
   product?: ProductDisplayInfo;
 };
+
+// Interface cho quà tặng trong giỏ hàng
+export interface GiftItem {
+  id_bienthe: number;
+  soluong: number;
+  thanhtien: number;
+  ten_sanpham?: string;
+  ten_loaibienthe?: string;
+  thuonghieu?: string;
+  hinhanh?: string;
+  slug?: string;
+  giagoc?: number;
+}
 
 interface ServerCartItemRaw {
   id_giohang?: number | string;
@@ -77,13 +167,30 @@ interface ServerCartItemRaw {
       thuonghieu?: string;
       tensanpham?: string;
       loaisanpham?: string;
-      giamgia?: string;
+      loaibienthe?: string;
+      giamgia?: string | number;
       giagoc?: number;
       giaban?: number;
       hinhanh?: string;
+      slug?: string;
     };
   };
-  bienthe_quatang?: unknown;
+  bienthe_quatang?: {
+    id_bienthe?: number;
+    soluong?: number;
+    thanhtien?: number;
+    bienthe?: {
+      id?: number;
+      giagoc?: number;
+      sanpham?: {
+        ten?: string;
+        slug?: string;
+        thuonghieu?: { ten?: string };
+        hinhanhsanpham?: Array<{ hinhanh?: string }>;
+      };
+      loaibienthe?: { ten?: string };
+    };
+  };
 }
 
 export type AddToCartInput = {
@@ -103,6 +210,9 @@ export function useCart() {
   const { isLoggedIn } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Gift State - Quà tặng trong giỏ hàng
+  const [gifts, setGifts] = useState<GiftItem[]>([]);
 
   // Voucher State
   const [appliedVoucher, setAppliedVoucher] = useState<Coupon | null>(null);
@@ -135,6 +245,9 @@ export function useCart() {
     if (detail) {
       const currentPrice = Number(detail.giaban ?? detail.giagoc ?? 0);
       const originPrice = Number(detail.giagoc ?? 0);
+      const discountPercent = originPrice > currentPrice && originPrice > 0
+        ? Math.round(((originPrice - currentPrice) / originPrice) * 100)
+        : (typeof detail.giamgia === 'number' ? detail.giamgia : Number(detail.giamgia) || 0);
 
       productInfo = {
         id: id_giohang,
@@ -143,10 +256,14 @@ export function useCart() {
         category: detail.loaisanpham,
         gia: {
           current: currentPrice,
-          before_discount: originPrice
+          before_discount: originPrice,
+          discount_percent: discountPercent
         },
         ratingAverage: 5,
-        ratingCount: 0
+        ratingCount: 0,
+        thuonghieu: detail.thuonghieu,
+        loaibienthe: detail.loaibienthe,
+        slug: detail.slug
       };
     }
 
@@ -159,14 +276,17 @@ export function useCart() {
   }, []);
 
   // --- FETCH CART ---
-  const loadServerCart = useCallback(async (): Promise<CartItem[]> => {
+  const loadServerCart = useCallback(async (): Promise<{ items: CartItem[], gifts: GiftItem[] }> => {
     try {
       const res = await fetch(`${API}/api/toi/giohang`, {
         headers: getAuthHeaders(),
         cache: "no-store",
       });
-      if (!res.ok) return [];
+      if (!res.ok) return { items: [], gifts: [] };
       const j: unknown = await res.json();
+
+      // DEBUG: Log raw response để xem cấu trúc
+      console.log('🛒 Raw cart API response:', JSON.stringify(j, null, 2));
 
       let rawData: unknown[] = [];
       if (Array.isArray(j)) {
@@ -175,10 +295,44 @@ export function useCart() {
         rawData = (j as { data: unknown[] }).data;
       }
 
-      return rawData.map(mapServerDataToCartItem);
+      // DEBUG: Log từng item để tìm quà tặng
+      console.log('🎁 Checking for gifts in cart items:', rawData.length, 'items');
+      rawData.forEach((item, index) => {
+        const sItem = item as ServerCartItemRaw;
+        console.log(`  Item ${index}:`, {
+          id_giohang: sItem.id_giohang,
+          has_bienthe_quatang: !!sItem.bienthe_quatang,
+          bienthe_quatang: sItem.bienthe_quatang
+        });
+      });
+
+      const cartItems = rawData.map(mapServerDataToCartItem);
+
+      // Extract gifts from cart items
+      const giftItems: GiftItem[] = [];
+      rawData.forEach((item) => {
+        const sItem = item as ServerCartItemRaw;
+        if (sItem.bienthe_quatang && sItem.bienthe_quatang.bienthe) {
+          const qt = sItem.bienthe_quatang;
+          const bienthe = qt.bienthe;
+          giftItems.push({
+            id_bienthe: qt.id_bienthe || bienthe?.id || 0,
+            soluong: qt.soluong || 1,
+            thanhtien: qt.thanhtien || 0,
+            ten_sanpham: bienthe?.sanpham?.ten,
+            ten_loaibienthe: bienthe?.loaibienthe?.ten,
+            thuonghieu: bienthe?.sanpham?.thuonghieu?.ten,
+            hinhanh: bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh,
+            slug: bienthe?.sanpham?.slug,
+            giagoc: bienthe?.giagoc
+          });
+        }
+      });
+
+      return { items: cartItems, gifts: giftItems };
     } catch (e) {
       console.error("Lỗi load server cart:", e);
-      return [];
+      return { items: [], gifts: [] };
     }
   }, [API, getAuthHeaders, mapServerDataToCartItem]);
 
@@ -220,10 +374,11 @@ export function useCart() {
         }).catch(() => { });
       }
       clearLocalCart();
-      const serverCart = await loadServerCart();
-      setItems(serverCart);
+      const { items: serverItems, gifts: serverGifts } = await loadServerCart();
+      setItems(serverItems);
+      setGifts(serverGifts);
       try {
-        const count = serverCart.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+        const count = serverItems.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
         window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
       } catch { }
     } finally { setLoading(false); }
@@ -234,11 +389,13 @@ export function useCart() {
     setLoading(true);
     try {
       if (isLoggedIn) {
-        const serverCart = await loadServerCart();
-        setItems(serverCart);
+        const { items: serverItems, gifts: serverGifts } = await loadServerCart();
+        setItems(serverItems);
+        setGifts(serverGifts);
       } else {
         const localCart = loadLocalCart();
         setItems(localCart);
+        setGifts([]);
       }
     } finally { setLoading(false); }
   }, [isLoggedIn, loadServerCart, loadLocalCart]);
@@ -285,9 +442,10 @@ export function useCart() {
           }),
         });
         if (res.ok) {
-          const serverCart = await loadServerCart();
-          setItems(serverCart);
-          const count = serverCart.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+          const { items: serverItems, gifts: serverGifts } = await loadServerCart();
+          setItems(serverItems);
+          setGifts(serverGifts);
+          const count = serverItems.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
           window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
         }
       } else {
@@ -413,16 +571,27 @@ export function useCart() {
         }
 
         // SỬA: Filter trước, Map sau để tránh any
+        // Thêm check ngày hết hạn
         const activeVouchers = (list as ServerVoucherRaw[])
-          .filter(raw => raw.trangthai === "Hoạt động")
+          .filter(raw => {
+            // Check trạng thái
+            if (raw.trangthai !== "Hoạt động") return false;
+            // Check ngày hết hạn
+            if (!isVoucherInDateRange(raw.ngaybatdau, raw.ngayketthuc)) return false;
+            return true;
+          })
           .map(raw => {
-            const minVal = parseMinOrderValue(raw.dieukien, raw.mota);
+            const parsed = parseVoucherCondition(raw.dieukien, raw.mota);
             return {
               id: raw.id,
               code: String(raw.magiamgia ?? raw.code ?? "UNKNOWN"),
               giatri: Number(raw.giatri ?? raw.amount ?? 0),
               mota: raw.mota ?? raw.description ?? "Mã giảm giá",
-              min_order_value: minVal
+              min_order_value: parsed.minOrderValue,
+              dieukien: raw.dieukien,
+              condition_type: parsed.type,
+              ngaybatdau: raw.ngaybatdau,
+              ngayketthuc: raw.ngayketthuc
             } as Coupon;
           });
 
@@ -451,23 +620,30 @@ export function useCart() {
         list = json;
       }
 
-      // SỬA: Ép kiểu an toàn
+      // SỬA: Ép kiểu an toàn + check ngày hết hạn
       const foundRaw = (list as ServerVoucherRaw[]).find((raw) => {
-        return String(raw.magiamgia) === code && raw.trangthai === "Hoạt động";
+        if (String(raw.magiamgia) !== code) return false;
+        if (raw.trangthai !== "Hoạt động") return false;
+        if (!isVoucherInDateRange(raw.ngaybatdau, raw.ngayketthuc)) return false;
+        return true;
       });
 
       if (foundRaw) {
-        const minVal = parseMinOrderValue(foundRaw.dieukien, foundRaw.mota);
+        const parsed = parseVoucherCondition(foundRaw.dieukien, foundRaw.mota);
         const coupon: Coupon = {
           id: foundRaw.id,
           code: String(foundRaw.magiamgia),
           giatri: Number(foundRaw.giatri),
           mota: foundRaw.mota,
-          min_order_value: minVal
+          min_order_value: parsed.minOrderValue,
+          dieukien: foundRaw.dieukien,
+          condition_type: parsed.type,
+          ngaybatdau: foundRaw.ngaybatdau,
+          ngayketthuc: foundRaw.ngayketthuc
         };
         applyVoucher(coupon);
       } else {
-        alert("Mã giảm giá không tồn tại hoặc chưa kích hoạt.");
+        alert("Mã giảm giá không tồn tại, chưa kích hoạt hoặc đã hết hạn.");
       }
     } catch (e) {
       console.error(e);
@@ -482,11 +658,14 @@ export function useCart() {
   const discountAmount = appliedVoucher ? appliedVoucher.giatri : 0;
   const total = Math.max(0, subtotal - discountAmount);
   const totalItems = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+  const totalGifts = gifts.reduce((sum, g) => sum + (g.soluong || 0), 0);
 
   return {
     items, loading, addToCart, updateQuantity, removeItem, clearCart, refreshCart: fetchCart,
     subtotal,
     totalItems,
+    gifts,
+    totalGifts,
     appliedVoucher,
     applyVoucher,
     applyVoucherByCode,

@@ -161,10 +161,10 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
                                 ))
                             )}
                         </div>
-                        <div className="mx-auto w-100 text-center">
+                        <div className="mx-auto w-100 text-center" style={{ marginTop: 40 }}>
                             <a
                                 href={`/shop?category=${cat.slug}`}
-                                className="btn border-main-600 text-main-600 hover-bg-main-600 hover-border-main-600 hover-text-white rounded-8 px-32 py-12 mt-8"
+                                className="btn border-main-600 text-main-600 hover-bg-main-600 hover-border-main-600 hover-text-white rounded-8 px-32 py-12"
                                 style={{ marginBottom: 0 }}
                             >
                                 Xem thêm sản phẩm

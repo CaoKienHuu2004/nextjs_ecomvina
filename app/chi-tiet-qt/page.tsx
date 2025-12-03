@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import FullHeader from '@/components/FullHeader';
-import { fetchHomePage, GiftEvent } from '@/lib/api';
 import { useCart } from '@/hooks/useCart';
+
+const API_URL = process.env.NEXT_PUBLIC_SERVER_API || 'http://148.230.100.215';
 
 interface TimeLeft {
     days: number;
@@ -14,31 +15,120 @@ interface TimeLeft {
     seconds: number;
 }
 
-interface RelatedProduct {
+// Interface cho quà tặng từ API mới /api/quatang/{id}
+interface QuaTangDetail {
+    id: number;
+    id_bienthe: number;
+    id_chuongtrinh: number;
+    thongtin_thuonghieu: {
+        id_thuonghieu: number;
+        ten_thuonghieu: string;
+        slug_thuonghieu: string;
+        logo_thuonghieu: string;
+    };
+    dieukiensoluong: number;
+    dieukiengiatri: number;
+    tieude: string;
+    slug: string;
+    thongtin: string;
+    hinhanh: string;
+    luotxem: number;
+    ngaybatdau: string;
+    thoigian_conlai: number;
+    ngayketthuc: string;
+    trangthai: string;
+    bienthe_quatang?: {
+        ten_bienthe_quatang: string;
+        ten_loaibienthe_quatang: string;
+        slug_bienthe_quatang_sanpham: string;
+        hinhanh: string;
+        soluong: number;
+    };
+}
+
+interface SanPhamCoQua {
     id: number;
     ten: string;
     slug: string;
+    have_gift: boolean;
     hinh_anh: string;
-    thuonghieu: string;
+    rating: {
+        average: number;
+        count: number;
+    };
+    luotxem: number;
+    sold: {
+        total_sold: number;
+        total_quantity: number;
+    };
     gia: {
         current: number;
         before_discount: number;
         discount_percent: number;
     };
-    rating: {
-        average: number;
-        count: number;
+    trangthai: {
+        active: string;
+        in_stock: boolean;
     };
-    sold_count: string | number;
-    donvi?: string;
+    id_bienthe_de_them_vao_gio: number;
+}
+
+interface QuaTangResponse {
+    data: QuaTangDetail;
+    sanpham_coqua: SanPhamCoQua[];
+}
+
+// Fetch chi tiết quà tặng bằng slug - API: /api/quatangs-all/{slug}
+async function fetchQuaTangDetail(slug: string): Promise<QuaTangResponse | null> {
+    try {
+        const response = await fetch(`${API_URL}/api/quatangs-all/${slug}`, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+            },
+            cache: 'no-store',
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        return response.json();
+    } catch (error) {
+        console.error('Error fetching gift detail:', error);
+        return null;
+    }
+}
+
+// Fetch chi tiết quà tặng bằng id - API: /api/quatang/{id}
+async function fetchQuaTangById(id: string): Promise<QuaTangResponse | null> {
+    try {
+        const response = await fetch(`${API_URL}/api/quatang/${id}`, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+            },
+            cache: 'no-store',
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        return response.json();
+    } catch (error) {
+        console.error('Error fetching gift detail by id:', error);
+        return null;
+    }
 }
 
 export default function GiftDetailPage() {
     const searchParams = useSearchParams();
+    const giftSlug = searchParams.get('slug');
     const giftId = searchParams.get('id');
 
-    const [gift, setGift] = useState<GiftEvent | null>(null);
-    const [relatedProducts, setRelatedProducts] = useState<RelatedProduct[]>([]);
+    const [gift, setGift] = useState<QuaTangDetail | null>(null);
+    const [relatedProducts, setRelatedProducts] = useState<SanPhamCoQua[]>([]);
     const [loading, setLoading] = useState(true);
     const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     const [showCartAlert, setShowCartAlert] = useState(false);
@@ -46,17 +136,17 @@ export default function GiftDetailPage() {
     // Cart hook
     const { addToCart, loading: cartLoading, subtotal, totalItems } = useCart();
 
-    // Conditions check
-    const MIN_PRODUCTS = 3;
-    const TARGET_AMOUNT = 1000000;
+    // Lấy điều kiện từ API
+    const MIN_PRODUCTS = gift?.dieukiensoluong || 3;
+    const TARGET_AMOUNT = gift?.dieukiengiatri || 0;
     const hasEnoughProducts = totalItems >= MIN_PRODUCTS;
-    const hasEnoughAmount = subtotal >= TARGET_AMOUNT;
-    const progressPercent = Math.min(100, Math.round((subtotal / TARGET_AMOUNT) * 100));
+    const hasEnoughAmount = TARGET_AMOUNT === 0 || subtotal >= TARGET_AMOUNT;
+    const progressPercent = TARGET_AMOUNT > 0 ? Math.min(100, Math.round((subtotal / TARGET_AMOUNT) * 100)) : (hasEnoughProducts ? 100 : 0);
 
     // Handle add to cart
-    const handleAddToCart = async (product: RelatedProduct) => {
+    const handleAddToCart = async (product: SanPhamCoQua) => {
         await addToCart({
-            id_bienthe: product.id,
+            id_bienthe: product.id_bienthe_de_them_vao_gio,
             id: product.id,
             ten: product.ten,
             hinhanh: product.hinh_anh,
@@ -67,28 +157,30 @@ export default function GiftDetailPage() {
         setTimeout(() => setShowCartAlert(false), 3000);
     };
 
-    // Fetch gift data
+    // Fetch gift data từ API - hỗ trợ cả slug và id
     useEffect(() => {
         const loadGiftData = async () => {
+            // Cần có slug hoặc id
+            if (!giftSlug && !giftId) {
+                setLoading(false);
+                return;
+            }
+
             try {
                 setLoading(true);
-                const response = await fetchHomePage({}, 100);
-                const gifts = response?.data?.hot_gift || [];
-
-                // Find the gift by ID
-                const foundGift = gifts.find(g => g.id === parseInt(giftId || '0'));
-                if (foundGift) {
-                    setGift(foundGift);
-                } else if (gifts.length > 0) {
-                    // Default to first gift if ID not found
-                    setGift(gifts[0]);
+                let response: QuaTangResponse | null = null;
+                
+                // Ưu tiên slug, nếu không có thì dùng id
+                if (giftSlug) {
+                    response = await fetchQuaTangDetail(giftSlug);
+                } else if (giftId) {
+                    response = await fetchQuaTangById(giftId);
                 }
 
-                // Get related products - only 5 items
-                const products = response?.data?.best_products || response?.data?.hot_sales || [];
-                const limitedProducts = products.slice(0, 5);
-                console.log('Related products count:', limitedProducts.length);
-                setRelatedProducts(limitedProducts);
+                if (response?.data) {
+                    setGift(response.data);
+                    setRelatedProducts(response.sanpham_coqua || []);
+                }
             } catch (error) {
                 console.error('Error loading gift data:', error);
             } finally {
@@ -97,7 +189,7 @@ export default function GiftDetailPage() {
         };
 
         loadGiftData();
-    }, [giftId]);
+    }, [giftSlug, giftId]);
 
     // Calculate time left
     const calculateTimeLeft = useCallback((): TimeLeft => {
@@ -257,17 +349,19 @@ export default function GiftDetailPage() {
                                                         <i className={`ph-bold ${hasEnoughProducts ? 'ph-check' : 'ph-x'}`}></i>
                                                     </span>
                                                     <span className="text-heading fw-medium">
-                                                        Mua tối thiểu <span className={hasEnoughProducts ? 'text-success-600' : 'text-main-600'}>{MIN_PRODUCTS} sản phẩm</span> bất kỳ cùng nhà cung cấp
+                                                        Mua tối thiểu <span className={hasEnoughProducts ? 'text-success-600' : 'text-main-600'}>{MIN_PRODUCTS} sản phẩm</span> từ {gift.thongtin_thuonghieu?.ten_thuonghieu || 'nhà cung cấp'}
                                                     </span>
                                                 </li>
-                                                <li className="text-gray-400 mb-14 flex-align gap-14">
-                                                    <span className={`w-30 h-30 ${hasEnoughAmount ? 'bg-success-100 text-success-600' : 'bg-main-100 text-main-600'} text-md flex-center rounded-circle`}>
-                                                        <i className={`ph-bold ${hasEnoughAmount ? 'ph-check' : 'ph-x'}`}></i>
-                                                    </span>
-                                                    <span className="text-heading fw-medium">
-                                                        Giá trị đơn hàng tối thiểu <span className={hasEnoughAmount ? 'text-success-600' : 'text-main-600'}>{formatPrice(TARGET_AMOUNT)} đ</span>
-                                                    </span>
-                                                </li>
+                                                {TARGET_AMOUNT > 0 && (
+                                                    <li className="text-gray-400 mb-14 flex-align gap-14">
+                                                        <span className={`w-30 h-30 ${hasEnoughAmount ? 'bg-success-100 text-success-600' : 'bg-main-100 text-main-600'} text-md flex-center rounded-circle`}>
+                                                            <i className={`ph-bold ${hasEnoughAmount ? 'ph-check' : 'ph-x'}`}></i>
+                                                        </span>
+                                                        <span className="text-heading fw-medium">
+                                                            Giá trị đơn hàng tối thiểu <span className={hasEnoughAmount ? 'text-success-600' : 'text-main-600'}>{formatPrice(TARGET_AMOUNT)} đ</span>
+                                                        </span>
+                                                    </li>
+                                                )}
                                             </ul>
 
                                             <span className="mt-10 mb-10 text-gray-700 border-top border-gray-100 d-block"></span>
@@ -280,35 +374,35 @@ export default function GiftDetailPage() {
 
                                             <div className="d-flex align-items-center gap-12">
                                                 <Link
-                                                    href="#"
+                                                    href={gift.bienthe_quatang ? `/san-pham/${gift.bienthe_quatang.slug_bienthe_quatang_sanpham}` : '#'}
                                                     className="border border-gray-100 rounded-8 flex-center"
                                                     style={{ maxWidth: '80px', maxHeight: '80px', width: '100%', height: '100%' }}
                                                 >
                                                     <img
-                                                        src={gift.hinhanh}
-                                                        alt={gift.tieude}
+                                                        src={gift.bienthe_quatang?.hinhanh || gift.hinhanh}
+                                                        alt={gift.bienthe_quatang?.ten_bienthe_quatang || gift.tieude}
                                                         className="w-100 rounded-8"
                                                     />
                                                 </Link>
                                                 <div className="table-product__content text-start">
                                                     <h6 className="title text-md fw-semibold mb-0">
                                                         <Link
-                                                            href="#"
+                                                            href={gift.bienthe_quatang ? `/san-pham/${gift.bienthe_quatang.slug_bienthe_quatang_sanpham}` : '#'}
                                                             className="link text-line-2"
-                                                            title={gift.tieude}
+                                                            title={gift.bienthe_quatang?.ten_bienthe_quatang || gift.tieude}
                                                             style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '350px', display: 'inline-block' }}
                                                         >
-                                                            {gift.tieude}
+                                                            {gift.bienthe_quatang?.ten_bienthe_quatang || gift.tieude}
                                                         </Link>
                                                     </h6>
                                                     <div className="flex-align gap-16 mb-6">
                                                         <span className="btn bg-gray-50 text-heading text-xs py-4 px-6 rounded-8 flex-center gap-8 fw-medium">
-                                                            Quà tặng
+                                                            {gift.bienthe_quatang?.ten_loaibienthe_quatang || 'Quà tặng'}
                                                         </span>
                                                     </div>
                                                     <div className="product-card__price mb-6">
                                                         <div className="flex-align gap-24">
-                                                            <span className="text-heading text-sm fw-medium">Số lượng: 1</span>
+                                                            <span className="text-heading text-sm fw-medium">Số lượng: {gift.bienthe_quatang?.soluong || 1}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -359,7 +453,7 @@ export default function GiftDetailPage() {
 
                                     <div className="mt-10">
                                         <Link
-                                            href="#"
+                                            href={`/san-pham?thuonghieu=${gift.thongtin_thuonghieu?.slug_thuonghieu || ''}`}
                                             className="px-16 py-8 bg-main-50 rounded-8 flex-between gap-12 mb-0"
                                             style={{ justifyContent: 'start' }}
                                         >
@@ -368,13 +462,13 @@ export default function GiftDetailPage() {
                                                 style={{ width: '40px', height: '40px' }}
                                             >
                                                 <img
-                                                    src={gift.chuongtrinh?.hinhanh || gift.hinhanh}
-                                                    alt={gift.chuongtrinh?.tieude}
+                                                    src={gift.thongtin_thuonghieu?.logo_thuonghieu || gift.hinhanh}
+                                                    alt={gift.thongtin_thuonghieu?.ten_thuonghieu}
                                                     className="w-100 rounded-circle"
                                                 />
                                             </span>
                                             <span className="text-sm text-neutral-600">
-                                                <span className="fw-semibold">{gift.chuongtrinh?.tieude}</span>
+                                                <span className="fw-semibold">{gift.thongtin_thuonghieu?.ten_thuonghieu || 'Nhà cung cấp'}</span>
                                             </span>
                                         </Link>
                                     </div>
@@ -383,7 +477,12 @@ export default function GiftDetailPage() {
                                     <div className="mt-20">
                                         <div className="flex-align gap-8 mb-8">
                                             <i className="ph ph-clock text-main-600"></i>
-                                            <span className="text-sm text-gray-600">Thời gian còn lại: {gift.thoigian_conlai}</span>
+                                            <span className="text-sm text-gray-600">
+                                                {gift.thoigian_conlai > 0
+                                                    ? `Còn ${gift.thoigian_conlai} ngày`
+                                                    : <span className="text-danger-600">Đã hết hạn</span>
+                                                }
+                                            </span>
                                         </div>
                                         <div className="flex-align gap-8 mb-8">
                                             <i className="ph ph-eye text-main-600"></i>
@@ -488,12 +587,17 @@ export default function GiftDetailPage() {
                                 </div>
                             </div>
 
-                            {/* Products Grid - 5 products */}
+                            {/* Products Grid - sản phẩm có quà */}
                             <div className="new-arrival__slider arrow-style-two mt-20">
-                                <div className="d-flex flex-nowrap" style={{ gap: '10px' }}>
+                                <div className="d-flex flex-nowrap overflow-auto" style={{ gap: '10px' }}>
                                     {relatedProducts.map((product) => (
                                         <div key={product.id} style={{ width: '240px', minWidth: '240px' }}>
                                             <div className="product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2">
+                                                {product.have_gift && (
+                                                    <span className="product-card__badge bg-main-600 px-8 py-4 text-sm text-white position-absolute inset-inline-start-0 inset-block-start-0">
+                                                        <i className="ph-fill ph-gift"></i> Có quà
+                                                    </span>
+                                                )}
                                                 <Link
                                                     href={`/san-pham/${product.slug}`}
                                                     className="flex-center rounded-8 bg-gray-50 position-relative"
@@ -506,20 +610,6 @@ export default function GiftDetailPage() {
                                                 </Link>
                                                 <div className="product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex mt-10 px-10 pb-8">
                                                     <div>
-                                                        <div className="flex-align justify-content-between mt-5">
-                                                            <div className="flex-align gap-4 w-100">
-                                                                <span className="text-main-600 text-md d-flex">
-                                                                    <i className="ph-fill ph-storefront"></i>
-                                                                </span>
-                                                                <span
-                                                                    className="text-gray-500 text-xs"
-                                                                    style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'inline-block' }}
-                                                                    title={product.thuonghieu}
-                                                                >
-                                                                    {product.thuonghieu}
-                                                                </span>
-                                                            </div>
-                                                        </div>
                                                         <h6 className="title text-lg fw-semibold mt-2 mb-2">
                                                             <Link
                                                                 href={`/san-pham/${product.slug}`}
@@ -528,21 +618,16 @@ export default function GiftDetailPage() {
                                                                 {product.ten}
                                                             </Link>
                                                         </h6>
-                                                        <div className="flex-align gap-16 mb-6">
-                                                            <span className="btn bg-gray-50 text-line-2 text-xs text-gray-900 py-4 px-6 rounded-8 flex-align gap-8 fw-medium">
-                                                                {product.donvi || 'Sản phẩm'}
-                                                            </span>
-                                                        </div>
                                                         <div className="flex-align justify-content-between mt-2">
                                                             <div className="flex-align gap-6">
                                                                 <span className="text-xs fw-medium text-gray-500">Đánh giá</span>
                                                                 <span className="text-xs fw-medium text-gray-500">
-                                                                    {product.rating?.average || 5}
+                                                                    {product.rating?.average || 0}
                                                                     <i className="ph-fill ph-star text-warning-600"></i>
                                                                 </span>
                                                             </div>
                                                             <div className="flex-align gap-4">
-                                                                <span className="text-xs fw-medium text-gray-500">{product.sold_count}</span>
+                                                                <span className="text-xs fw-medium text-gray-500">{product.sold?.total_sold || 0}</span>
                                                                 <span className="text-xs fw-medium text-gray-500">Đã bán</span>
                                                             </div>
                                                         </div>
@@ -565,15 +650,27 @@ export default function GiftDetailPage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleAddToCart(product)}
-                                                        disabled={cartLoading}
+                                                        disabled={cartLoading || !product.trangthai?.in_stock}
                                                         className="mt-6 rounded-bottom-2 bg-gray-50 text-sm text-gray-900 w-100 hover-bg-main-600 hover-text-white py-6 px-24 flex-center gap-8 fw-medium transition-1"
                                                     >
-                                                        <i className="ph ph-shopping-cart"></i> {cartLoading ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
+                                                        <i className="ph ph-shopping-cart"></i>
+                                                        {!product.trangthai?.in_stock
+                                                            ? 'Hết hàng'
+                                                            : cartLoading
+                                                                ? 'Đang thêm...'
+                                                                : 'Thêm vào giỏ hàng'
+                                                        }
                                                     </button>
                                                 </div>
                                             </div>
                                         </div>
                                     ))}
+
+                                    {relatedProducts.length === 0 && (
+                                        <div className="text-center py-20 w-100">
+                                            <p className="text-gray-500">Không có sản phẩm nào trong chương trình này</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
