@@ -67,63 +67,68 @@ export default function HoanTatThanhToanPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order_id") || "";
   
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading] = useState<boolean>(true);
   const [order, setOrder] = useState<ServerOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // 2. FETCH DATA (Sử dụng logic "Lấy danh sách -> Lọc" để tránh lỗi 404)
   useEffect(() => {
-    const fetchOrder = async () => {
-      if (!orderId) {
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        setLoading(true);
+  const checkPayment = async () => {
+    if (!orderId) return;
+    try {
         const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
         const token = Cookies.get("access_token");
 
         // Gọi API danh sách đơn hàng (API này ổn định nhất)
-        const res = await fetch(`${API}/api/toi/donhangs`, {
-            headers: { 
-                "Accept": "application/json",
-                ...(token ? { "Authorization": `Bearer ${token}` } : {})
-            },
-            credentials: "include" 
+        // const res = await fetch(`${API}/api/toi/donhangs`, {
+        //     headers: { 
+        //         "Accept": "application/json",
+        //         ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        //     },
+        //     credentials: "include" 
+        // });
+        const res = await fetch(`${API}/api/toi/donhangs/${orderId}/payment-status`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        credentials: "include" 
         });
 
-        if (res.ok) {
-            const json = await res.json();
-            // Ép kiểu danh sách trả về
-            const list = (Array.isArray(json) ? json : json.data || []) as ServerOrder[];
-            
-            // Tìm đơn hàng khớp ID
-            const foundOrder = list.find((o) => String(o.id) === String(orderId));
-            
-            if (foundOrder) {
-                setOrder(foundOrder);
-            } else {
-                setError("Không tìm thấy đơn hàng vừa tạo.");
-            }
-        } else {
-            setError("Không thể tải dữ liệu đơn hàng.");
-        }
-      } catch (err) {
-        console.error(err);
-        setError("Lỗi kết nối đến máy chủ.");
-      } finally {
-        setLoading(false);
+        const json = await res.json();
+      if (json.status) {
+        setOrder((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            trangthaithanhtoan: json.payment_status,
+            trangthai: json.order_status
+          };
+        });
       }
-    };
+    } catch (err) {
+      console.log("Payment check failed");
+    }
+  };
 
-    fetchOrder();
-  }, [orderId]);
+  checkPayment();
+}, [orderId]);
 
   // Chuẩn bị dữ liệu hiển thị
   const isSuccess = !!order;
   const orderCode = order?.madon || orderId || "#UNKNOWN";
-  const orderDate = order?.created_at ? new Date(order.created_at).toLocaleString("vi-VN") : "";
+  const formatDate = (dateString?: string | null) => {
+        if (!dateString) return "";
+        try {
+            const date = new Date(dateString);
+            // Kiểm tra nếu date không hợp lệ (Invalid Date)
+            if (isNaN(date.getTime())) return dateString; // Trả về nguyên gốc nếu không parse được
+            return date.toLocaleString("vi-VN");
+        } catch {
+            return dateString || "";
+        }
+    };
+  const orderDate = order?.created_at ?? "";
+  
   
   const paymentText = order?.trangthaithanhtoan || "Thanh toán khi nhận hàng";
   const totalAmount = fmtMoney(order?.thanhtien);
@@ -191,7 +196,7 @@ export default function HoanTatThanhToanPage() {
                                     <i className="text-xl ph-bold ph-shopping-cart text-main-600"></i> 
                                     Chi tiết đơn hàng
                                 </span>
-                                <Link href={`/orders`} className="gap-4 text-sm text-gray-600 fw-semibold hover-text-main-600 transition-1 flex-align">
+                                <Link href={`/don-hang`} className="gap-4 text-sm text-gray-600 fw-semibold hover-text-main-600 transition-1 flex-align">
                                     <i className="ph-bold ph-notepad"></i> Xem chi tiết đầy đủ
                                 </Link>
                             </div>
@@ -265,7 +270,7 @@ export default function HoanTatThanhToanPage() {
                             <Link href="/shop" className="gap-8 mt-10 text-main-600 hover-text-gray-900 text-md fw-medium flex-align">
                                 <i className="ph-bold ph-arrow-fat-lines-left text-md"></i> Tiếp tục mua sắm
                             </Link>
-                            <Link href="/orders" className="gap-8 mt-10 text-main-600 hover-text-gray-900 text-md fw-medium flex-align">
+                            <Link href="/don-hang" className="gap-8 mt-10 text-main-600 hover-text-gray-900 text-md fw-medium flex-align">
                                 Đơn hàng của tôi <i className="ph-bold ph-arrow-fat-lines-right text-md"></i>
                             </Link>
                         </div>

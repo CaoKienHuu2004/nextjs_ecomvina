@@ -1,21 +1,29 @@
 
 export const getTrangThaiDonHang = (trang_thai: string | undefined | null): string => {
   if (!trang_thai) return 'Chưa rõ';
-  switch (trang_thai.toLowerCase()) {
-    case 'chờ xử lý':
-    case 'pending':
-    case 'chờ duyệt':
-      return 'Chờ xử lý';
-    case 'paid':
-    case 'đã thanh toán':
-      return 'Đã thanh toán';
-    case 'cancelled':
-      return 'Đã hủy';
-    case 'delivered':
-      return 'Đã giao hàng';
-    default:
-      return 'Chờ xử lý';
+  const s = trang_thai.toString().trim().toLowerCase();
+  // Map theo yêu cầu:
+  if (s.includes("chờ xử lý") || s.includes("chờ thanh toán") || s.includes("pending") || s.includes("chờ duyệt")) {
+    return "Chờ thanh toán";
   }
+  if (s.includes("đã xác nhận") || s.includes("xác nhận")) {
+    return "Đang xác nhận";
+  }
+  if (s.includes("đang chuẩn bị") || s.includes("đang chuẩn bị hàng") || s.includes("đóng gói") || s.includes("preparing")) {
+    return "Đang đóng gói";
+  }
+  if (s.includes("đang giao") || s.includes("shipping")) {
+    return "Đang giao hàng";
+  }
+  if (s.includes("đã giao") || s.includes("delivered")) {
+    return "Đã giao";
+  }
+  if (s.includes("đã hủy") || s.includes("cancel") || s.includes("cancelled")) {
+    return "Đã hủy";
+  }
+  // Fallback: nếu gặp 'đã thanh toán' vẫn có thể coi là 'Đã xác nhận'
+  if (s.includes("đã thanh toán") || s === "paid") return "Đang xác nhận";
+  return "Chưa rõ";
 };
 
 /**

@@ -1,10 +1,13 @@
 "use client";
 import Link from 'next/link';
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useCart, parseVoucherCondition, isVoucherInDateRange, VoucherConditionType } from '@/hooks/useCart';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useCart, parseVoucherCondition, isVoucherInDateRange, VoucherConditionType, Gia } from '@/hooks/useCart';
 import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData';
 import Image from 'next/image';
 import FullHeader from '@/components/FullHeader';
+import BenefitsStrip from "@/components/BenefitsStrip";
+// --- HELPER FUNCTIONS ---
+type PriceInput = number | Gia | undefined | null;
 
 // Helper format giá tiền
 const formatPrice = (price: number) => {
@@ -13,6 +16,18 @@ const formatPrice = (price: number) => {
     currency: 'VND',
     minimumFractionDigits: 0,
   }).format(price);
+};
+
+const getPrice = (gia: PriceInput): number => {
+  if (typeof gia === "number") return gia;
+  return Number(gia?.current ?? 0);
+};
+
+const getOriginPrice = (gia: PriceInput): number => {
+  if (typeof gia === "object" && gia !== null) {
+    return Number(gia.before_discount ?? 0);
+  }
+  return 0; 
 };
 
 // Helper format ngày
@@ -662,7 +677,7 @@ function CartPageContent() {
                 {discountAmount > 0 && (
                   <div className="gap-8 flex-between">
                     <span className="text-gray-900 font-heading-two">Giảm giá Voucher:</span>
-                    <span className="text-success-600 fw-semibold">-{formatPrice(discountAmount)}</span>
+                    <span className="text-success-600 fw-semibold">-{formatPrice(Number(discountAmount ?? 0))}</span>
                   </div>
                 )}
 

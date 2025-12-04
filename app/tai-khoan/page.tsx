@@ -1,0 +1,737 @@
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import AccountShell from "@/components/AccountShell";
+import FullHeader from "@/components/FullHeader";
+import Cookies from "js-cookie";
+
+
+const pickErrorMessage = (err: unknown, fallback: string): string => {
+  if (err && typeof err === "object" && "message" in err) {
+    const maybe = (err as { message?: unknown }).message;
+    if (typeof maybe === "string") {
+      const s = maybe.trim();
+      if (s && s !== "{}" && s !== "[]") return s;
+    }
+  }
+  return fallback;
+};
+
+
+type OrderItem = { product_id?: number; quantity?: number };
+type Order = {
+  id: number;
+  total: number;
+  status: string;
+  created_at: string;
+  items: OrderItem[];
+};
+
+type WishlistRow = {
+  product_id?: number;
+  product?: { id?: number };
+};
+
+type CartRow = {
+  id?: number; // row id
+  id_bienthesp?: number;
+  quantity?: number;
+};
+
+type Address = {
+  id: number;
+  hoten: string;
+  sodienthoai: string;
+  diachi: string;
+  tinhthanh?: string;
+  trangthai?: string;
+};
+
+type AuthUser = {
+  id?: number;
+  username?: string | null;
+  email?: string | null;
+  sodienthoai?: string | null;
+  hoten?: string | null;
+  name?: string | null;
+  gioitinh?: string | null;
+  ngaysinh?: string | null; // 'Y-m-d' or null
+  avatar?: string | null;
+  // vaitro?: string | null;
+  // trangthai?: string | null;
+  diachi?: Address[] | null;
+};
+
+export default function Page() {
+  const router = useRouter();
+  const search = useSearchParams();
+  const { login, register, logout, user, isLoggedIn } = useAuth();
+
+  // Mirror FullHeader token detection -> set x-user-id cookie for mock server
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (isLoggedIn) return; // client already knows logged in
+
+    // if cookie already present, nothing to do
+    if (document.cookie.match(/\bx-user-id=([^;]+)/)) return;
+
+    // candidate token keys used by the app
+    const candidates = [
+      localStorage.getItem("token"),
+      localStorage.getItem("auth_token"),
+      localStorage.getItem("mock_token"),
+      localStorage.getItem("user_token"),
+      (() => {
+        try {
+          const a = localStorage.getItem("auth");
+          if (!a) return null;
+          const p = JSON.parse(a);
+          return p?.token ?? null;
+        } catch {
+          return null;
+        }
+      })(),
+    ].filter(Boolean) as string[];
+
+    const raw = candidates[0] || "";
+    if (!raw) return;
+
+    let token = raw.replace(/^Bearer\s+/i, "").trim();
+    if (!token) return;
+
+    // token format "userId:timestamp" -> extract userId
+    if (token.includes(":")) token = token.split(":")[0];
+    if (!/^\d+$/.test(token)) return;
+
+    try {
+      const expires = new Date(Date.now() + 7 * 24 * 3600 * 1000).toUTCString();
+      document.cookie = `x-user-id=${encodeURIComponent(token)}; Path=/; Expires=${expires}`;
+      console.debug("[auth] set x-user-id cookie (dev)", token);
+    } catch {
+      // ignore
+    }
+  }, [isLoggedIn]);
+
+  // Chuẩn hoá host để cookie không rớt (localhost ↔ 127.0.0.1)
+  const API = useMemo(() => {
+    const raw = process.env.NEXT_PUBLIC_SERVER_API || "http://localhost:4000";
+    try {
+      if (typeof window === "undefined") return raw;
+      const u = new URL(raw);
+      const host = window.location.hostname; // "localhost" hoặc "127.0.0.1"
+      if (
+        (u.hostname === "127.0.0.1" && host === "localhost") ||
+        (u.hostname === "localhost" && host === "127.0.0.1")
+      )
+        u.hostname = host;
+      return u.origin;
+    } catch {
+      return raw;
+    }
+  }, []);
+  const token = Cookies.get("access_token");
+
+  const [tab, setTab] = useState<
+    "login" | "register" | "wishlist" | "cart" | "orders" | "profile"
+  >(() => (search?.get("tab") === "register" ? "register" : "login"));
+
+  const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  // Các state “value” không dùng trong UI → chỉ giữ setter để tránh cảnh báo unused
+  const [, setWishlist] = useState<WishlistRow[]>([]);
+  const [, setCart] = useState<CartRow[]>([]);
+  const [, setOrders] = useState<Order[]>([]);
+
+  // const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
+  const [profile, setProfile] = useState<AuthUser | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  useEffect(() => {
+    const src = (profile && (profile.avatar as string)) || (user && (user.avatar as string)) || null;
+    setAvatarPreview(src);
+  }, [profile, user]);
+
+  useEffect(() => {
+    const cls = ["color-two", "font-exo", "header-style-two"];
+    const html = document.documentElement;
+    cls.forEach((c) => html.classList.add(c));
+    return () => {
+      cls.forEach((c) => html.classList.remove(c));
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    // 1) seed profile from useAuth.user so UI updates immediately after login
+    if (user) {
+      setProfile((user as AuthUser) ?? null);
+    }
+
+    // 2) fetch detailed profile (diachi etc.) only when logged in
+    if (!isLoggedIn) return () => { alive = false; };
+    (async () => {
+      try {
+        const res = await fetch(`${API}/api/auth/thong-tin-nguoi-dung`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`, 
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        });
+        if (!alive) return;
+        if (!res.ok) return;
+        const j = await res.json();
+        const remote = (j?.data ?? j?.user ?? j) as AuthUser | null;
+        if (remote && alive) {
+          // merge to keep any fields already in user (avoid dropping token/other)
+          setProfile((prev) => ({ ...(prev ?? {}), ...(remote ?? {}) }));
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { alive = false; };
+  }, [user, isLoggedIn, API]);
+  // Khi đã đăng nhập, nếu đang ở tab login/register thì chuyển sang wishlist
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    if (tab === "login" || tab === "register") setTab("wishlist");
+  }, [isLoggedIn, tab]);
+
+  // Tải dữ liệu theo tab (giữ nguyên endpoint, chỉ đổi kiểu)
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    (async () => {
+      try {
+        if (tab === "wishlist") {
+          const res = await fetch(`${API}/api/yeuthichs`, { credentials: "include" });
+          const data = await res.json();
+          setWishlist(Array.isArray(data) ? (data as WishlistRow[]) : (data?.data ?? []));
+        } else if (tab === "cart") {
+          const res = await fetch(`${API}/api/toi/giohang`, { credentials: "include" });
+          const j = await res.json();
+          setCart((j?.data as CartRow[]) ?? []);
+        } else if (tab === "orders") {
+          const res = await fetch(`${API}/api/toi/donhangs`, { credentials: "include" });
+          const j = await res.json();
+          setOrders((j?.data as Order[]) ?? []);
+        } else if (tab === "profile") {
+          const res = await fetch(`${API}/api/auth/thong-tin-nguoi-dung`, { credentials: "include" });
+          const j = await res.json();
+          setProfile((j?.data as AuthUser) ?? null);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  }, [tab, isLoggedIn, API]);
+
+  const handleSaveProfile: React.FormEventHandler<HTMLFormElement> = async (e) => {
+    e.preventDefault();
+    if (!isLoggedIn) return;
+    setLoading(true);
+    setNotice(null);
+    const formEl = e.currentTarget;
+
+    try {
+    const formData = new FormData(formEl);
+    const fd = new FormData();
+
+    const hoten = String(formData.get("name") || "");
+    const sodienthoai = String(formData.get("phone") || formData.get("sodienthoai") || "");
+    const ngaysinh = String(formData.get("birthday") || formData.get("ngaysinh") ||"");
+    const gioitinh = String(formData.get("gender") || formData.get("gioitinh") || "");
+    const email = String(formData.get("email") || "");
+    const tinhthanh = String(formData.get("address_city") || formData.get("tinhthanh") || "");
+    const diachi = String(formData.get("address_street") || formData.get("address") || "");
+    const trangthai_diachi = String(formData.get("address_state") || formData.get("trangthai_diachi") || "Mặc định");
+
+    fd.append("hoten", hoten);
+    if (sodienthoai) fd.append("sodienthoai", sodienthoai);
+    if (ngaysinh) fd.append("ngaysinh", ngaysinh);
+    if (gioitinh) fd.append("gioitinh", gioitinh);
+    if (email) fd.append("email", email);
+    if (tinhthanh) fd.append("tinhthanh", tinhthanh);
+    if (diachi) fd.append("diachi", diachi);
+    fd.append("trangthai_diachi", trangthai_diachi);
+
+    // avatar file (if user selected one)
+    const fileInput = formEl.querySelector<HTMLInputElement>('input[type="file"][name="avatar"]');
+    const avatarFile = fileInput?.files?.[0];
+    if (avatarFile) fd.append("avatar", avatarFile);
+
+    // send as multipart/form-data (let browser set Content-Type)
+    const res = await fetch(`${API}/api/auth/cap-nhat-thong-tin`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,  // gửi token kèm header Authorization
+        // "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: fd,
+    });
+
+    if (!res.ok) throw new Error("Cập nhật thất bại");
+    const j = await res.json();
+      const newProfile = (j?.user ?? j?.data ?? j) as AuthUser | null;
+      if (newProfile) setProfile(newProfile);
+
+      // update avatar preview + persist for AccountShell/sidebar
+      if (newProfile?.avatar && typeof newProfile.avatar === "string") {
+        setAvatarPreview(String(newProfile.avatar));
+        try { localStorage.setItem("avatar", String(newProfile.avatar)); } catch {}
+      }
+
+      // persist display name / username so sidebar shows immediately
+      if (newProfile?.hoten && typeof newProfile.hoten === "string") {
+        try { localStorage.setItem("fullname", String(newProfile.hoten)); } catch {}
+      }
+      if (newProfile?.username && typeof newProfile.username === "string") {
+        try { localStorage.setItem("username", String(newProfile.username)); } catch {}
+      }
+
+      // if backend returns diachi array, remind user to add address if empty
+      const diachiArr = Array.isArray(newProfile?.diachi) ? (newProfile!.diachi as Address[]) : undefined;
+      if (!diachiArr || diachiArr.length === 0) {
+        setNotice({
+          type: "success",
+          msg: "Đã lưu thông tin. Bạn chưa có địa chỉ giao hàng — vui lòng thêm ở Sổ địa chỉ để sử dụng khi đặt hàng.",
+        });
+      } else {
+        setNotice({ type: "success", msg: "Đã lưu thông tin cá nhân" });
+      }
+    } catch (err: unknown) {
+      setNotice({
+        type: "error",
+        msg: pickErrorMessage(err, "Không thể lưu thông tin cá nhân"),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+    const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const current_password = String(form.get('current_password') || '');
+    const new_password = String(form.get('new_password') || '');
+    const new_password_confirmation = String(form.get('new_password_confirmation') || '');
+    setLoading(true);
+    try {
+      const token = Cookies.get('access_token');
+      const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`${API}/api/auth/cap-nhat-mat-khau`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ current_password, new_password, new_password_confirmation }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.message ?? 'Không thể đổi mật khẩu');
+      setNotice({ type: 'success', msg: j?.message || 'Đổi mật khẩu thành công' });
+      setShowChangePassword(false);
+    } catch (err) {
+      setNotice({ type: 'error', msg: typeof err === 'string' ? err : (err as any)?.message ?? 'Lỗi đổi mật khẩu' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Đồng bộ wishlist khách sau khi đăng nhập (giữ nguyên API)
+  const syncGuestWishlist = async () => {
+    try {
+      const raw = localStorage.getItem("guest_wishlist") || "[]";
+      const parsed = JSON.parse(raw);
+      const ids: number[] = Array.isArray(parsed) ? parsed : [];
+      if (!ids.length) return;
+      await Promise.allSettled(
+        ids.map((id) =>
+          fetch(`${API}/api/toi/yeuthichs`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ product_id: id }),
+          })
+        )
+      );
+    } catch {}
+  };
+
+  
+  const handleLogin: React.FormEventHandler<HTMLFormElement> = async (e) => {
+   e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const username = String(form.get("username") || "").trim();
+    const password = String(form.get("password") || "").trim();
+    setLoading(true);
+    setNotice(null);
+    try {
+      // gọi useAuth.login với key 'username'
+      await login({ username, password });
+      await syncGuestWishlist();
+      router.replace("/");
+    } catch (err: unknown) {
+      setNotice({
+        type: "error",
+        msg: pickErrorMessage(err, "Đăng nhập thất bại. Vui lòng kiểm tra thông tin và thử lại."),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleRegister: React.FormEventHandler<HTMLFormElement> = async (e) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const hoten = String(form.get("hoten") || "").trim();
+    const username = String(form.get("username") || "").trim();
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "").trim();
+    const password_confirmation = String(form.get("password_confirmation") || "").trim();
+    const sodienthoai = String(form.get("sodienthoai") || "").trim();
+
+    setLoading(true);
+    setNotice(null);
+    try {
+      // gửi payload thuần tiếng Việt theo API ví dụ
+      const payload: Record<string, unknown> = {
+        hoten,
+        username: username || hoten,
+        password,
+        password_confirmation: password_confirmation || password,
+      };
+      if (email) payload.email = email;
+      if (sodienthoai) payload.sodienthoai = sodienthoai;
+
+      const res = await fetch(`${API}/api/auth/dang-ky`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.message ?? `Đăng ký thất bại (HTTP ${res.status})`);
+      }
+      const j = await res.json();
+      setNotice({ type: "success", msg: j?.message ?? "Đăng ký thành công. Vui lòng đăng nhập." });
+      // chuyển sang trang đăng nhập
+      if (typeof window !== "undefined") window.location.replace("/tai-khoan?tab=login");
+      else setTab("login");
+    } catch (err: unknown) {
+      setNotice({ type: "error", msg: pickErrorMessage(err, "Đăng ký thất bại. Kiểm tra và thử lại.") });
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleRemoveWish = async (productId: number) => {
+    try {
+      await fetch(`${API}/api/yeuthichs/${productId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      setWishlist((prev) =>
+        prev.filter((w) => (w.product?.id ?? w.product_id) !== productId)
+      );
+    } catch {}
+  };
+
+  return (
+    <>
+      {showChangePassword && (
+        <div className="modal" style={{ display: 'block', background: 'rgba(0,0,0,0.5)' }}>
+          <div className="container modal-content" style={{ maxWidth: 520 }}>
+            <div className="mb-20 flex-align flex-between">
+              <h6 className="m-0">Đổi mật khẩu</h6>
+              <button onClick={() => setShowChangePassword(false)} className="bg-transparent border-0">×</button>
+            </div>
+            <form onSubmit={handleChangePassword}>
+              <div className="mb-12">
+                <label className="form-label">Mật khẩu hiện tại</label>
+                <input name="current_password" type="password" className="form-control p-10" required />
+              </div>
+              <div className="mb-12">
+                <label className="form-label">Mật khẩu mới</label>
+                <input name="new_password" type="password" className="form-control p-10" required />
+              </div>
+              <div className="mb-12">
+                <label className="form-label">Xác nhận mật khẩu</label>
+                <input name="new_password_confirmation" type="password" className="form-control p-10" required />
+              </div>
+              <div className="d-flex gap-8">
+                <button type="submit" className="btn btn-main-two">Đổi mật khẩu</button>
+                <button type="button" onClick={() => setShowChangePassword(false)} className="btn btn-outline-main-two">Hủy</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      <FullHeader showClassicTopBar={true} showTopNav={false} />
+      <AccountShell title="Tài khoản" current="profile">
+        {!isLoggedIn ? (
+          <>
+            <div className="gap-16 mb-16 d-flex">
+            <button
+              className={`btn ${tab === "login" ? "btn-main-two" : "btn-outline-main-two"}`}
+              onClick={() => setTab("login")}
+            >
+              Đăng nhập
+            </button>
+            <button
+              className={`btn ${tab === "register" ? "btn-main-two" : "btn-outline-main-two"}`}
+              onClick={() => setTab("register")}
+            >
+              Đăng ký
+            </button>
+          </div>
+
+          {notice && (
+            <div
+              className={`alert ${notice.type === "success" ? "alert-success" : "alert-danger"} py-10 px-12 mb-16`}
+            >
+              {notice.msg}
+            </div>
+          )}
+
+          {tab === "login" ? (
+            <form onSubmit={handleLogin}>
+              <div className="row gy-4">
+                <div className="col-12">
+                  <label htmlFor="login-username" className="text-sm text-gray-900 fw-medium">Email hoặc SĐT *</label>
+                  <input id="login-username" name="username" type="text" className="common-input" placeholder="tên đăng nhập / email / sđt" autoComplete="username" required />
+                </div>
+                <div className="col-12">
+                  <label htmlFor="login-password" className="text-sm text-gray-900 fw-medium">Mật khẩu</label>
+                  <input id="login-password" name="password" type="password" className="common-input" placeholder="••••••••" required />
+                </div>
+                <div className="col-12">
+                  <button disabled={loading} type="submit" className="btn btn-main-two">
+                    {loading ? "Đang xử lý..." : "Đăng nhập"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister}>
+              <div className="row gy-4">
+                <div className="col-12">
+                  <label htmlFor="reg-hoten" className="text-sm text-gray-900 fw-medium">Họ tên *</label>
+                  <input
+                  name="hoten"
+                  defaultValue={(profile?.hoten as string) || (user?.hoten ?? "")}
+                  className="form-control p-10"
+                  placeholder="Nhập họ và tên của bạn..."
+                  required
+                />
+                </div>
+                <div className="col-12">
+                  <label htmlFor="reg-username" className="text-sm text-gray-900 fw-medium">Tên tài khoản (username)</label>
+                  <input id="reg-username" name="username" type="text" autoComplete="username" className="common-input" placeholder="tùy chọn — để trống sẽ dùng họ tên" />
+                  <small className="text-xs text-muted">Bạn có thể đăng nhập bằng username, email hoặc số điện thoại.</small>
+                </div>
+                <div className="col-12">
+                  <label htmlFor="reg-email" className="text-sm text-gray-900 fw-medium">Email</label>
+                  <input id="reg-email" name="email" type="email" autoComplete="email" className="common-input" placeholder="you@example.com" />
+               </div>
+                <div className="col-12">
+                  <label htmlFor="reg-password" className="text-sm text-gray-900 fw-medium">Mật khẩu *</label>
+                  <input id="reg-password" name="password" type="password" autoComplete="new-password" className="common-input" placeholder="••••••••" required />
+                </div>
+                <div className="col-12">
+                  <label htmlFor="reg-password-confirm" className="text-sm text-gray-900 fw-medium">Xác nhận mật khẩu *</label>
+                  <input id="reg-password-confirm" name="password_confirmation" type="password" autoComplete="new-password" className="common-input" placeholder="Nhập lại mật khẩu" required />
+                </div>
+                <div className="col-12">
+                  <label htmlFor="reg-sodienthoai" className="text-sm text-gray-900 fw-medium">Số điện thoại</label>
+                  <input id="reg-sodienthoai" name="sodienthoai" type="tel" autoComplete="tel" className="common-input" placeholder="098xxxxxxx" />
+                </div>
+                <div className="col-12">
+                  <button disabled={loading} type="submit" className="btn btn-main-two">
+                    {loading ? "Đang xử lý..." : "Tạo tài khoản"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+        </>
+      ) : (
+        <form key={String(profile?.id ?? "no-profile")} onSubmit={handleSaveProfile} className="row">
+          <div className="row g-12">
+            <div className="border border-gray-100 rounded-8 p-16 w-100">
+              <div className="row">
+                <div className="col-xl-8 py-10">
+                  <h6 className="mb-20 fw-semibold text-gray-700 text-md">Thông tin cá nhân</h6>
+
+                  <div className="row mb-20">
+                    <div className="col-xl-3 flex-align flex-center flex-wrap gap-2">
+                      <div className="avatar-container mx-16 mt-10 mb-0">
+                        <img
+                          id="avatarImage"
+                          src={avatarPreview || "/assets/images/default-avatar.png"}
+                          alt="Avatar"
+                          className="avatar-img"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/assets/images/default-avatar.png"; }}
+                          style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: '50%' }}
+                        />
+                        <input
+                          type="file"
+                          id="fileInput"
+                          name="avatar"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(ev) => {
+                            const f = (ev.target as HTMLInputElement).files?.[0];
+                            if (f) setAvatarPreview(URL.createObjectURL(f));
+                          }}
+                        />
+                      </div>
+                      <label className="form-label text-xs text-gray-500 fw-medium" htmlFor="fileInput" style={{ cursor: 'pointer' }}>
+                        <i className="ph-bold ph-pencil-simple" /> đổi ảnh
+                      </label>
+                    </div>
+
+                    <div className="col-xl-9">
+                      <div className="form-group">
+                        <label className="form-label text-md text-gray-900">Tên người dùng:</label>
+                        <input
+                          type="text"
+                          id="username"
+                          className="form-control p-10 bg-gray-50 disabled"
+                          value={String(profile?.username ?? user?.username ?? '')}
+                          readOnly
+                        />
+                      </div>
+
+                      <div className="form-group mt-10">
+                        <label className="form-label text-md text-gray-900">Họ và tên:</label>
+                        <input
+                          name="name"
+                          defaultValue={(profile?.name as string) || (user?.hoten ?? "")}
+                          className="form-control p-10"
+                          placeholder="Nhập họ và tên của bạn..."
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="row mb-20">
+                    <div className="col-xl-6">
+                      <div className="form-group">
+                        <label className="form-label text-md text-gray-900" htmlFor="gioitinh">Giới tính:</label>
+                        <select
+                          name="gioitinh"
+                          id="gioitinh"
+                          defaultValue={(profile?.gioitinh as string) || ""}
+                          className="form-control p-10"
+                          required
+                        >
+                          <option value="">Không xác định</option>
+                          <option value="Nam">Nam</option>
+                          <option value="Nữ">Nữ</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="col-xl-6">
+                      <div className="form-group">
+                        <label className="form-label text-md text-gray-900" htmlFor="ngaysinh">Ngày sinh:</label>
+                        <input
+                          type="date"
+                          id="ngaysinh"
+                          name="ngaysinh"
+                          defaultValue={(profile?.ngaysinh as string) || ""}
+                          className="form-control p-10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    title="Lưu thông tin cá nhân"
+                    disabled={loading}
+                    type="submit"
+                    className="btn bg-main-600 text-white hover-bg-main-300 hover-text-main-600 rounded-8 px-32 py-12 w-100 flex-center flex-align gap-8"
+                  >
+                    <i className="ph-bold ph-floppy-disk" /> {loading ? 'Đang lưu...' : 'Lưu thông tin'}
+                  </button>
+                </div>
+
+                <div className="col-xl-4 border-start border-gray-200 py-10">
+                  <h6 className="mb-20 fw-semibold text-gray-700 text-md">Thông tin liên hệ</h6>
+
+                  <div className="form-group mb-10">
+                    <div className="flex-align flex-between">
+                      <label className="form-label text-md text-gray-900 flex-align gap-8" htmlFor="sodienthoai">
+                        <i className="ph-bold ph-phone" /> Số điện thoại:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingPhone((v) => !v); if (!editingPhone) setTimeout(() => document.getElementById('sodienthoai')?.focus(), 0); }}
+                        className="text-xs text-primary-700 flex-align gap-4 fw-normal bg-transparent border-0 p-0"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <i className="ph-bold ph-pencil-simple" /> {editingPhone ? 'Hủy' : 'Chỉnh sửa'}
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      id="sodienthoai"
+                      name="sodienthoai"
+                      defaultValue={(profile?.sodienthoai as string) || ""}
+                      className={'form-control p-10 ' + (editingPhone ? '' : 'bg-gray-50 disabled')}
+                      readOnly={!editingPhone}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <div className="flex-align flex-between">
+                      <label className="form-label text-md text-gray-900 flex-align gap-8" htmlFor="email">
+                        <i className="ph-bold ph-envelope" /> Email:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingEmail((v) => !v); if (!editingEmail) setTimeout(() => document.getElementById('email')?.focus(), 0); }}
+                        className="text-xs text-primary-700 flex-align gap-4 fw-normal bg-transparent border-0 p-0"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <i className="ph-bold ph-pencil-simple" /> {editingEmail ? 'Hủy' : 'Chỉnh sửa'}
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      id="email"
+                      name="email"
+                      defaultValue={(profile?.email as string) || (user?.email ?? "")}
+                      className={'form-control p-10 ' + (editingEmail ? '' : 'bg-gray-50 disabled')}
+                      readOnly={!editingEmail}
+                    />
+                  </div>
+
+                  <span className="mt-20 pt-20 text-gray-700 border-top border-gray-100 d-block" />
+
+                  <h6 className="mb-20 fw-semibold text-gray-700 text-md">Thông tin bảo mật</h6>
+                  <div className="form-group mb-10">
+                    <div className="flex-align flex-between">
+                      <label className="form-label text-md text-gray-900 flex-align gap-8 m-0">
+                        <i className="ph-bold ph-lock" /> Đổi mật khẩu:
+                      </label>
+                      <button type="button" onClick={() => setShowChangePassword(true)} className="text-sm text-primary-700 flex-align gap-4 fw-normal bg-transparent border-0 p-0" style={{ cursor: 'pointer' }}>
+                        <i className="ph-bold ph-pencil-simple"></i> Chỉnh sửa
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      )}
+    </AccountShell>
+    </>
+  );
+}

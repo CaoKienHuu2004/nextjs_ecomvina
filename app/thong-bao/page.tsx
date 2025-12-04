@@ -4,144 +4,268 @@ import React, { JSX } from "react";
 import FullHeader from "@/components/FullHeader";
 import BenefitsStrip from "@/components/BenefitsStrip";
 import AccountShell from "@/components/AccountShell";
+import Cookies from "js-cookie";
 
-type ThongBao = {
-  id: string;
-  loai: "giaohang" | "khuyenmai" | "dat_hang_thanh_cong";
-  tieu_de: string;
-  noi_dung?: string;
-  lienket?: string;
-  active?: boolean;
-  created_at?: string;
+type ApiNotification = {
+  id: number;
+  id_nguoidung?: number;
+  tieude: string;
+  noidung?: string | null;
+  lienket?: string | null;
+  loaithongbao?: string | null;
+  trangthai?: string | null;
+  created_at?: string | null;
+  thoigian?: string | number | null;
 };
 
 export default function ThongBaoPage(): JSX.Element {
-  const [list, setList] = React.useState<ThongBao[]>([]);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [tab, setTab] = React.useState<ThongBao["loai"]>("giaohang");
-  const [showDropdown, setShowDropdown] = React.useState<boolean>(false);
+  const [list, setList] = React.useState<ApiNotification[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [activeTab, setActiveTab] = React.useState<string>("Đơn hàng");
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "";
+
+  // Shared tick to update countdowns
+  const [now, setNow] = React.useState(Date.now());
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const TAB_ORDER = [
+    { key: "Đơn hàng", icon: "ph-notepad" },
+    { key: "Khuyến mãi", icon: "ph-ticket" },
+    { key: "Quà tặng", icon: "ph-gift" },
+    { key: "Hệ thống", icon: "ph-gear" },
+  ];
+
+  // parseTargetMs: convert various input formats into epoch-ms target (or null)
+  const parseTargetMs = (v?: string | number | null): number | null => {
+    if (!v) return null;
+    if (typeof v === "number") {
+      // if seconds -> convert to ms (typical server seconds value)
+      return v > 1e12 ? v : v * 1000;
+    }
+    const num = Number(v);
+    if (!isNaN(num)) {
+      return num > 1e12 ? num : num * 1000;
+    }
+    const parsed = Date.parse(v);
+    return isNaN(parsed) ? null : parsed;
+  };
 
   const fetchList = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/thongbao");
+      const token = Cookies.get("access_token");
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`${API || ""}/api/toi/thongbaos`, {
+        method: "GET",
+        headers,
+        credentials: "include",
+      });
       const j = await res.json().catch(() => null);
-      setList(Array.isArray(j?.data) ? j.data : []);
+      const items = Array.isArray(j?.data) ? j.data : [];
+
+      const normalized: ApiNotification[] = items.map((it: any) => {
+        // normalize thoigian from several possible server fields
+        let rawThoigian: any =
+          it.thoigian ?? it.expire_at ?? it.expires_at ?? it.time_left_seconds ?? null;
+
+        // If server gave remaining seconds (small number), convert to a target ms timestamp
+        if (typeof rawThoigian === "number" && rawThoigian < 9999999999) {
+          // treat as remaining seconds -> compute target ms timestamp
+          rawThoigian = Date.now() + rawThoigian * 1000;
+        } else if (
+          typeof rawThoigian === "string" &&
+          /^\d+$/.test(rawThoigian) &&
+          rawThoigian.length <= 13
+        ) {
+          // numeric string: parse to number (could be seconds or ms)
+          rawThoigian = Number(rawThoigian);
+        }
+        return {
+          id: it.id,
+          id_nguoidung: it.id_nguoidung,
+          tieude: it.tieude ?? it.tieu_de ?? "",
+          noidung: it.noidung ?? it.noi_dung ?? null,
+          lienket: it.lienket ?? null,
+          loaithongbao: it.loaithongbao ?? it.loai ?? "Hệ thống",
+          trangthai: it.trangthai ?? "Chưa đọc",
+          created_at: it.created_at ?? it.createdAt ?? null,
+          thoigian: rawThoigian ?? null,
+        } as ApiNotification;
+      });
+
+      setList(normalized);
+      if (!TAB_ORDER.some((t) => t.key === activeTab) && normalized.length) {
+        setActiveTab(normalized[0]?.loaithongbao ?? "Đơn hàng");
+      }
     } catch (e) {
-      console.error("fetch thongbao", e);
+      console.error("fetch thongbaos", e);
       setList([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [API, activeTab]);
 
   React.useEffect(() => {
     fetchList();
   }, [fetchList]);
 
-  const visible = list.filter((t) => t.loai === tab && t.active !== false);
+  const visible = list.filter((n) => (n.loaithongbao || "Hệ thống") === activeTab);
 
-  // small dropdown like header-notifications (recent 5)
-  const recent = list.slice(0, 5);
+  // markAllAsRead: call PATCH per API: /api/toi/thongbaos/{id}/daxem
+  const markAllAsRead = async () => {
+    try {
+      const token = Cookies.get("access_token");
+      const headers: Record<string, string> = { Accept: "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const targets = visible.length ? visible : list;
+      if (!targets || targets.length === 0) return;
+
+      // Mark all in parallel (change to sequential if server rate-limits)
+      await Promise.all(
+        targets.map((item: any) =>
+          fetch(`${API || ""}/api/toi/thongbaos/${item.id}/daxem`, {
+            method: "PATCH",
+            headers,
+            credentials: "include",
+          }).catch((err) => {
+            console.warn(`Failed marking ${item.id} as read`, err);
+            return null;
+          })
+        )
+      );
+    } catch (e) {
+      console.error("markAllAsRead error", e);
+    } finally {
+      // refresh
+      fetchList();
+    }
+  };
 
   return (
     <>
       <FullHeader showClassicTopBar={true} showTopNav={false} />
 
-      <AccountShell title="Thông báo" current="thongbao" user={undefined}>
-        <div className="mb-16 d-flex align-items-center justify-content-between">
-          <h2 className="m-0">Thông báo</h2>
-
-          <div style={{ position: "relative" }}>
+      <AccountShell title="Thông báo" current="notifications">
+        <div className="flex-between gap-16 flex-wrap mb-20">
+          <h6 className="mb-0 text-gray-900 flex-align gap-12">
+            <i className="ph-bold ph-bell-simple-ringing text-main-600" /> Thông báo của tôi
+          </h6>
+          <div className="position-relative flex-align gap-16 flex-wrap">
             <button
               type="button"
-              className="btn btn-ghost"
-              onClick={() => setShowDropdown((s) => !s)}
-              aria-expanded={showDropdown}
+              className="w-44 h-44 d-lg-none d-flex flex-center border border-gray-100 rounded-6 text-2xl sidebar-btn"
             >
-              <i className="ph ph-bell" /> Thông Báo Mới
+              <i className="ph-bold ph-folder-user" />
             </button>
-
-            {showDropdown && (
-              <div
-                className="p-12 card"
-                style={{
-                  position: "absolute",
-                  right: 0,
-                  top: "calc(100% + 8px)",
-                  width: 360,
-                  zIndex: 50,
-                }}
-              >
-                <div className="mb-8 fw-bold">Thông Báo Mới Nhận</div>
-                {recent.length === 0 ? (
-                  <div className="text-muted">Không có thông báo mới</div>
-                ) : (
-                  recent.map((r) => (
-                    <div key={r.id} className="gap-12 mb-8 d-flex">
-                      <div style={{ width: 56, height: 56, background: "#f4f4f6", borderRadius: 6 }} />
-                      <div style={{ flex: 1 }}>
-                        <div className="fw-bold">{r.tieu_de}</div>
-                        {r.noi_dung && <div className="text-muted small">{r.noi_dung}</div>}
-                      </div>
-                    </div>
-                  ))
-                )}
-                <div className="pt-8 text-center">
-                  <button className="btn btn-link" onClick={() => { setShowDropdown(false); }}>
-                    Xem tất cả
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        <div className="gap-8 mb-12 d-flex">
-          <button className={`btn ${tab === "giaohang" ? "btn-primary" : "btn-outline"}`} onClick={() => setTab("giaohang")}>
-            Tiến độ giao hàng
-          </button>
-          <button className={`btn ${tab === "khuyenmai" ? "btn-primary" : "btn-outline"}`} onClick={() => setTab("khuyenmai")}>
-            Khuyến mãi
-          </button>
-          <button
-            className={`btn ${tab === "dat_hang_thanh_cong" ? "btn-primary" : "btn-outline"}`}
-            onClick={() => setTab("dat_hang_thanh_cong")}
-          >
-            Đặt hàng thành công
-          </button>
-        </div>
-
-        <div className="p-16 card">
-          {loading ? (
-            <div>Đang tải...</div>
-          ) : visible.length === 0 ? (
-            <div>Không có thông báo.</div>
-          ) : (
-            <div>
-              {visible.map((t) => (
-                <div key={t.id} className="gap-12 py-12 d-flex align-items-start" style={{ borderBottom: "1px solid #f0f0f0" }}>
-                  <div style={{ width: 90, height: 90, background: "#fafafa", borderRadius: 8 }} />
-                  <div style={{ flex: 1 }}>
-                    <div className="d-flex justify-content-between align-items-start">
-                      <div>
-                        <div className="fw-bold">{t.tieu_de}</div>
-                        {t.noi_dung && <div className="mt-6 text-muted small">{t.noi_dung}</div>}
-                      </div>
-                      <div className="text-muted small">{t.created_at ? new Date(t.created_at).toLocaleString() : ""}</div>
-                    </div>
-                    {t.lienket && (
-                      <div className="mt-8">
-                        <a className="text-primary" href={t.lienket}>
-                          Xem chi tiết
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
+        <div className="border border-gray-100 rounded-8 p-16">
+          <div className="py-10 flex-between flex-align mb-20">
+            <ul className="nav common-tab style-two nav-pills m-0" role="tablist">
+              {TAB_ORDER.map((t) => (
+                <li key={t.key} className="nav-item" role="presentation">
+                  <button
+                    className={`nav-link flex-align gap-8 fw-medium text-sm hover-border-main-600 ${
+                      activeTab === t.key ? "active" : ""
+                    }`}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === t.key}
+                    onClick={() => setActiveTab(t.key)}
+                  >
+                    <i className={`ph-bold ${t.icon} text-lg`} /> {t.key}
+                  </button>
+                </li>
               ))}
+            </ul>
+
+            <button
+              onClick={markAllAsRead}
+              className="text-white hover-bg-main-800 text-sm bg-main-600 px-10 py-6 rounded-8 flex-align gap-12"
+            >
+              <i className="ph-bold ph-check" /> Đánh dấu tất cả là đã đọc
+            </button>
+          </div>
+
+          <div className="tab-content" id="pills-tabContent">
+            <div className="tab-pane fade show active" role="tabpanel">
+              <div>
+                {loading ? (
+                  <div>Đang tải...</div>
+                ) : visible.length === 0 ? (
+                  <div className="text-center py-40">
+                    <img src="/assets/client/images/empty/notification-empty.png" alt="no" className="mx-auto mb-16" />
+                    <div className="text-gray-600">Bạn chưa có thông báo nào.</div>
+                  </div>
+                ) : (
+                  <div className="row gy-2">
+                    {visible.map((n) => {
+                      // Determine display text for time:
+                      // - If `thoigian` is parseable into a target timestamp -> show countdown
+                      // - Else if `thoigian` is a human string like "3 giờ trước" -> show it raw
+                      // - Else fallback to created_at
+                      const targetMs = parseTargetMs(n.thoigian);
+                      let timeText = "";
+
+                      if (targetMs) {
+                        const sec = Math.max(0, Math.ceil((targetMs - now) / 1000));
+                        if (sec <= 0) timeText = "Đã hết hạn";
+                        else if (sec >= 3600)
+                          timeText = `${Math.floor(sec / 3600)} giờ ${String(
+                            Math.floor((sec % 3600) / 60)
+                          ).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+                        else timeText = `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+                      } else if (typeof n.thoigian === "string" && n.thoigian.trim().length > 0) {
+                        // Server gave a human-friendly string like "3 giờ trước"
+                        timeText = n.thoigian;
+                      } else {
+                        timeText = n.created_at ? new Date(n.created_at).toLocaleString() : "";
+                      }
+
+                      return (
+                        <div key={n.id} className="col-12 col-lg-12">
+                          <div className="border border-gray-200 box-shadow-sm text-main-900 rounded-4 px-20 py-16 mb-10">
+                            <div className="d-flex flex-align gap-12">
+                              <span className="flex-shrink-0 text-main-600 text-4xl">
+                                <i className="ph-bold ph-notepad" />
+                              </span>
+                              <div className="w-100">
+                                <div className="d-flex flex-between align-items-start gap-12">
+                                  <div>
+                                    <h6 className="mb-2 text-gray-900 text-lg">{n.tieude}</h6>
+                                    <p className="mb-0 text-gray-700 text-md wrap-80">{n.noidung}</p>
+                                    <div className="text-muted text-sm">{timeText}</div>
+                                  </div>
+                                  <div className="text-end flex-column d-flex align-items-end gap-8" style={{ minWidth: 160 }}>
+                                    <a
+                                      href={n.lienket ?? "#"}
+                                      className={`border border-main-600 text-main-600 hover-text-white hover-bg-main-600 px-8 py-4 rounded-4 text-sm`}
+                                      target={n.lienket ? "_blank" : undefined}
+                                      rel={n.lienket ? "noopener noreferrer" : undefined}
+                                      onClick={(e) => { /* keep existing handlers if any */ }}
+                                    >
+                                      Xem chi tiết
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </AccountShell>
 

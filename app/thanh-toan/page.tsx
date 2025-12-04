@@ -114,7 +114,7 @@ export default function ThanhToanPage() {
 
             // VNPay / QR
             if (paymentMethod === "dbt") {
-                const resPay = await fetch(`${API}/api/toi/donhangs/${orderId}/create-payment-url`, {
+                const resPay = await fetch(`${API}/api/toi/donhangs/${orderId}/payment-url`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -138,6 +138,26 @@ export default function ThanhToanPage() {
                     return;
                 } else {
                     alert(payJson.message || "Không tạo được liên kết VNPay");
+                }
+            }
+            if (paymentMethod === "cp") {
+                const resPay = await fetch(`${API}/api/toi/donhangs/${orderId}/payment-url`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ provider: "cp" }) // hoặc server chấp nhận khác
+                });
+
+                const payJson = await resPay.json();
+                if (payJson.status && payJson.payment_url) {
+                    clearCart();
+                    setRedirecting(true);
+                    setTimeout(() => { window.location.href = payJson.payment_url; }, 500);
+                    return;
+                } else {
+                    alert(payJson.message || "Không tạo được liên kết VietQR");
                 }
             }
         } else {
@@ -309,7 +329,18 @@ export default function ThanhToanPage() {
                         <div className="mb-0 form-check common-check common-radio">
                             <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "dbt"} readOnly />
                             <label className="text-sm form-check-label fw-medium text-neutral-600 w-100">
-                                Thanh toán qua QR Code (VNPAY/VietQR)
+                                Thanh toán qua QR Code (VNPAY)
+                            </label>
+                        </div>
+                    </label>
+                    <label 
+                        className={`w-100 mt-10 border ${paymentMethod === "cp" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
+                        onClick={() => setPaymentMethod("cp")}
+                    >
+                        <div className="mb-0 form-check common-check common-radio">
+                            <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "cp"} readOnly />
+                            <label className="text-sm form-check-label fw-medium text-neutral-600 w-100">
+                                Thanh toán qua VietQR (QR Code)
                             </label>
                         </div>
                     </label>

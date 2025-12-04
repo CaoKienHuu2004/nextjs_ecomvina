@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "./useAuth";
 import Cookies from "js-cookie";
 
@@ -115,6 +115,15 @@ export const isVoucherInDateRange = (ngaybatdau?: string, ngayketthuc?: string):
   }
 
   return true;
+};
+
+const parseMinOrderValue = (condition?: string, description?: string): number => {
+  const text = (condition || "") + " " + (description || "");
+  const matches = text.match(/(\d{3,})/g);
+  if (matches && matches.length > 0) {
+    return Math.max(...matches.map(Number));
+  }
+  return 0;
 };
 
 export type Gia = { current?: number; before_discount?: number; discount_percent?: number };
@@ -516,55 +525,36 @@ export function useCart() {
 
   const updateQuantity = useCallback(async (id_giohang: number | string, quantity: number) => {
     if (quantity < 1) return;
+    setItems(prev => prev.map(it => it.id_giohang === id_giohang ? { ...it, quantity } : it));
 
-    // Cập nhật state ngay lập tức (optimistic update)
-    setItems(prev => {
-      const updated = prev.map(it => it.id_giohang === id_giohang ? { ...it, quantity } : it);
-      // Lưu vào localStorage nếu chưa đăng nhập
-      if (!isLoggedIn) {
-        saveLocalCart(updated);
-      }
-      return updated;
-    });
-
-    // Gọi API nếu đã đăng nhập
     if (isLoggedIn) {
-      try {
-        await fetch(`${API}/api/toi/giohang/${id_giohang}`, {
-          method: "PUT",
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ soluong: quantity }),
-        });
-      } catch {
-        // Nếu API lỗi, không làm gì - giữ nguyên state local
-        console.warn("Không thể cập nhật số lượng trên server");
-      }
+      await fetch(`${API}/api/toi/giohang/${id_giohang}`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ soluong: quantity }),
+      }).catch(() => fetchCart());
+    } else {
+      const local = loadLocalCart();
+      const updated = local.map(it => it.id_giohang === id_giohang ? { ...it, quantity } : it);
+      saveLocalCart(updated);
     }
-  }, [isLoggedIn, API, getAuthHeaders, saveLocalCart]);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent("cart:updated"));
+  }, [isLoggedIn, API, getAuthHeaders, fetchCart, loadLocalCart, saveLocalCart]);
 
   const removeItem = useCallback(async (id_giohang: number | string) => {
-    // Cập nhật state ngay lập tức (optimistic update)
-    setItems(prev => {
-      const updated = prev.filter(it => it.id_giohang !== id_giohang);
-      // Lưu vào localStorage nếu chưa đăng nhập
-      if (!isLoggedIn) {
-        saveLocalCart(updated);
-      }
-      return updated;
-    });
-
-    // Gọi API nếu đã đăng nhập
+    setItems(prev => prev.filter(it => it.id_giohang !== id_giohang));
     if (isLoggedIn) {
-      try {
-        await fetch(`${API}/api/toi/giohang/${id_giohang}`, {
-          method: "DELETE",
-          headers: getAuthHeaders(),
-        });
-      } catch {
-        console.warn("Không thể xóa sản phẩm trên server");
-      }
+      await fetch(`${API}/api/toi/giohang/${id_giohang}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      }).catch(() => fetchCart());
+    } else {
+      const local = loadLocalCart();
+      const updated = local.filter(it => it.id_giohang !== id_giohang);
+      saveLocalCart(updated);
     }
-  }, [isLoggedIn, API, getAuthHeaders, saveLocalCart]);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent("cart:updated"));
+  }, [isLoggedIn, API, getAuthHeaders, fetchCart, loadLocalCart, saveLocalCart]);
 
   const clearCart = useCallback(() => {
     setItems([]);

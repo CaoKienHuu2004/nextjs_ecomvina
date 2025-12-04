@@ -24,7 +24,7 @@ export default function Header() {
             </button>
           </form>
           <div className="flex items-center gap-3 text-sm">
-            <Link href="/wishlist" className="inline-flex items-center gap-2">
+            <Link href="/yeu-thich" className="inline-flex items-center gap-2">
               <i className="ph-bold ph-shopping-cart"></i>
               <span>Giỏ hàng</span>
             </Link>

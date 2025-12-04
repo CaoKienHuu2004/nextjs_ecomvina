@@ -49,14 +49,14 @@ export default function AccountShell({
   };
 
   const tabs: { key: AccountShellProps["current"]; label: string; href: string; icon: string }[] = [
-    { key: "profile", label: "Thông tin cá nhân", href: "/account", icon: "ph ph-user" },
+    { key: "profile", label: "Thông tin cá nhân", href: "/tai-khoan", icon: "ph ph-user" },
     { key: "notifications", label: "Hiện thông báo", href: "/thong-bao", icon: "ph ph-bell" },
-    { key: "orders", label: "Đơn hàng của tôi", href: "/orders", icon: "ph ph-notepad" },
+    { key: "orders", label: "Đơn hàng của tôi", href: "/don-hang", icon: "ph ph-notepad" },
     { key: "addresses", label: "Sổ địa chỉ", href: "/dia-chi", icon: "ph ph-map-pin" },
-    { key: "reviews", label: "Đánh giá sản phẩm", href: "/account/reviews", icon: "ph ph-star" },
-    { key: "wishlist", label: "Sản phẩm yêu thích", href: "/wishlist", icon: "ph ph-heart" },
+    { key: "reviews", label: "Đánh giá sản phẩm", href: "/danh-gia", icon: "ph ph-star" },
+    { key: "wishlist", label: "Sản phẩm yêu thích", href: "/yeu-thich", icon: "ph ph-heart" },
     { key: "cart", label: "Giỏ hàng", href: "/gio-hang", icon: "ph ph-shopping-cart" },
-    { key: "support", label: "Hỗ trợ khách hàng", href: "/account/support", icon: "ph ph-headset" },
+    { key: "support", label: "Hỗ trợ khách hàng", href: "/tai-khoan/support", icon: "ph ph-headset" },
   ];
 
   const handleLogout = () => {

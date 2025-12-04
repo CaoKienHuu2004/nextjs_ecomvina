@@ -104,17 +104,17 @@ export default function Page() {
     return (
         <>
             {/* FullHeader - giống trang chủ */}
-            <FullHeader showTopNav={true} showCategoriesBar={false} />
+            <FullHeader showClassicTopBar={true} showTopNav={false} />
 
             {/* Main Content */}
             <div className="page">
-                <section className="account pt-20">
+                <section className="pt-20 account">
                     <div className="container container-lg">
                         <div className="row gy-4 justify-content-center">
                             {/* Login Card */}
                             <div className="col-xl-5">
-                                <div className="border border-gray-100 rounded-16 px-24 py-40 h-100">
-                                    <h6 className="text-xl mb-32">Đăng nhập</h6>
+                                <div className="px-24 py-40 border border-gray-100 rounded-16 h-100">
+                                    <h6 className="mb-32 text-xl">Đăng nhập</h6>
 
                                     {/* Message */}
                                     {message && (
@@ -130,7 +130,7 @@ export default function Page() {
 
                                     <form onSubmit={handleSubmit}>
                                         <div className="mb-24">
-                                            <label htmlFor="username" className="text-neutral-900 text-lg mb-8 fw-medium">
+                                            <label htmlFor="username" className="mb-8 text-lg text-neutral-900 fw-medium">
                                                 Tên đăng nhập <span className="text-danger">*</span>
                                             </label>
                                             <input
@@ -146,7 +146,7 @@ export default function Page() {
                                         </div>
 
                                         <div className="mb-24">
-                                            <label htmlFor="password" className="text-neutral-900 text-lg mb-8 fw-medium">
+                                            <label htmlFor="password" className="mb-8 text-lg text-neutral-900 fw-medium">
                                                 Mật khẩu <span className="text-danger">*</span>
                                             </label>
                                             <div className="position-relative">
@@ -168,9 +168,9 @@ export default function Page() {
                                             </div>
                                         </div>
 
-                                        <div className="mb-24 mt-20">
-                                            <div className="flex-align gap-48 flex-wrap">
-                                                <button type="submit" className="btn btn-main py-18 px-40" disabled={loading}>
+                                        <div className="mt-20 mb-24">
+                                            <div className="flex-wrap gap-48 flex-align">
+                                                <button type="submit" className="px-40 btn btn-main py-18" disabled={loading}>
                                                     {loading ? "Đang xử lý..." : "Đăng nhập"}
                                                 </button>
                                                 <div className="form-check common-check">
@@ -189,13 +189,13 @@ export default function Page() {
                                             </div>
                                         </div>
 
-                                        <div className="mt-20 flex-align flex-between gap-24">
-                                            <Link href="/quen-mat-khau" className="text-danger-600 text-sm fw-semibold p-0 m-0 hover-text-decoration-underline">
+                                        <div className="gap-24 mt-20 flex-align flex-between">
+                                            <Link href="/quen-mat-khau" className="p-0 m-0 text-sm text-danger-600 fw-semibold hover-text-decoration-underline">
                                                 Quên mật khẩu ?
                                             </Link>
-                                            <span className="text-gray-900 text-sm fw-normal">
+                                            <span className="text-sm text-gray-900 fw-normal">
                                                 Bạn chưa có tài khoản ?{" "}
-                                                <Link href="/dang-ky" className="text-main-600 hover-text-decoration-underline text-sm fw-semibold">
+                                                <Link href="/dang-ky" className="text-sm text-main-600 hover-text-decoration-underline fw-semibold">
                                                     Đăng ký ngay
                                                 </Link>
                                             </span>
@@ -209,9 +209,9 @@ export default function Page() {
             </div>
 
             {/* Footer */}
-            <footer className="footer pt-30 overflow-hidden border-top fix-scale-20">
+            <footer className="overflow-hidden footer pt-30 border-top fix-scale-20">
                 <div className="container container-lg">
-                    <div className="footer-item-two-wrapper d-flex align-items-start flex-wrap">
+                    <div className="flex-wrap footer-item-two-wrapper d-flex align-items-start">
                         {/* Footer Column 1 */}
                         <div className="footer-item max-w-275" data-aos="fade-up" data-aos-duration="200">
                             <div className="footer-item__logo">
@@ -228,27 +228,27 @@ export default function Page() {
                             <p className="mb-24">
                                 Trang thương mại điện tử Siêu Thị Vina cung cấp các sản phẩm đa dạng đến với khách hàng
                             </p>
-                            <div className="flex-align gap-16 mb-16">
-                                <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
+                            <div className="gap-16 mb-16 flex-align">
+                                <span className="flex-shrink-0 w-32 h-32 border border-gray-100 flex-center rounded-circle text-main-two-600 text-md">
                                     <i className="ph-fill ph-phone-call"></i>
                                 </span>
-                                <a href="tel:+886911975996" className="text-md text-gray-900 hover-text-main-600">
+                                <a href="tel:+886911975996" className="text-gray-900 text-md hover-text-main-600">
                                     +886 0911 975 996
                                 </a>
                             </div>
-                            <div className="flex-align gap-16 mb-16">
-                                <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
+                            <div className="gap-16 mb-16 flex-align">
+                                <span className="flex-shrink-0 w-32 h-32 border border-gray-100 flex-center rounded-circle text-main-two-600 text-md">
                                     <i className="ph-fill ph-envelope"></i>
                                 </span>
-                                <a href="mailto:hotro@sieuthivina.com" className="text-md text-gray-900 hover-text-main-600">
+                                <a href="mailto:hotro@sieuthivina.com" className="text-gray-900 text-md hover-text-main-600">
                                     hotro@sieuthivina.com
                                 </a>
                             </div>
-                            <div className="flex-align gap-16 mb-16">
-                                <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
+                            <div className="gap-16 mb-16 flex-align">
+                                <span className="flex-shrink-0 w-32 h-32 border border-gray-100 flex-center rounded-circle text-main-two-600 text-md">
                                     <i className="ph-fill ph-map-pin"></i>
                                 </span>
-                                <span className="text-md text-gray-900">801/2A Phạm Thế Hiển, Phường 4, Quận 8, TP.HCM</span>
+                                <span className="text-gray-900 text-md">801/2A Phạm Thế Hiển, Phường 4, Quận 8, TP.HCM</span>
                             </div>
                         </div>
 
@@ -334,11 +334,11 @@ export default function Page() {
                             <p className="mb-16">
                                 Truy cập các nền tảng mạng xã hội <br /> của chúng tôi.
                             </p>
-                            <ul className="flex-align gap-16">
+                            <ul className="gap-16 flex-align">
                                 <li>
                                     <a
                                         href="https://www.facebook.com/sieuthivina"
-                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
+                                        className="text-xl w-44 h-44 flex-center bg-main-two-50 text-main-two-600 rounded-8 hover-bg-main-two-600 hover-text-white"
                                     >
                                         <i className="ph-fill ph-facebook-logo"></i>
                                     </a>
@@ -346,7 +346,7 @@ export default function Page() {
                                 <li>
                                     <a
                                         href="https://www.twitter.com"
-                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
+                                        className="text-xl w-44 h-44 flex-center bg-main-two-50 text-main-two-600 rounded-8 hover-bg-main-two-600 hover-text-white"
                                     >
                                         <i className="ph-fill ph-twitter-logo"></i>
                                     </a>
@@ -354,7 +354,7 @@ export default function Page() {
                                 <li>
                                     <a
                                         href="https://www.instagram.com"
-                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
+                                        className="text-xl w-44 h-44 flex-center bg-main-two-50 text-main-two-600 rounded-8 hover-bg-main-two-600 hover-text-white"
                                     >
                                         <i className="ph-fill ph-instagram-logo"></i>
                                     </a>
@@ -362,7 +362,7 @@ export default function Page() {
                                 <li>
                                     <a
                                         href="https://www.linkedin.com"
-                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
+                                        className="text-xl w-44 h-44 flex-center bg-main-two-50 text-main-two-600 rounded-8 hover-bg-main-two-600 hover-text-white"
                                     >
                                         <i className="ph-fill ph-linkedin-logo"></i>
                                     </a>
@@ -374,12 +374,12 @@ export default function Page() {
             </footer>
 
             {/* Bottom Footer */}
-            <div className="bottom-footer bg-color-three py-8">
+            <div className="py-8 bottom-footer bg-color-three">
                 <div className="container container-lg">
-                    <div className="bottom-footer__inner flex-between flex-wrap gap-16 py-16">
+                    <div className="flex-wrap gap-16 py-16 bottom-footer__inner flex-between">
                         <p className="bottom-footer__text wow fadeInLeftBig">Bản quyền thuộc về Sieuthivina.com</p>
-                        <div className="flex-align gap-8 flex-wrap wow fadeInRightBig">
-                            <span className="text-heading text-sm">Hỗ trợ thanh toán</span>
+                        <div className="flex-wrap gap-8 flex-align wow fadeInRightBig">
+                            <span className="text-sm text-heading">Hỗ trợ thanh toán</span>
                             <Image
                                 src="/assets/images/thumbs/payment-method.png"
                                 alt="Payment methods"

@@ -6,7 +6,7 @@ import Image from "next/image";
 export default function Footer() {
   return (
     <>
-      <footer className="footer py-40 overflow-hidden" style={{ marginTop: -50 }}>
+      <footer className="footer py-40 overflow-hidden" style={{ marginTop: -112 }}>
         <div className="container container-lg">
           <div className="row gy-4">
             {/* Brand & contact */}
@@ -65,9 +65,9 @@ export default function Footer() {
               <div className="footer-item">
                 <h6 className="footer-item__title">Tài khoản</h6>
                 <ul className="footer-menu">
-                  <li className="mb-16"><Link href="/account" className="text-gray-600 hover-text-main-600">Truy cập tài khoản</Link></li>
-                  <li className="mb-16"><Link href="/orders" className="text-gray-600 hover-text-main-600">Lịch sử đơn hàng</Link></li>
-                  <li className="mb-16"><Link href="/wishlist" className="text-gray-600 hover-text-main-600">Danh sách yêu thích</Link></li>
+                  <li className="mb-16"><Link href="/tai-khoan" className="text-gray-600 hover-text-main-600">Truy cập tài khoản</Link></li>
+                  <li className="mb-16"><Link href="/don-hang" className="text-gray-600 hover-text-main-600">Lịch sử đơn hàng</Link></li>
+                  <li className="mb-16"><Link href="/yeu-thich" className="text-gray-600 hover-text-main-600">Danh sách yêu thích</Link></li>
                   <li className="mb-16"><Link href="/gio-hang" className="text-gray-600 hover-text-main-600">Giỏ hàng của bạn</Link></li>
                 </ul>
               </div>
