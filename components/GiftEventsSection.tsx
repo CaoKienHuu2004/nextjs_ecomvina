@@ -4,6 +4,20 @@ import Link from "next/link";
 import { type GiftEvent } from "@/lib/api";
 import { useHomeData } from "@/hooks/useHomeData";
 
+// Hàm tạo slug từ tiêu đề
+function createSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Bỏ dấu tiếng Việt
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/[^a-z0-9\s-]/g, "") // Bỏ ký tự đặc biệt
+    .replace(/\s+/g, "-") // Thay khoảng trắng bằng -
+    .replace(/-+/g, "-") // Bỏ - lặp
+    .trim();
+}
+
 export default function GiftEventsSection() {
   const { data: homeData, loading: homeLoading } = useHomeData();
   const [gifts, setGifts] = useState<GiftEvent[]>([]);
@@ -114,66 +128,70 @@ export default function GiftEventsSection() {
 
           <div className="gift-event-slider arrow-style-two">
             <div className="d-flex flex-wrap justify-content-center" style={{ gap: "12px", marginLeft: "40px" }}>
-              {displayedGifts.map((gift) => (
-                <div key={gift.id} style={{ width: "244px", display: "inline-block" }}>
-                  <div className="product-card p-card border border-gray-100 rounded-16 position-relative transition-2" style={{ height: "340px" }}>
-                    <Link href={gift.slug ? `/chi-tiet-qt?slug=${gift.slug}` : `/chi-tiet-qt?id=${gift.id}`}>
-                      <div
-                        className="rounded-16"
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: "100%",
-                          backgroundImage: `url('${gift.hinhanh}')`,
-                          backgroundSize: "cover",
-                          backgroundRepeat: "no-repeat",
-                          zIndex: 1,
-                          backgroundPosition: "center"
-                        }}
-                      >
+              {displayedGifts.map((gift) => {
+                // Tạo slug từ tieude nếu không có sẵn
+                const giftSlug = gift.slug || createSlug(gift.tieude);
+                return (
+                  <div key={gift.id} style={{ width: "244px", display: "inline-block" }}>
+                    <div className="product-card p-card border border-gray-100 rounded-16 position-relative transition-2" style={{ height: "340px" }}>
+                      <Link href={`/chi-tiet-qt?slug=${giftSlug}`}>
                         <div
-                          className="card-overlay rounded-16 transition-1"
+                          className="rounded-16"
                           style={{
                             position: "absolute",
-                            bottom: 0,
+                            top: 0,
                             left: 0,
                             width: "100%",
-                            height: "50%",
-                            background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)",
-                            zIndex: 1
+                            height: "100%",
+                            backgroundImage: `url('${gift.hinhanh}')`,
+                            backgroundSize: "cover",
+                            backgroundRepeat: "no-repeat",
+                            zIndex: 1,
+                            backgroundPosition: "center"
                           }}
-                        ></div>
-                      </div>
-                    </Link>
-
-                    <div
-                      className="card-content p-14 w-100 position-absolute d-flex flex-column align-items-center"
-                      style={{ bottom: 0, left: 0, zIndex: 2 }}
-                    >
-                      <div className="title text-lg fw-semibold mt-5 mb-5 text-center w-100">
-                        <Link
-                          href={gift.slug ? `/chi-tiet-qt?slug=${gift.slug}` : `/chi-tiet-qt?id=${gift.id}`}
-                          className="link text-line-2"
-                          style={{ color: "white", display: "block" }}
                         >
-                          {gift.tieude}
-                        </Link>
-                      </div>
+                          <div
+                            className="card-overlay rounded-16 transition-1"
+                            style={{
+                              position: "absolute",
+                              bottom: 0,
+                              left: 0,
+                              width: "100%",
+                              height: "50%",
+                              background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)",
+                              zIndex: 1
+                            }}
+                          ></div>
+                        </div>
+                      </Link>
 
-                      <div className="flex-align gap-4 bg-gray-50 p-5 rounded-8">
-                        <span className="text-main-600 text-md d-flex">
-                          <i className="ph-bold ph-timer"></i>
-                        </span>
-                        <span className="text-gray-500 text-xs">
-                          Còn lại <strong>{gift.thoigian_conlai}</strong>
-                        </span>
+                      <div
+                        className="card-content p-14 w-100 position-absolute d-flex flex-column align-items-center"
+                        style={{ bottom: 0, left: 0, zIndex: 2 }}
+                      >
+                        <div className="title text-lg fw-semibold mt-5 mb-5 text-center w-100">
+                          <Link
+                            href={`/chi-tiet-qt?slug=${giftSlug}`}
+                            className="link text-line-2"
+                            style={{ color: "white", display: "block" }}
+                          >
+                            {gift.tieude}
+                          </Link>
+                        </div>
+
+                        <div className="flex-align gap-4 bg-gray-50 p-5 rounded-8">
+                          <span className="text-main-600 text-md d-flex">
+                            <i className="ph-bold ph-timer"></i>
+                          </span>
+                          <span className="text-gray-500 text-xs">
+                            Còn lại <strong>{gift.thoigian_conlai}</strong>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

@@ -15,7 +15,7 @@ interface TimeLeft {
     seconds: number;
 }
 
-// Interface cho quà tặng từ API mới /api/quatang/{id}
+// Interface cho quà tặng từ API /api-qua-tang/{slug}
 interface QuaTangDetail {
     id: number;
     id_bienthe: number;
@@ -28,8 +28,9 @@ interface QuaTangDetail {
     };
     dieukiensoluong: number;
     dieukiengiatri: number;
+    phantram_datduoc: number;
     tieude: string;
-    slug: string;
+    slug?: string;
     thongtin: string;
     hinhanh: string;
     luotxem: number;
@@ -74,14 +75,14 @@ interface SanPhamCoQua {
 }
 
 interface QuaTangResponse {
-    data: QuaTangDetail;
+    quatang: QuaTangDetail;
     sanpham_coqua: SanPhamCoQua[];
 }
 
-// Fetch chi tiết quà tặng bằng slug - API: /api/quatangs-all/{slug}
+// Fetch chi tiết quà tặng bằng slug - API: /api-qua-tang/{slug}
 async function fetchQuaTangDetail(slug: string): Promise<QuaTangResponse | null> {
     try {
-        const response = await fetch(`${API_URL}/api/quatangs-all/${slug}`, {
+        const response = await fetch(`${API_URL}/api-qua-tang/${slug}`, {
             method: 'GET',
             headers: {
                 Accept: 'application/json',
@@ -100,32 +101,9 @@ async function fetchQuaTangDetail(slug: string): Promise<QuaTangResponse | null>
     }
 }
 
-// Fetch chi tiết quà tặng bằng id - API: /api/quatang/{id}
-async function fetchQuaTangById(id: string): Promise<QuaTangResponse | null> {
-    try {
-        const response = await fetch(`${API_URL}/api/quatang/${id}`, {
-            method: 'GET',
-            headers: {
-                Accept: 'application/json',
-            },
-            cache: 'no-store',
-        });
-
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-        }
-
-        return response.json();
-    } catch (error) {
-        console.error('Error fetching gift detail by id:', error);
-        return null;
-    }
-}
-
 export default function GiftDetailPage() {
     const searchParams = useSearchParams();
     const giftSlug = searchParams.get('slug');
-    const giftId = searchParams.get('id');
 
     const [gift, setGift] = useState<QuaTangDetail | null>(null);
     const [relatedProducts, setRelatedProducts] = useState<SanPhamCoQua[]>([]);
@@ -157,28 +135,24 @@ export default function GiftDetailPage() {
         setTimeout(() => setShowCartAlert(false), 3000);
     };
 
-    // Fetch gift data từ API - hỗ trợ cả slug và id
+    // Fetch gift data từ API /api-qua-tang/{slug}
     useEffect(() => {
         const loadGiftData = async () => {
-            // Cần có slug hoặc id
-            if (!giftSlug && !giftId) {
+            // Cần có slug
+            if (!giftSlug) {
                 setLoading(false);
                 return;
             }
 
             try {
                 setLoading(true);
-                let response: QuaTangResponse | null = null;
-                
-                // Ưu tiên slug, nếu không có thì dùng id
-                if (giftSlug) {
-                    response = await fetchQuaTangDetail(giftSlug);
-                } else if (giftId) {
-                    response = await fetchQuaTangById(giftId);
-                }
+                const response = await fetchQuaTangDetail(giftSlug);
+                console.log('🎁 API Response:', response);
+                console.log('🎁 dieukiengiatri:', response?.quatang?.dieukiengiatri);
+                console.log('🎁 dieukiensoluong:', response?.quatang?.dieukiensoluong);
 
-                if (response?.data) {
-                    setGift(response.data);
+                if (response?.quatang) {
+                    setGift(response.quatang);
                     setRelatedProducts(response.sanpham_coqua || []);
                 }
             } catch (error) {
@@ -189,7 +163,7 @@ export default function GiftDetailPage() {
         };
 
         loadGiftData();
-    }, [giftSlug, giftId]);
+    }, [giftSlug]);
 
     // Calculate time left
     const calculateTimeLeft = useCallback((): TimeLeft => {
@@ -352,13 +326,13 @@ export default function GiftDetailPage() {
                                                         Mua tối thiểu <span className={hasEnoughProducts ? 'text-success-600' : 'text-main-600'}>{MIN_PRODUCTS} sản phẩm</span> từ {gift.thongtin_thuonghieu?.ten_thuonghieu || 'nhà cung cấp'}
                                                     </span>
                                                 </li>
-                                                {TARGET_AMOUNT > 0 && (
+                                                {(gift.dieukiengiatri ?? 0) > 0 && (
                                                     <li className="text-gray-400 mb-14 flex-align gap-14">
                                                         <span className={`w-30 h-30 ${hasEnoughAmount ? 'bg-success-100 text-success-600' : 'bg-main-100 text-main-600'} text-md flex-center rounded-circle`}>
                                                             <i className={`ph-bold ${hasEnoughAmount ? 'ph-check' : 'ph-x'}`}></i>
                                                         </span>
                                                         <span className="text-heading fw-medium">
-                                                            Giá trị đơn hàng tối thiểu <span className={hasEnoughAmount ? 'text-success-600' : 'text-main-600'}>{formatPrice(TARGET_AMOUNT)} đ</span>
+                                                            Giá trị đơn hàng tối thiểu <span className={hasEnoughAmount ? 'text-success-600' : 'text-main-600'}>{formatPrice(gift.dieukiengiatri)} đ</span>
                                                         </span>
                                                     </li>
                                                 )}

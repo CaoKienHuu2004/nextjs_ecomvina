@@ -178,7 +178,19 @@ interface ServerCartItemRaw {
   bienthe_quatang?: {
     id_bienthe?: number;
     soluong?: number;
+    giagoc?: number;
     thanhtien?: number;
+    tamtinh?: number;
+    // Cấu trúc API thực tế trả về
+    detail?: {
+      thuonghieu?: string;
+      tensanpham?: string;
+      loaisanpham?: string;
+      giagoc?: number;
+      hinhanh?: string;
+      slug?: string;
+    };
+    // Cấu trúc cũ (backup)
     bienthe?: {
       id?: number;
       giagoc?: number;
@@ -262,7 +274,7 @@ export function useCart() {
         ratingAverage: 5,
         ratingCount: 0,
         thuonghieu: detail.thuonghieu,
-        loaibienthe: detail.loaibienthe,
+        loaibienthe: detail.loaibienthe || detail.loaisanpham, // Ưu tiên loaibienthe, fallback sang loaisanpham
         slug: detail.slug
       };
     }
@@ -301,33 +313,59 @@ export function useCart() {
         const sItem = item as ServerCartItemRaw;
         console.log(`  Item ${index}:`, {
           id_giohang: sItem.id_giohang,
+          has_bienthe: !!sItem.bienthe,
           has_bienthe_quatang: !!sItem.bienthe_quatang,
           bienthe_quatang: sItem.bienthe_quatang
         });
       });
 
-      const cartItems = rawData.map(mapServerDataToCartItem);
+      // Lọc: Chỉ lấy items có bienthe (sản phẩm thường), loại bỏ items chỉ có bienthe_quatang (quà tặng)
+      const regularItems = rawData.filter((item) => {
+        const sItem = item as ServerCartItemRaw;
+        return sItem.bienthe !== null && sItem.bienthe !== undefined;
+      });
+      console.log('🛒 Regular cart items (with bienthe):', regularItems.length);
 
-      // Extract gifts from cart items
+      const cartItems = regularItems.map(mapServerDataToCartItem);
+
+      // Extract gifts from cart items - items có bienthe_quatang
       const giftItems: GiftItem[] = [];
       rawData.forEach((item) => {
         const sItem = item as ServerCartItemRaw;
-        if (sItem.bienthe_quatang && sItem.bienthe_quatang.bienthe) {
+        if (sItem.bienthe_quatang) {
           const qt = sItem.bienthe_quatang;
-          const bienthe = qt.bienthe;
-          giftItems.push({
-            id_bienthe: qt.id_bienthe || bienthe?.id || 0,
-            soluong: qt.soluong || 1,
-            thanhtien: qt.thanhtien || 0,
-            ten_sanpham: bienthe?.sanpham?.ten,
-            ten_loaibienthe: bienthe?.loaibienthe?.ten,
-            thuonghieu: bienthe?.sanpham?.thuonghieu?.ten,
-            hinhanh: bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh,
-            slug: bienthe?.sanpham?.slug,
-            giagoc: bienthe?.giagoc
-          });
+          // Ưu tiên đọc từ detail (API mới), fallback sang bienthe (cấu trúc cũ)
+          if (qt.detail) {
+            // Cấu trúc API mới: bienthe_quatang.detail
+            giftItems.push({
+              id_bienthe: qt.id_bienthe || sItem.id_giohang as number || 0,
+              soluong: qt.soluong || 1,
+              thanhtien: qt.thanhtien || 0,
+              ten_sanpham: qt.detail.tensanpham,
+              ten_loaibienthe: qt.detail.loaisanpham,
+              thuonghieu: qt.detail.thuonghieu,
+              hinhanh: qt.detail.hinhanh,
+              slug: qt.detail.slug,
+              giagoc: qt.detail.giagoc || qt.giagoc
+            });
+          } else if (qt.bienthe) {
+            // Cấu trúc cũ: bienthe_quatang.bienthe
+            const bienthe = qt.bienthe;
+            giftItems.push({
+              id_bienthe: qt.id_bienthe || bienthe?.id || 0,
+              soluong: qt.soluong || 1,
+              thanhtien: qt.thanhtien || 0,
+              ten_sanpham: bienthe?.sanpham?.ten,
+              ten_loaibienthe: bienthe?.loaibienthe?.ten,
+              thuonghieu: bienthe?.sanpham?.thuonghieu?.ten,
+              hinhanh: bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh,
+              slug: bienthe?.sanpham?.slug,
+              giagoc: bienthe?.giagoc
+            });
+          }
         }
       });
+      console.log('🎁 Gift items extracted:', giftItems.length, giftItems);
 
       return { items: cartItems, gifts: giftItems };
     } catch (e) {

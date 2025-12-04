@@ -394,48 +394,47 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                             </div>
                                         </div>
 
-                                        {/* Product Variants */}
-                                        <div className="mb-32">
-                                            <h6 className="mb-16">Loại sản phẩm</h6>
-                                            <div className="flex-wrap gap-16 flex-between align-items-start">
-                                                <div>
-                                                    <div className="gap-8 flex-align">
-                                                        <input
-                                                            type="radio"
-                                                            id="bienthe-30"
-                                                            name="id_bienthe"
-                                                            value="30"
-                                                            checked={selectedVariant === "30"}
-                                                            onChange={(e) => setSelectedVariant(e.target.value)}
-                                                            className="d-none"
-                                                        />
-                                                        <label
-                                                            htmlFor="bienthe-30"
-                                                            className="px-12 py-8 border border-2 color-list__button rounded-8 hover-border-main-600 transition-1"
-                                                            style={{ cursor: "pointer" }}
-                                                        >
-                                                            Có đường (190ml/lon)
-                                                        </label>
-                                                        <input
-                                                            type="radio"
-                                                            id="bienthe-31"
-                                                            name="id_bienthe"
-                                                            value="31"
-                                                            checked={selectedVariant === "31"}
-                                                            onChange={(e) => setSelectedVariant(e.target.value)}
-                                                            className="d-none"
-                                                        />
-                                                        <label
-                                                            htmlFor="bienthe-31"
-                                                            className="px-12 py-8 border border-2 border-gray-900 color-list__button rounded-8 hover-border-main-600 transition-1"
-                                                            style={{ cursor: "pointer" }}
-                                                        >
-                                                            Plus ít đường (190ml/lon)
-                                                        </label>
+                                        {/* Product Variants - Dynamic from API */}
+                                        {product.loai_bien_the && product.loai_bien_the.length > 0 && product.bienthe_khichon_loaibienthe_themvaogio && product.bienthe_khichon_loaibienthe_themvaogio.length > 0 && (
+                                            <div className="mb-32">
+                                                <h6 className="mb-16">Loại sản phẩm</h6>
+                                                <div className="flex-wrap gap-16 flex-between align-items-start">
+                                                    <div>
+                                                        <div className="gap-8 flex-align flex-wrap">
+                                                            {product.bienthe_khichon_loaibienthe_themvaogio.map((variant) => {
+                                                                // Tìm tên loại biến thể tương ứng
+                                                                const variantType = product.loai_bien_the?.find(
+                                                                    lt => lt.id_loaibienthe === variant.loai_bien_the
+                                                                );
+                                                                const variantName = variantType?.ten || `Biến thể ${variant.id_bienthe}`;
+                                                                const isSelected = selectedVariantId === variant.id_bienthe;
+
+                                                                return (
+                                                                    <React.Fragment key={variant.id_bienthe}>
+                                                                        <input
+                                                                            type="radio"
+                                                                            id={`bienthe-${variant.id_bienthe}`}
+                                                                            name="id_bienthe"
+                                                                            value={variant.id_bienthe}
+                                                                            checked={isSelected}
+                                                                            onChange={() => setSelectedVariantId(variant.id_bienthe)}
+                                                                            className="d-none"
+                                                                        />
+                                                                        <label
+                                                                            htmlFor={`bienthe-${variant.id_bienthe}`}
+                                                                            className={`px-12 py-8 border border-2 color-list__button rounded-8 hover-border-main-600 transition-1 ${isSelected ? 'border-main-600 bg-main-50' : ''}`}
+                                                                            style={{ cursor: "pointer" }}
+                                                                        >
+                                                                            {variantName}
+                                                                        </label>
+                                                                    </React.Fragment>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        )}
 
                                         <span className="pt-32 mt-32 text-gray-700 border-gray-100 border-top d-block" />
 

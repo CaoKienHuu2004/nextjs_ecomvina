@@ -301,7 +301,7 @@ function DeleteConfirmModal({
 }
 
 function CartPageContent() {
-  const { items, loading, updateQuantity, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total, gifts, totalGifts } = useCart();
+  const { items, loading, updateQuantity, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total } = useCart();
   const { data: homeData } = useHomeData();
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: number | string; name: string }>({
@@ -309,8 +309,6 @@ function CartPageContent() {
     id: 0,
     name: '',
   });
-
-  const API_URL = process.env.NEXT_PUBLIC_SERVER_API || 'http://148.230.100.215';
 
   // Tính giảm giá từ giá gốc sản phẩm
   const productDiscount = items.reduce((sum, item) => {
@@ -497,95 +495,7 @@ function CartPageContent() {
                 </form>
               </div>
 
-              {/* Thông báo quà tặng - Hiển thị khi có quà tặng */}
-              {gifts.length > 0 && (
-                <div className="p-10 mt-48 text-center border-2 border-dashed rounded-lg bg-yellow-50 text-yellow-800 fw-semibold border-yellow-500">
-                  🎉 Bạn nhận được thêm {totalGifts} sản phẩm Quà Tặng miễn phí trong đơn hàng này!
-                </div>
-              )}
-
-              {/* Bảng quà tặng nhận được */}
-              {gifts.length > 0 && (
-                <div className="pb-0 mt-20 border border-gray-100 cart-table rounded-8 p-30">
-                  <div className="overflow-x-auto scroll-sm scroll-sm-horizontal">
-                    <table className="table style-three">
-                      <thead>
-                        <tr className="py-10 my-10 border-gray-500 border-bottom">
-                          <th className="gap-6 p-0 pb-10 mb-0 text-lg h6 fw-bold flex-align" colSpan={2}>
-                            <i className="text-lg ph-bold ph-gift text-main-600"></i> Quà tặng nhận được ( {totalGifts} sản phẩm )
-                          </th>
-                          <th className="px-60"></th>
-                          <th className="px-60"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {gifts.map((gift, index) => {
-                          const giftImage = gift.hinhanh
-                            ? `${API_URL}/assets/client/images/thumbs/${gift.hinhanh}`
-                            : '/assets/images/thumbs/product-placeholder.png';
-                          const giftLink = gift.slug ? `/san-pham/${gift.slug}` : '#';
-
-                          return (
-                            <tr key={`gift-${index}-${gift.id_bienthe}`}>
-                              <td className="px-5 py-20">
-                                <div className="gap-12 d-flex align-items-center">
-                                  <Link href={giftLink} className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: '100px', maxHeight: '100px', width: '100%', height: '100%' }}>
-                                    <Image
-                                      src={giftImage}
-                                      alt={gift.ten_sanpham || 'Quà tặng'}
-                                      width={100}
-                                      height={100}
-                                      className="w-100 rounded-8"
-                                    />
-                                  </Link>
-                                  <div className="table-product__content text-start">
-                                    {gift.thuonghieu && (
-                                      <div className="gap-16 flex-align">
-                                        <div className="gap-4 mb-5 flex-align">
-                                          <span className="text-sm text-main-two-600 d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                          <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '250px', display: 'inline-block' }}>{gift.thuonghieu}</span>
-                                        </div>
-                                      </div>
-                                    )}
-                                    <h6 className="mb-0 title text-md fw-semibold">
-                                      <Link href={giftLink} className="link text-line-2 fw-medium" title={gift.ten_sanpham || 'Quà tặng'} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '350px', display: 'inline-block' }}>
-                                        {gift.ten_sanpham || 'Quà tặng'}
-                                      </Link>
-                                    </h6>
-                                    {gift.ten_loaibienthe && (
-                                      <div className="gap-16 mb-6 flex-align">
-                                        <span className="gap-8 px-6 py-6 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">
-                                          {gift.ten_loaibienthe}
-                                        </span>
-                                      </div>
-                                    )}
-                                    <div className="mb-6 product-card__price">
-                                      <div className="gap-4 text-xs flex-align text-main-two-600">
-                                        {gift.giagoc && gift.giagoc > 0 && (
-                                          <span className="text-sm text-gray-400 fw-semibold text-decoration-line-through me-4">{formatPrice(gift.giagoc)}</span>
-                                        )}
-                                        <span className="gap-4 text-xs flex-align text-main-two-600"><i className="text-sm ph-fill ph-seal-percent"></i> Quà tặng miễn phí</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-5 py-20">
-                                <div className="overflow-hidden d-flex rounded-4">
-                                  <input type="text" className="w-32 px-4 py-8 text-center border quantity__input flex-grow-1 border-start-0 border-end-0 bg-gray-100" value={`x ${gift.soluong}`} readOnly title="Số lượng quà tặng" aria-label="Số lượng quà tặng" />
-                                </div>
-                              </td>
-                              <td className="px-5 py-20">
-                                <span className="mb-0 text-lg h6 fw-semibold text-main-600">0 đ</span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+              {/* TODO: Quà tặng - chờ backend xác nhận API /api/toi/giohang */}
             </div>
             <div className="col-xl-3 col-lg-4">
               <div className="px-24 pb-20 border border-gray-100 cart-sidebar rounded-8 py-30">
@@ -741,7 +651,7 @@ function CartPageContent() {
                 <div className="mb-20">
                   <h6 className="gap-4 mb-6 text-lg flex-align"><i className="text-xl ph-bold ph-shopping-cart text-main-600"></i> Thông tin giỏ hàng</h6>
                   <span className="gap-1 text-sm text-gray-600 flex-align fw-medium">
-                    {totalItems} sản phẩm {totalGifts > 0 && <span> + {totalGifts} quà tặng</span>}
+                    {totalItems} sản phẩm
                   </span>
                 </div>
                 <div className="gap-8 mb-20 flex-between">
