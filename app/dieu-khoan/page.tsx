@@ -32,7 +32,7 @@ export default function Page() {
             có nghĩa vụ cung cấp thông tin chính xác và hợp tác khi cần thiết.
           </p>
           <p className="mt-24">
-            Xem thêm <Link href="/chinhsach" style={{ color: "#ee4d2d" }}>Chính sách bảo mật</Link>.
+            Xem thêm <Link href="/chinh-sach-nguoi-dung" style={{ color: "#ee4d2d" }}>Chính sách bảo mật</Link>.
           </p>
         </div>
       </main>

@@ -54,8 +54,8 @@ export default function Footer() {
                 <ul className="footer-menu">
                   <li className="mb-16"><Link href="/about" className="text-gray-600 hover-text-main-600">Giới thiệu về Siêu thị Vina</Link></li>
                   <li className="mb-16"><Link href="/contact" className="text-gray-600 hover-text-main-600">Liên hệ hỗ trợ</Link></li>
-                  <li className="mb-16"><Link href="/dieukhoan" className="text-gray-600 hover-text-main-600">Điều khoản sử dụng</Link></li>
-                  <li className="mb-16"><Link href="/chinhsach" className="text-gray-600 hover-text-main-600">Chính sách mua hàng</Link></li>
+                  <li className="mb-16"><Link href="/dieu-khoan" className="text-gray-600 hover-text-main-600">Điều khoản sử dụng</Link></li>
+                  <li className="mb-16"><Link href="/chinh-sach-nguoi-dung" className="text-gray-600 hover-text-main-600">Chính sách mua hàng</Link></li>
                 </ul>
               </div>
             </div>
