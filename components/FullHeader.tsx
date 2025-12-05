@@ -648,7 +648,7 @@ export default function FullHeader({
                       </li>
                       <li>
                         <Link
-                          href="/contact"
+                          href="/lien-he"
                           onClick={() => setMobileOpen(false)}
                         >
                           Contact
@@ -688,7 +688,7 @@ export default function FullHeader({
                       </Link>
                     </li>
                     <li className="flex-align">
-                      <Link href="/contact" className="text-sm text-white-6 hover-text-white">
+                      <Link href="/lien-he" className="text-sm text-white-6 hover-text-white">
                         <i className="ph-bold ph-chat-dots text-white-6"></i> Liên hệ hỗ trợ
                       </Link>
                     </li>

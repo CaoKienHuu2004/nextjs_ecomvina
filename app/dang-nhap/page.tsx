@@ -81,7 +81,7 @@ export default function Page() {
             if (form.remember) {
                 const token = Cookies.get("access_token");
                 if (token) {
-                    Cookies.set("access_token", token, { expires: 7, path: "/" });
+                    Cookies.set("access_token", token, { expires: 1, path: "/" });
                 }
             }
 
