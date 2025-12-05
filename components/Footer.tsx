@@ -53,7 +53,7 @@ export default function Footer() {
                 <h6 className="footer-item__title">Về chúng tôi</h6>
                 <ul className="footer-menu">
                   <li className="mb-16"><Link href="/about" className="text-gray-600 hover-text-main-600">Giới thiệu về Siêu thị Vina</Link></li>
-                  <li className="mb-16"><Link href="/contact" className="text-gray-600 hover-text-main-600">Liên hệ hỗ trợ</Link></li>
+                  <li className="mb-16"><Link href="/lien-he" className="text-gray-600 hover-text-main-600">Liên hệ hỗ trợ</Link></li>
                   <li className="mb-16"><Link href="/dieu-khoan" className="text-gray-600 hover-text-main-600">Điều khoản sử dụng</Link></li>
                   <li className="mb-16"><Link href="/chinh-sach-nguoi-dung" className="text-gray-600 hover-text-main-600">Chính sách mua hàng</Link></li>
                 </ul>
