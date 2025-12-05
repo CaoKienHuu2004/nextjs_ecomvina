@@ -42,7 +42,7 @@ export default function AuthFooter() {
             <ul className="footer-menu" style={{ listStyle: "none", paddingLeft: 0 }}>
               <li className="mb-10"><Link href="/gioithieu" className="text-gray-600 hover-text-main-600">Giới thiệu về Siêu thị Vina</Link></li>
               <li className="mb-10"><Link href="/lienhe" className="text-gray-600 hover-text-main-600">Liên hệ hỗ trợ</Link></li>
-              <li className="mb-10"><Link href="/dieukhoan" className="text-gray-600 hover-text-main-600">Điều khoản sử dụng</Link></li>
+              <li className="mb-10"><Link href="/dieu-khoan" className="text-gray-600 hover-text-main-600">Điều khoản sử dụng</Link></li>
               <li className="mb-10"><Link href="/chinh-sach-mua-hang" className="text-gray-600 hover-text-main-600">Chính sách mua hàng</Link></li>
               <li className="mb-10"><Link href="/chinh-sach-nguoi-dung" className="text-gray-600 hover-text-main-600">Chính sách người dùng</Link></li>
               <li className="mb-10"><Link href="/chinh-sach-cua-hang" className="text-gray-600 hover-text-main-600">Chính sách cửa hàng</Link></li>

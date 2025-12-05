@@ -29,7 +29,7 @@ export default function Page() {
             Chúng tôi áp dụng các biện pháp kỹ thuật và tổ chức phù hợp để bảo vệ dữ liệu cá nhân.
           </p>
           <p className="mt-24">
-            Xem thêm <Link href="/dieukhoan" style={{ color: "#ee4d2d" }}>Điều khoản dịch vụ</Link>.
+            Xem thêm <Link href="/dieu-khoan" style={{ color: "#ee4d2d" }}>Điều khoản dịch vụ</Link>.
           </p>
         </div>
       </main>
