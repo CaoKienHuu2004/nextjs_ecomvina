@@ -157,7 +157,7 @@ export default function Page() {
                         className="common-input px-16"
                         id="name"
                         name="hoten"
-                        placeholder="Full name"
+                        placeholder="Họ tên"
                         value={formData.hoten}
                         onChange={handleChange}
                         required
@@ -176,7 +176,7 @@ export default function Page() {
                         className="common-input px-16"
                         id="email"
                         name="email"
-                        placeholder="Email address"
+                        placeholder="Email"
                         value={formData.email}
                         onChange={handleChange}
                       />
@@ -194,7 +194,7 @@ export default function Page() {
                         className="common-input px-16"
                         id="phone"
                         name="sodienthoai"
-                        placeholder="Phone Number*"
+                        placeholder="Số điện thoại*"
                         value={formData.sodienthoai}
                         onChange={handleChange}
                         required
@@ -213,7 +213,7 @@ export default function Page() {
                         className="common-input px-16"
                         id="subject"
                         name="tieude"
-                        placeholder="Subject"
+                        placeholder="Tiêu đề"
                         value={formData.tieude}
                         onChange={handleChange}
                         required
@@ -231,7 +231,7 @@ export default function Page() {
                         className="common-input px-16"
                         id="message"
                         name="noidung"
-                        placeholder="Type your message"
+                        placeholder="Nội dung"
                         value={formData.noidung}
                         onChange={handleChange}
                         required
