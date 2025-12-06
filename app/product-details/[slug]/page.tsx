@@ -155,7 +155,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     if (loading) {
         return (
             <>
-                <FullHeader showClassicTopBar={true} showTopNav={false} showCategoriesBar={false} />
+                <FullHeader showClassicTopBar={true} showTopNav={false} />
                 <div className="container text-center py-80">
                     <div className="spinner-border text-main-600" role="status">
                         <span className="visually-hidden">Đang tải...</span>
@@ -169,7 +169,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     if (error || !product) {
         return (
             <>
-                <FullHeader showClassicTopBar={false} showTopNav={true} showCategoriesBar={false} />
+                <FullHeader showClassicTopBar={true} showTopNav={false} />
                 <div className="container text-center py-80">
                     <h4 className="text-danger">Lỗi: {error || "Không tìm thấy sản phẩm"}</h4>
                     <Link href="/" className="mt-3 btn btn-main-600">Về trang chủ</Link>
@@ -181,7 +181,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
     return (
         <>
-            <FullHeader showClassicTopBar={false} showTopNav={true} showCategoriesBar={false} />
+            <FullHeader showClassicTopBar={true} showTopNav={false} />
 
             {/* Breadcrumb */}
             <section className="mb-0 breadcrumb py-26 bg-main-two-50">
@@ -400,7 +400,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 <h6 className="mb-16">Loại sản phẩm</h6>
                                                 <div className="flex-wrap gap-16 flex-between align-items-start">
                                                     <div>
-                                                        <div className="gap-8 flex-align flex-wrap">
+                                                        <div className="flex-wrap gap-8 flex-align">
                                                             {product.bienthe_khichon_loaibienthe_themvaogio.map((variant) => {
                                                                 // Tìm tên loại biến thể tương ứng
                                                                 const variantType = product.loai_bien_the?.find(
@@ -853,7 +853,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 }}
                                             />
                                             {similarProduct.have_gift && (
-                                                <span className="product-card__badge bg-success-600 px-8 py-4 text-sm text-white position-absolute inset-inline-start-0 inset-block-start-0">
+                                                <span className="px-8 py-4 text-sm text-white product-card__badge bg-success-600 position-absolute inset-inline-start-0 inset-block-start-0">
                                                     Có quà
                                                 </span>
                                             )}
