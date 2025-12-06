@@ -651,7 +651,7 @@ export default function FullHeader({
                           href="/lien-he"
                           onClick={() => setMobileOpen(false)}
                         >
-                          Contact
+                          Liên Hệ
                         </Link>
                       </li>
                       <li className="mt-8">
@@ -683,7 +683,7 @@ export default function FullHeader({
                       </Link>
                     </li> */}
                     <li className="flex-align">
-                      <Link href="#" className="text-sm text-white-6 hover-text-white pe-1">
+                      <Link href="/gioi-thieu" className="text-sm text-white-6 hover-text-white pe-1">
                         <i className="ph-bold ph-info text-white-6"></i> Giới thiệu về Siêu Thị Vina
                       </Link>
                     </li>
