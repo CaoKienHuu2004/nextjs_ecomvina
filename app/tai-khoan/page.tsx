@@ -210,7 +210,7 @@ export default function Page() {
     (async () => {
       try {
         if (tab === "wishlist") {
-          const res = await fetch(`${API}/api/yeuthichs`, { credentials: "include" });
+          const res = await fetch(`${API}/api/toi/yeuthichs`, { credentials: "include" });
           const data = await res.json();
           setWishlist(Array.isArray(data) ? (data as WishlistRow[]) : (data?.data ?? []));
         } else if (tab === "cart") {
@@ -430,7 +430,7 @@ export default function Page() {
   };
   const handleRemoveWish = async (productId: number) => {
     try {
-      await fetch(`${API}/api/yeuthichs/${productId}`, {
+      await fetch(`${API}/api/toi/yeuthichs/${productId}`, {
         method: "DELETE",
         credentials: "include",
       });

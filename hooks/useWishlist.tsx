@@ -25,7 +25,7 @@ function useWishlistCore(): Ctx {
 
     (async () => {
       try {
-        const res = await fetch(`${API}/api/yeuthichs`, {
+        const res = await fetch(`${API}/api/toi/yeuthichs`, {
           headers: { Accept: "application/json" },
           credentials: "include",
         });
@@ -109,7 +109,7 @@ function useWishlistCore(): Ctx {
       const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
       const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${API}/api/yeuthichs`, {
+      const res = await fetch(`${API}/api/toi/yeuthichs`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         credentials: "include",
@@ -134,7 +134,7 @@ function useWishlistCore(): Ctx {
       const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
       const headers: Record<string, string> = { Accept: "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${API}/api/yeuthichs/${id}`, {
+      const res = await fetch(`${API}/api/toi/yeuthichs/${id}`, {
         method: "DELETE",
         headers: { Accept: "application/json" },
         credentials: "include",

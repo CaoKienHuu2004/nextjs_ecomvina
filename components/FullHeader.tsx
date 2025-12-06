@@ -183,7 +183,7 @@ export default function FullHeader({
     (async () => {
       try {
         // dùng API đã chuẩn hoá origin ở biến API
-        const res = await fetch(`${API}/api/danhmucs?per_page=100`, {
+        const res = await fetch(`${API}/api/danhmucs-all`, {
           headers: { Accept: "application/json" },
           cache: "no-store",
         });
@@ -264,7 +264,7 @@ export default function FullHeader({
           className="py-10 header-middle border-bottom border-neutral-40"
           style={{ overflow: "visible", position: "sticky", top: 0, zIndex: 300, background: "#fff" }}//position: "relative"
         >
-          <div className="container container-lg">
+          <div className="container px-0 container-lg">
             <nav className="gap-8 header-inner flex-between align-items-center">
               {/* Logo */}
               <div className="logo">
@@ -493,7 +493,7 @@ export default function FullHeader({
             className="pt-24 bg-white header"
             style={{ overflow: "visible", zIndex: 100 }}
           >
-            <div className="container container-lg">
+            <div className="container px-0 container-lg">
               <nav className="gap-16 header-inner d-flex justify-content-between">
                 <div className="d-flex flex-grow-1">
                   {/* Category Button */}
@@ -669,7 +669,7 @@ export default function FullHeader({
         <>
           {showClassicTopBar && (
             <div className="py-10 header-top bg-main-600 d-none d-lg-block">
-              <div className="container container-lg">
+              <div className="container px-0 container-lg">
                 <div className="flex-wrap gap-8 flex-between">
                   <ul className="flex-wrap gap-16 header-top__right flex-align">
                     {/* <li className="flex-align">
@@ -734,7 +734,7 @@ export default function FullHeader({
           )}
 
           <header className="header border-bottom border-neutral-40 pt-14 pb-14">
-            <div className="container">
+            <div className="container px-0 container-lg">
               <nav className="gap-8 header-inner flex-between">
                 <div className="logo">
                   <Link href="/" className="link" aria-label="Home">
