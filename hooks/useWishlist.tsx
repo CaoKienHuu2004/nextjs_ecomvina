@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import Cookies from "js-cookie";
 
 type Ctx = {
   ids: Set<number>;
@@ -25,8 +26,11 @@ function useWishlistCore(): Ctx {
 
     (async () => {
       try {
+        const token = typeof window !== "undefined" ? (Cookies.get("access_token") || Cookies.get("token")) : null;
+        const headers: Record<string,string> = { Accept: "application/json" };
+        if (token) headers.Authorization = `Bearer ${token}`;
         const res = await fetch(`${API}/api/toi/yeuthichs`, {
-          headers: { Accept: "application/json" },
+          headers,
           credentials: "include",
         });
 
@@ -40,8 +44,7 @@ function useWishlistCore(): Ctx {
 
         const json = await res.json();
 
-        // ----- parse data không dùng any -----
-        const raw = Array.isArray(json?.data) ? json.data : json?.data?.data || [];
+        const raw = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
 
         const hasId = (v: unknown): v is { id: unknown } =>
           typeof v === "object" && v !== null && "id" in v;
@@ -55,17 +58,15 @@ function useWishlistCore(): Ctx {
         };
 
         const toId = (row: unknown): number | null => {
-          // 1) { product: { id } }
+          // Prefer id_sanpham (API sample), then sanpham.id, then fallback to id
+          if (typeof row === "object" && row !== null && "id_sanpham" in (row as Record<string, unknown>)) {
+            return toNumber((row as { id_sanpham: unknown }).id_sanpham);
+          }
           if (hasProduct(row) && hasId((row as { product: unknown }).product)) {
             return toNumber((row as { product: { id: unknown } }).product.id);
           }
-          // 2) { product_id }
-          if (typeof row === "object" && row !== null && "product_id" in (row as Record<string, unknown>)) {
-            return toNumber((row as { product_id: unknown }).product_id);
-          }
-          // 3) { id } – fallback
           if (hasId(row)) return toNumber((row as { id: unknown }).id);
-          return null;
+           return null;
         };
 
         const arr = Array.isArray(raw) ? raw : [];
@@ -106,14 +107,14 @@ function useWishlistCore(): Ctx {
       return next;
     });
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const token = typeof window !== 'undefined' ? (Cookies.get('access_token') || Cookies.get('token')) : null;
       const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
-      if (token) headers.Authorization = `Bearer ${token}`;
+        if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch(`${API}/api/toi/yeuthichs`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers,
         credentials: "include",
-        body: JSON.stringify({ product_id: id }),
+        body: JSON.stringify({ id_sanpham: id }),
       });
       if (res.status === 401) {
         // guest mode
@@ -131,12 +132,12 @@ function useWishlistCore(): Ctx {
       return next;
     });
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const token = typeof window !== 'undefined' ? (Cookies.get('access_token') || Cookies.get('token')) : null;
       const headers: Record<string, string> = { Accept: "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch(`${API}/api/toi/yeuthichs/${id}`, {
-        method: "DELETE",
-        headers: { Accept: "application/json" },
+        method: "PATCH",
+        headers,
         credentials: "include",
       });
       if (res.status === 401) {
@@ -144,7 +145,6 @@ function useWishlistCore(): Ctx {
         setIds(prev => { const next = new Set(prev); next.delete(id); persistGuest(next); return next; });
       }
     } catch {
-      // rollback nhẹ nếu muốn
     }
   }, [API, persistGuest]);
 

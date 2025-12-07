@@ -374,6 +374,7 @@ export default function FullHeader({
                     <ul
                       role="menu"
                       className="bg-white rounded-md shadow common-dropdown nav-submenu scroll-sm position-absolute"
+                      style={{ zIndex: 9999 }} // thêm zIndex để dropdown không bị che khuất
                     >
                       <li
                         className="common-dropdown__item nav-submenu__item"
@@ -554,27 +555,6 @@ export default function FullHeader({
                       </div>
                     )}
                   </div>
-
-                  {/* Search */}
-                  {/* <form
-                    action="#"
-                    className="position-relative ms-20 w-100 d-md-block d-none me-16"
-                    role="search"
-                  >
-                    <input
-                      type="text"
-                      className="py-16 form-control ps-30 pe-60 bg-neutral-30 placeholder-italic placeholder-light"
-                      placeholder="Search for products, categories or brands..."
-                      aria-label="Search products"
-                    />
-                    <button
-                      type="submit"
-                      className="text-xl position-absolute top-50 translate-middle-y text-main-600 end-0 me-36 line-height-1 js-open-search"
-                      aria-label="Search"
-                    >
-                      <i className="ph-bold ph-magnifying-glass"></i>
-                    </button>
-                  </form> */}
                 </div>
 
                 {/* Right actions */}
@@ -733,7 +713,7 @@ export default function FullHeader({
 
           )}
 
-          <header className="header border-bottom border-neutral-40 pt-14 pb-14">
+          <header className="header border-bottom border-neutral-40 pt-14 pb-14" style={{ overflow: "visible", position: "relative", zIndex: 200 }}>
             <div className="container px-0 container-lg">
               <nav className="gap-8 header-inner flex-between">
                 <div className="logo">
@@ -818,6 +798,7 @@ export default function FullHeader({
                         <ul
                           role="menu"
                           className="bg-white rounded-md shadow common-dropdown nav-submenu scroll-sm position-absolute"
+                          style={{ zIndex: 9999 }} // thêm zIndex để dropdown không bị che khuất
                         >
                           <li className="common-dropdown__item nav-submenu__item" role="none">
                             <Link

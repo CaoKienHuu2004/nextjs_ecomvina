@@ -244,15 +244,16 @@ export function useCart() {
   const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
 
   const getAuthHeaders = useCallback((): Record<string, string> => {
-    const headers: Record<string, string> = {
+      const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "application/json",
     };
-    const token = Cookies.get("access_token");
+    // nếu user chưa đăng nhập => không thêm Authorization (cho phép dùng session cookie)
+    if (!isLoggedIn) return headers;
+    const token = Cookies.get("access_token") || Cookies.get("token");
     if (token) headers.Authorization = `Bearer ${token}`;
     return headers;
-  }, []);
-
+  }, [isLoggedIn]);
   // --- HELPER MAP DATA ---
   const mapServerDataToCartItem = useCallback((serverItem: unknown): CartItem => {
     const sItem = serverItem as ServerCartItemRaw;
@@ -307,7 +308,7 @@ export function useCart() {
       const j: unknown = await res.json();
 
       // DEBUG: Log raw response để xem cấu trúc
-      console.log('🛒 Raw cart API response:', JSON.stringify(j, null, 2));
+      // console.log('🛒 Raw cart API response:', JSON.stringify(j, null, 2));
 
       let rawData: unknown[] = [];
       if (Array.isArray(j)) {
@@ -317,15 +318,15 @@ export function useCart() {
       }
 
       // DEBUG: Log từng item để tìm quà tặng
-      console.log('🎁 Checking for gifts in cart items:', rawData.length, 'items');
+      // console.log('🎁 Checking for gifts in cart items:', rawData.length, 'items');
       rawData.forEach((item, index) => {
         const sItem = item as ServerCartItemRaw;
-        console.log(`  Item ${index}:`, {
-          id_giohang: sItem.id_giohang,
-          has_bienthe: !!sItem.bienthe,
-          has_bienthe_quatang: !!sItem.bienthe_quatang,
-          bienthe_quatang: sItem.bienthe_quatang
-        });
+        // console.log(`  Item ${index}:`, {
+        //   id_giohang: sItem.id_giohang,
+        //   has_bienthe: !!sItem.bienthe,
+        //   has_bienthe_quatang: !!sItem.bienthe_quatang,
+        //   bienthe_quatang: sItem.bienthe_quatang
+        // });
       });
 
       // Lọc: Chỉ lấy items có bienthe (sản phẩm thường), loại bỏ items chỉ có bienthe_quatang (quà tặng)
@@ -333,7 +334,7 @@ export function useCart() {
         const sItem = item as ServerCartItemRaw;
         return sItem.bienthe !== null && sItem.bienthe !== undefined;
       });
-      console.log('🛒 Regular cart items (with bienthe):', regularItems.length);
+      // console.log('🛒 Regular cart items (with bienthe):', regularItems.length);
 
       const cartItems = regularItems.map(mapServerDataToCartItem);
 
@@ -374,7 +375,7 @@ export function useCart() {
           }
         }
       });
-      console.log('🎁 Gift items extracted:', giftItems.length, giftItems);
+      // console.log('🎁 Gift items extracted:', giftItems.length, giftItems);
 
       return { items: cartItems, gifts: giftItems };
     } catch (e) {

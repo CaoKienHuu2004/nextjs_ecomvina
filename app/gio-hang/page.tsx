@@ -5,7 +5,6 @@ import { useCart, parseVoucherCondition, isVoucherInDateRange, VoucherConditionT
 import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData';
 import Image from 'next/image';
 import FullHeader from '@/components/FullHeader';
-import BenefitsStrip from "@/components/BenefitsStrip";
 // --- HELPER FUNCTIONS ---
 type PriceInput = number | Gia | undefined | null;
 
