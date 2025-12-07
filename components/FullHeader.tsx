@@ -733,7 +733,7 @@ export default function FullHeader({
 
           )}
 
-          <header className="header border-bottom border-neutral-40 pt-14 pb-14">
+          <header className="header border-bottom border-neutral-40 pt-14 pb-14" style={{ overflow: "visible", position: "relative", zIndex: 200 }}>
             <div className="container px-0 container-lg">
               <nav className="gap-8 header-inner flex-between">
                 <div className="logo">
