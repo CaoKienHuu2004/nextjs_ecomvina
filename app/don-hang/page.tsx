@@ -102,6 +102,21 @@ export default function OrdersPage() {
   return status || "Chưa rõ";
 };
 
+  // Helper lấy props cho badge: icon và className theo trạng thái
+  const getStatusBadgeProps = (status?: string) => {
+    const s = (status || "").toString().toLowerCase();
+    // Completed (thành công / đã giao)
+    if (s.includes("đã giao") || s.includes("đã giao hàng") || s.includes("thành công") || s.includes("delivered") || s.includes("completed")) {
+      return { icon: "ph-check-fat", className: "text-white bg-cyan-500 px-6 py-4 rounded-lg" };
+    }
+    // Cancelled
+    if (s.includes("đã hủy") || s.includes("hủy") || s.includes("cancel")) {
+      return { icon: "ph-prohibit", className: "text-white bg-danger-600 px-6 py-4 rounded-4" };
+    }
+    // Default / warning
+    return { icon: "ph-clock-countdown", className: "text-white px-6 py-2 rounded-4 fw-medium text-xs", style: { backgroundColor: "var(--main-600)" } };
+  };
+
   // --- FETCH DATA ---
   useEffect(() => {
     const fetchOrders = async () => {
@@ -369,7 +384,13 @@ const retryPayment = async (orderId: number, provider?: string) => {
                         <div className="fw-medium">
                           {formatPaymentMethod(detailOrder.phuongthuc)}
                         </div>
-                        <div className="mt-5 text-sm"><span className="fw-medium">Trạng thái:</span> {detailOrder.trangthaithanhtoan ?? detailOrder.trangthai ?? "-"}</div>
+                        <div className="mt-5 text-sm"><span className="fw-medium">Trạng thái:</span>{" "}
+                          {(() => {
+                            const st = detailOrder.trangthaithanhtoan ?? detailOrder.trangthai ?? "-";
+                            const badge = getStatusBadgeProps(st);
+                            return <span className={`fw-medium text-xs ${badge.className}`}><i className={`ph-bold ${badge.icon}`} /> {displayStatusLabel(st)}</span>;
+                          })()}
+                        </div>
                         {/* {detailOrder.phuongthuc?.maphuongthuc && (
                           <div className="mt-5 text-sm"><span className="fw-medium">Mã PT:</span> {detailOrder.phuongthuc.maphuongthuc}</div>
                         )} */}
@@ -518,11 +539,14 @@ const retryPayment = async (orderId: number, provider?: string) => {
                           <span className="text-gray-900 fw-semibold text-md">Đơn hàng #{order.madon}</span>
                         </div>
                         <div className="gap-12 flex-align">
-                          <span className={`fw-medium text-xs ${order.trangthai.includes("Hoàn") ? "text-success-700 bg-success-100 px-6 py-4 rounded-4" : order.trangthai.includes("Hủy") ? "text-danger-700 bg-danger-100 px-6 py-4 rounded-4" : "text-warning-700 bg-warning-100 px-6 py-4 rounded-4"}`}>
-                            {/* <i className="ph-bold ph-clock-countdown" /> {getTrangThaiDonHang(order.trangthai)} */}
-                            {/* displayStatusLabel là helper dùng để lọc và hiển thị thành công thay vì đã giao, xét đánh giá */}
-                            <i className="ph-bold ph-clock-countdown" /> {displayStatusLabel(order.trangthai)}
-                          </span>
+                          {(() => {
+                            const badge = getStatusBadgeProps(order.trangthai);
+                            return (
+                              <span className={`fw-medium text-xs ${badge.className}`}>
+                                <i className={`ph-bold ${badge.icon}`} /> {displayStatusLabel(order.trangthai)}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
 
