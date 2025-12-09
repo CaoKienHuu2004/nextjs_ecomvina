@@ -273,9 +273,6 @@ export function useCart() {
     const soluong = Number(sItem.bienthe?.soluong ?? 1);
     const detail = sItem.bienthe?.detail;
 
-    // DEBUG: Log detail để xem cấu trúc
-    console.log('📦 Cart item detail:', detail);
-
     let productInfo: ProductDisplayInfo | undefined = undefined;
 
     if (detail) {
@@ -524,9 +521,6 @@ export function useCart() {
           id_bienthe: String(id_bienthe),
           soluong: Number(soluong)
         };
-
-        console.log("📤 Sending to API:", requestBody);
-        console.log("🌐 API URL:", `${API}/api/tai-khoan/giohang`);
 
         const res = await fetch(`${API}/api/tai-khoan/giohang`, {
           method: "POST",
@@ -779,7 +773,7 @@ export function useCart() {
   const totalGifts = gifts.reduce((sum, g) => sum + (g.soluong || 0), 0);
 
   return {
-    items, loading, addToCart, updatesoluong, removeItem, clearCart, refreshCart: fetchCart,
+    items, loading, addToCart, updatesoluong, removeItem, clearCart, refreshCart: fetchCart, updateQuantity: updatesoluong,
     subtotal,
     totalItems,
     gifts,

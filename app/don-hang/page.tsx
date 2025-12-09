@@ -137,10 +137,12 @@ export default function OrdersPage() {
         const payload = Array.isArray(json) ? json : (json.data ?? []);
 
         // If payload looks like groups (items have `donhang`), treat as OrderGroup[]
-        const groupsResp: OrderGroup[] = Array.isArray(payload) && payload.length && typeof (payload[0] as any).donhang !== "undefined"
-          ? (payload as OrderGroup[])
-          : [];
-
+        const groupsResp: OrderGroup[] =
+            Array.isArray(payload) &&
+            payload.length > 0 &&
+            typeof ((payload[0] as Record<string, unknown>).donhang) !== "undefined"
+              ? (payload as OrderGroup[])
+              : [];
         // Save groups (useful if you want to display server-provided counts later)
         setGroups(groupsResp);
 
@@ -362,12 +364,12 @@ export default function OrdersPage() {
         {/* Detail view replaces list when an order is opened */}
         {detailOpen && detailOrder ? (
           <div>
-            <div className="flex-between gap-16 flex-wrap mb-10">
+            <div className="flex-wrap gap-16 mb-10 flex-between">
               <h6 className="mb-0 text-gray-900">Chi tiết đơn hàng</h6>
-              <div className="position-relative flex-align gap-16 flex-wrap">
+              <div className="flex-wrap gap-16 position-relative flex-align">
                 <button
                   type="button"
-                  className="w-44 h-44 d-lg-none d-flex flex-center border border-gray-100 rounded-6 text-2xl sidebar-btn"
+                  className="text-2xl border border-gray-100 w-44 h-44 d-lg-none d-flex flex-center rounded-6 sidebar-btn"
                   onClick={closeDetail}
                   title="Đóng"
                 >
@@ -376,17 +378,17 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            <div className="flex-between gap-16 flex-wrap mb-20">
-              <h6 className="mb-0 text-gray-600 text-md fw-medium flex-align gap-12">
+            <div className="flex-wrap gap-16 mb-20 flex-between">
+              <h6 className="gap-12 mb-0 text-gray-600 text-md fw-medium flex-align">
                 Mã đơn: #{detailOrder.madon}
-                <span className="bg-warning-200 text-warning-900 p-4 fw-semibold text-sm rounded-4 ms-2">
+                <span className="p-4 text-sm bg-warning-200 text-warning-900 fw-semibold rounded-4 ms-2">
                   {detailOrder.trangthai ?? "Chờ xác nhận"}
                 </span>
               </h6>
 
-              <div className="flex-align gap-8 mb-20">
-                <i className="ph-bold ph-clock-countdown text-gray-600 text-md"></i>
-                <span className="text-gray-600 text-sm fw-normal">
+              <div className="gap-8 mb-20 flex-align">
+                <i className="text-gray-600 ph-bold ph-clock-countdown text-md"></i>
+                <span className="text-sm text-gray-600 fw-normal">
                   <span className="fw-medium">Ngày đặt hàng:</span> {formatOrderDate(detailOrder.created_at)}
                 </span>
               </div>
@@ -394,22 +396,22 @@ export default function OrdersPage() {
 
             <div className="row">
               {/* Địa chỉ người nhận */}
-              <div className="col-lg-4 d-flex flex-column gap-5 p-0 px-6">
-                <span className="text-lg fw-semibold text-gray-900">Địa chỉ người nhận</span>
-                <div className="border border-gray-300 rounded-4 py-10 px-10 h-100">
-                  <div className="text-sm fw-semibold text-gray-900">
+              <div className="gap-5 p-0 px-6 col-lg-4 d-flex flex-column">
+                <span className="text-lg text-gray-900 fw-semibold">Địa chỉ người nhận</span>
+                <div className="px-10 py-10 border border-gray-300 rounded-4 h-100">
+                  <div className="text-sm text-gray-900 fw-semibold">
                     {detailOrder.diachigiaohang?.hoten ?? detailOrder.nguoinhan ?? "-"}
                   </div>
-                  <div className="text-sm text-gray-800 mt-5">
+                  <div className="mt-5 text-sm text-gray-800">
                     <span className="fw-medium">Địa chỉ:</span>{" "}
                     {detailOrder.diachigiaohang?.diachi ?? detailOrder.diachinhan ?? "-"}
                   </div>
-                  <div className="text-sm text-gray-800 mt-5">
+                  <div className="mt-5 text-sm text-gray-800">
                     <span className="fw-medium">Số điện thoại:</span>{" "}
                     {detailOrder.diachigiaohang?.sodienthoai ?? detailOrder.sodienthoai ?? "-"}
                   </div>
                   {detailOrder.diachigiaohang?.tinhthanh && (
-                    <div className="text-sm text-gray-800 mt-5">
+                    <div className="mt-5 text-sm text-gray-800">
                       <span className="fw-medium">Tỉnh / Thành:</span> {detailOrder.diachigiaohang.tinhthanh}
                     </div>
                   )}
@@ -417,17 +419,17 @@ export default function OrdersPage() {
               </div>
 
               {/* Vận chuyển (fallbacks: phivanchuyen, hinhthucvanchuyen, phigiaohang, khuvucgiao) */}
-              <div className="col-lg-4 d-flex flex-column gap-5 p-0 px-6">
-                <span className="text-lg fw-semibold text-gray-900">Hình thức vận chuyển</span>
-                <div className="border border-gray-300 rounded-4 py-10 px-10 h-100">
-                  <div className="text-sm fw-semibold text-gray-900">
+              <div className="gap-5 p-0 px-6 col-lg-4 d-flex flex-column">
+                <span className="text-lg text-gray-900 fw-semibold">Hình thức vận chuyển</span>
+                <div className="px-10 py-10 border border-gray-300 rounded-4 h-100">
+                  <div className="text-sm text-gray-900 fw-semibold">
                     {detailOrder.phivanchuyen?.ten ?? detailOrder.hinhthucthanhtoan ?? detailOrder.phuongthucvanchuyen ?? "Giao hàng tiêu chuẩn (Nội tỉnh)"}
                   </div>
-                  <div className="text-sm text-gray-800 mt-5">
+                  <div className="mt-5 text-sm text-gray-800">
                     <span className="fw-medium">Phí vận chuyển:</span>{" "}
                     <span className="fst-italic">{fmtMoney(detailOrder.phivanchuyen?.phi ?? detailOrder.phigiaohang ?? 0)}</span>
                   </div>
-                  <div className="text-sm text-gray-800 mt-5">
+                  <div className="mt-5 text-sm text-gray-800">
                     <span className="fw-medium">Khu vực giao:</span>{" "}
                     <span className="fst-italic">{detailOrder.khuvucgiao ?? detailOrder.diachigiaohang?.tinhthanh ?? "-"}</span>
                   </div>
@@ -435,13 +437,13 @@ export default function OrdersPage() {
               </div>
 
               {/* Thanh toán (fallbacks: phuongthuc.maphuongthuc / phuongthuc.ten / trangthaithanhtoan) */}
-              <div className="col-lg-4 d-flex flex-column gap-5 p-0 px-6">
-                <span className="text-lg fw-semibold text-gray-900">Hình thức thanh toán</span>
-                <div className="border border-gray-300 rounded-4 py-10 px-10 h-100">
-                  <div className="text-sm fw-semibold text-gray-900">
+              <div className="gap-5 p-0 px-6 col-lg-4 d-flex flex-column">
+                <span className="text-lg text-gray-900 fw-semibold">Hình thức thanh toán</span>
+                <div className="px-10 py-10 border border-gray-300 rounded-4 h-100">
+                  <div className="text-sm text-gray-900 fw-semibold">
                     {formatPaymentMethod(detailOrder.phuongthuc)}
                   </div>
-                  <div className="text-sm text-gray-800 mt-5">
+                  <div className="mt-5 text-sm text-gray-800">
                     <span className="fw-medium">Trạng thái:</span>{" "}
                     <span className={`fst-italic ${(detailOrder.trangthaithanhtoan ?? detailOrder.trangthai ?? "").toLowerCase().includes("chưa") ? "text-warning-600" : "text-success-600"}`}>
                       {detailOrder.trangthaithanhtoan ?? detailOrder.trangthai ?? "-"}
@@ -474,49 +476,60 @@ export default function OrdersPage() {
             </div>
 
             {/* Chi tiết mua hàng */}
-            <div className="row mt-20">
-              <div className="col-lg-12 p-0 px-6">
-                <div className="border border-gray-300 rounded-4 p-16">
+            <div className="mt-20 row">
+              <div className="p-0 px-6 col-lg-12">
+                <div className="p-16 border border-gray-300 rounded-4">
                   <div className="mb-6 d-flex align-items-center justify-content-between">
-                    <div className="text-lg text-gray-900 fw-semibold flex-align gap-8">
-                      <i className="ph-bold ph-shopping-cart text-main-600 text-lg"></i> Chi tiết mua hàng
+                    <div className="gap-8 text-lg text-gray-900 fw-semibold flex-align">
+                      <i className="text-lg ph-bold ph-shopping-cart text-main-600"></i> Chi tiết mua hàng
                     </div>
                     <div className="text-sm text-gray-600">{(detailOrder.chitietdonhang ?? []).length} sản phẩm</div>
                   </div>
 
-                  <div className="py-6 px-5">
+                  <div className="px-5 py-6">
                     {(detailOrder.chitietdonhang ?? []).map((it) => {
                       // Fallbacks for variant / product name / image / variant label
-                      const variant = it.bienthe ?? (it as any).bienthe ?? {};
-                      const sp = variant.sanpham ?? {};
+                      const variant = it.bienthe ?? undefined;
+                      const sp = (variant as OrderItem["bienthe"])?.sanpham ?? {};
                       const title = sp.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
-                      const imgRaw = sp.hinhanhsanpham?.[0]?.hinhanh ?? sp.hinhanh ?? it.hinhanh ?? "/assets/images/thumbs/placeholder.png";
-                      const imgSrc = String(imgRaw).startsWith("http") ? String(imgRaw) : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${String(imgRaw)}`;
-                      const variantLabel = variant.loaibienthe?.ten ?? (variant as any).tenloaibienthe ?? it.tenloaibienthe ?? it.bienthe?.tenloaibienthe ?? "";
+                      const imgRaw =
+                        (sp.hinhanhsanpham?.[0]?.hinhanh as string | undefined) ??
+                        (sp.hinhanh as string | undefined) ??
+                        (it.hinhanh as string | undefined) ??
+                        "/assets/images/thumbs/placeholder.png";
+                      const imgSrc = String(imgRaw).startsWith("http")
+                        ? String(imgRaw)
+                        : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${String(imgRaw)}`;
+                      const variantLabel =
+                        (variant as OrderItem["bienthe"])?.loaibienthe?.ten ??
+                        (variant as OrderItem["bienthe"])?.tenloaibienthe ??
+                        it.tenloaibienthe ??
+                        it.bienthe?.tenloaibienthe ??
+                        "";
                       const qty = it.soluong ?? it.quantity ?? 0;
                       const price = it.dongia ?? it.price ?? 0;
 
                       return (
-                        <div key={it.id} className="d-flex align-items-center gap-12 mb-12">
+                        <div key={it.id} className="gap-12 mb-12 d-flex align-items-center">
                           <a href="#" className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: 90, maxHeight: 90 }}>
-                            <Image src={imgSrc} alt={title} width={90} height={90} className="w-100 rounded-8 object-cover" unoptimized />
+                            <Image src={imgSrc} alt={title} width={90} height={90} className="object-cover w-100 rounded-8" unoptimized />
                           </a>
 
                           <div className="text-start w-100">
-                            <h6 className="title text-md fw-semibold mb-0">
+                            <h6 className="mb-0 title text-md fw-semibold">
                               <a href="#" className="link text-line-2" title={title} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: 350, display: "inline-block" }}>
                                 {title}
                               </a>
                             </h6>
 
-                            <div className="flex-align gap-16 mb-6">
-                              <div className="btn bg-gray-50 text-heading text-sm py-4 px-6 rounded-8 flex-center gap-8 fw-normal">
+                            <div className="gap-16 mb-6 flex-align">
+                              <div className="gap-8 px-6 py-4 text-sm btn bg-gray-50 text-heading rounded-8 flex-center fw-normal">
                                 {variantLabel}
                               </div>
                             </div>
 
-                            <div className="product-card__price mb-6">
-                              <div className="flex-align flex-between gap-24">
+                            <div className="mb-6 product-card__price">
+                              <div className="gap-24 flex-align flex-between">
                                 <span className="text-heading text-md fw-medium">Số lượng: {qty}</span>
                                 <span className="text-gray-600 text-md fw-semibold">{fmtMoney(price)}</span>
                               </div>
@@ -528,36 +541,36 @@ export default function OrdersPage() {
                   </div>
 
                   {/* Tổng tiền */}
-                  <div className="border-top border-1 border-gray-300 pt-16 mt-16">
-                    <div className="flex-between gap-8 mb-8">
+                  <div className="pt-16 mt-16 border-gray-300 border-top border-1">
+                    <div className="gap-8 mb-8 flex-between">
                       <span></span>
-                      <div className="flex-align flex-between gap-24" style={{ width: "22%" }}>
-                        <span className="text-md text-gray-700">Tạm tính:</span>
-                        <span className="text-md text-gray-900 fw-semibold">{fmtMoney(detailOrder.tamtinh ?? detailOrder.thanhtien ?? 0)}</span>
+                      <div className="gap-24 flex-align flex-between" style={{ width: "22%" }}>
+                        <span className="text-gray-700 text-md">Tạm tính:</span>
+                        <span className="text-gray-900 text-md fw-semibold">{fmtMoney(detailOrder.tamtinh ?? detailOrder.thanhtien ?? 0)}</span>
                       </div>
                     </div>
 
-                    <div className="flex-between gap-8 mb-8">
+                    <div className="gap-8 mb-8 flex-between">
                       <span></span>
-                      <div className="flex-align flex-between gap-24" style={{ width: "22%" }}>
-                        <span className="text-md text-gray-700">Phí giao hàng:</span>
+                      <div className="gap-24 flex-align flex-between" style={{ width: "22%" }}>
+                        <span className="text-gray-700 text-md">Phí giao hàng:</span>
                         <span className="text-md text-info-900 fw-semibold">{fmtMoney(detailOrder.phivanchuyen?.phi ?? detailOrder.phigiaohang ?? 0)}</span>
                       </div>
                     </div>
 
                     {detailOrder.magiamgia?.giatri ? (
-                      <div className="flex-between gap-8 mb-8">
+                      <div className="gap-8 mb-8 flex-between">
                         <span></span>
-                        <div style={{ width: "22%" }} className="flex-align flex-between gap-24">
-                          <span className="text-md text-gray-700">Giảm giá:</span>
+                        <div style={{ width: "22%" }} className="gap-24 flex-align flex-between">
+                          <span className="text-gray-700 text-md">Giảm giá:</span>
                           <span className="text-md text-success-600 fw-semibold">-{fmtMoney(detailOrder.magiamgia.giatri)}</span>
                         </div>
                       </div>
                     ) : null}
 
-                    <div className="flex-between gap-8">
+                    <div className="gap-8 flex-between">
                       <span></span>
-                      <div className="flex-align gap-24">
+                      <div className="gap-24 flex-align">
                         <span className="text-xl text-gray-900 fw-bold">Tổng tiền:</span>
                         <span className="text-xl text-main-600 fw-bold">{fmtMoney(detailOrder.thanhtien ?? detailOrder.tamtinh ?? 0)}</span>
                       </div>
@@ -565,14 +578,14 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                <div className="flex-align flex-between gap-12 mt-10">
-                  <a onClick={closeDetail} className="text-main-600 text-md fw-medium flex-align gap-8 mt-10" style={{ cursor: "pointer" }}>
+                <div className="gap-12 mt-10 flex-align flex-between">
+                  <a onClick={closeDetail} className="gap-8 mt-10 text-main-600 text-md fw-medium flex-align" style={{ cursor: "pointer" }}>
                     <i className="ph-bold ph-arrow-fat-lines-left text-main-600 text-md"></i> Quay lại đơn hàng của tôi
                   </a>
 
-                  <div className="flex-align gap-12">
+                  <div className="gap-12 flex-align">
                     {isCancellable(detailOrder.trangthai) && (
-                      <button onClick={() => handleCancelOrder(detailOrder.id)} className="fw-medium text-main-600 text-md border border-main-600 hover-bg-main-600 hover-text-white px-8 py-4 rounded-4 transition-1 flex-align gap-8">
+                      <button onClick={() => handleCancelOrder(detailOrder.id)} className="gap-8 px-8 py-4 border fw-medium text-main-600 text-md border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
                         <i className="ph-bold ph-trash"></i> Hủy đơn
                       </button>
                     )}
@@ -584,7 +597,7 @@ export default function OrdersPage() {
         ) : (
           /* ELSE: render original orders list section (paste your existing section here) */
           <section className="mt-10 overflow-hidden trending-productss fix-scale-80">
-          <div className="border border-gray-100 p-24 rounded-8" style={{ paddingBottom: 120 }}>
+          <div className="p-24 border border-gray-100 rounded-8" style={{ paddingBottom: 120 }}>
             {/* <div className="p-24 border border-gray-100 rounded-8"> */}
             <div className="mb-20 section-heading">
               <div className="flex-wrap gap-8 flex-between flex-align">

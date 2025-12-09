@@ -315,7 +315,7 @@ function DeleteConfirmModal({
 }
 
 function CartPageContent() {
-  const { items, loading, updateQuantity, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total } = useCart();
+  const { items, loading, updatesoluong, updateQuantity, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total } = useCart();
   const { data: homeData } = useHomeData();
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: number | string; name: string }>({

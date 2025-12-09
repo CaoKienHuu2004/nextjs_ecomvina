@@ -64,11 +64,30 @@ type AuthUser = {
   diachi?: Address[] | null;
 };
 
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null;
+
+const getUserString = (obj: unknown, key: string): string | undefined => {
+  if (!isPlainObject(obj)) return undefined;
+  const val = (obj as Record<string, unknown>)[key];
+  if (typeof val === "string") return val;
+  if (typeof val === "number") return String(val);
+  return undefined;
+};
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null;
+
 export default function Page() {
   const router = useRouter();
   const search = useSearchParams();
   const { login, register, logout, user, isLoggedIn } = useAuth();
-
+  const [profile, setProfile] = useState<AuthUser | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  
   // Mirror FullHeader token detection -> set x-user-id cookie for mock server
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -114,6 +133,14 @@ export default function Page() {
     }
   }, [isLoggedIn]);
 
+  useEffect(() => {
+    const src =
+      (profile && typeof profile.avatar === "string" && profile.avatar) ||
+      getUserString(user, "avatar") ||
+      null;
+    setAvatarPreview(src);
+  }, [profile, user]);
+
   // Chuẩn hoá host để cookie không rớt (localhost ↔ 127.0.0.1)
   const API = useMemo(() => {
     const raw = process.env.NEXT_PUBLIC_SERVER_API || "http://localhost:4000";
@@ -145,12 +172,6 @@ export default function Page() {
   const [, setCart] = useState<CartRow[]>([]);
   const [, setOrders] = useState<Order[]>([]);
 
-  // const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
-  const [profile, setProfile] = useState<AuthUser | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [editingPhone, setEditingPhone] = useState(false);
-  const [editingEmail, setEditingEmail] = useState(false);
-  const [showChangePassword, setShowChangePassword] = useState(false);
   useEffect(() => {
     const src = (profile && (profile.avatar as string)) || (user && (user.avatar as string)) || null;
     setAvatarPreview(src);
@@ -252,8 +273,8 @@ export default function Page() {
     const formEl = e.currentTarget;
 
     try {
-    const formData = new FormData(formEl);
-    const fd = new FormData();
+      const formData = new FormData(formEl);
+      const fd = new FormData();
 
     const hoten = String(formData.get("name") || "");
     const sodienthoai = String(formData.get("phone") || formData.get("sodienthoai") || "");
@@ -290,8 +311,10 @@ export default function Page() {
     });
 
     if (!res.ok) throw new Error("Cập nhật thất bại");
-    const j = await res.json();
-      const newProfile = (j?.user ?? j?.data ?? j) as AuthUser | null;
+    const j = (await res.json().catch(() => null)) as unknown;
+    // normalize response safely without using `any`
+    const rawUser = isRecord(j) ? ((j.user ?? j.data ?? j) as unknown) : j;
+    const newProfile = (isRecord(rawUser) ? (rawUser as AuthUser) : null);
       if (newProfile) setProfile(newProfile);
 
       // update avatar preview + persist for AccountShell/sidebar
@@ -331,30 +354,34 @@ export default function Page() {
     const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const current_password = String(form.get('current_password') || '');
-    const new_password = String(form.get('new_password') || '');
-    const new_password_confirmation = String(form.get('new_password_confirmation') || '');
+    const current_password = String(form.get("current_password") || "");
+    const new_password = String(form.get("new_password") || "");
+    const new_password_confirmation = String(form.get("new_password_confirmation") || "");
     setLoading(true);
     try {
-      const token = Cookies.get('access_token');
-      const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+      const token = Cookies.get("access_token");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch(`${API}/api/auth/cap-nhat-mat-khau`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers,
+        credentials: "include",
         body: JSON.stringify({ current_password, new_password, new_password_confirmation }),
       });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j?.message ?? 'Không thể đổi mật khẩu');
-      setNotice({ type: 'success', msg: j?.message || 'Đổi mật khẩu thành công' });
+      const j = (await res.json().catch(() => null)) as unknown;
+      const msg =
+        isRecord(j) && typeof (j as Record<string, unknown>).message === "string"
+          ? ((j as Record<string, unknown>).message as string)
+          : undefined;
+      if (!res.ok) throw new Error(msg ?? "Không thể đổi mật khẩu");
+      setNotice({ type: "success", msg: msg ?? "Đổi mật khẩu thành công" });
       setShowChangePassword(false);
-    } catch (err) {
-      setNotice({ type: 'error', msg: typeof err === 'string' ? err : (err as any)?.message ?? 'Lỗi đổi mật khẩu' });
+    } catch (err: unknown) {
+      setNotice({ type: "error", msg: pickErrorMessage(err, "Lỗi đổi mật khẩu") });
     } finally {
       setLoading(false);
     }
   };
-
   // Đồng bộ wishlist khách sau khi đăng nhập (giữ nguyên API)
   const syncGuestWishlist = async () => {
     try {
@@ -538,7 +565,7 @@ export default function Page() {
                   <label htmlFor="reg-hoten" className="text-sm text-gray-900 fw-medium">Họ tên *</label>
                   <input
                   name="hoten"
-                  defaultValue={(profile?.hoten as string) || (user?.hoten ?? "")}
+                  defaultValue={(profile?.hoten as string) || getUserString(user, "hoten") || ""}
                   className="p-10 form-control"
                   placeholder="Nhập họ và tên của bạn..."
                   required
@@ -617,7 +644,7 @@ export default function Page() {
                           type="text"
                           id="username"
                           className="p-10 form-control bg-gray-50 disabled"
-                          value={String(profile?.username ?? user?.username ?? '')}
+                          value={String(profile?.username ?? getUserString(user, "username") ?? "")}
                           readOnly
                         />
                       </div>
@@ -625,8 +652,8 @@ export default function Page() {
                       <div className="mt-10 form-group">
                         <label className="text-gray-900 form-label text-md">Họ và tên:</label>
                         <input
-                          name="name"
-                          defaultValue={(profile?.name as string) || (user?.hoten ?? "")}
+                          name="hoten"
+                          defaultValue={(profile?.hoten as string) || getUserString(user, "hoten") || ""}
                           className="p-10 form-control"
                           placeholder="Nhập họ và tên của bạn..."
                           required
@@ -698,7 +725,7 @@ export default function Page() {
                       type="text"
                       id="sodienthoai"
                       name="sodienthoai"
-                      defaultValue={(profile?.sodienthoai as string) || ""}
+                      defaultValue={getUserString(profile, "sodienthoai") ?? getUserString(user, "sodienthoai") ?? ""}
                       className={'form-control p-10 ' + (editingPhone ? '' : 'bg-gray-50 disabled')}
                       readOnly={!editingPhone}
                     />
@@ -722,7 +749,7 @@ export default function Page() {
                       type="text"
                       id="email"
                       name="email"
-                      defaultValue={(profile?.email as string) || (user?.email ?? "")}
+                      defaultValue={getUserString(profile, "email") ?? getUserString(user, "email") ?? ""}
                       className={'form-control p-10 ' + (editingEmail ? '' : 'bg-gray-50 disabled')}
                       readOnly={!editingEmail}
                     />
