@@ -185,10 +185,11 @@ export default function TopDealsSection({
   const translateX = activeSlide * 100;
 
   return (
+    <>
     <section className="pt-24 mt-16 overflow-hidden">
       <div className="container container-lg">
         <div
-          className="border border-gray-100 pr-20 p-16 rounded-10 bg-hotsales position-relative"
+          className="p-16 pr-20 border border-gray-100 rounded-10 bg-hotsales position-relative"
           style={{
             overflow: "hidden",
           }}
@@ -227,7 +228,7 @@ export default function TopDealsSection({
                   <button
                     type="button"
                     ref={prevRef}
-                    className="text-xl text-white hover-text-white flex-center rounded-circle bg-transparent transition-1 w-50"
+                    className="text-xl text-white bg-transparent hover-text-white flex-center rounded-circle transition-1 w-50"
                     style={{ border: "none" }}
                     aria-label="Previous slide"
                   >
@@ -236,7 +237,7 @@ export default function TopDealsSection({
                   <button
                     type="button"
                     ref={nextRef}
-                    className="text-xl text-white hover-text-white flex-center rounded-circle bg-transparent transition-1 w-50"
+                    className="text-xl text-white bg-transparent hover-text-white flex-center rounded-circle transition-1 w-50"
                     style={{ border: "none" }}
                     aria-label="Next slide"
                   >
@@ -385,5 +386,7 @@ export default function TopDealsSection({
         </div>
       </div>
     </section>
+    
+    </>
   );
 }

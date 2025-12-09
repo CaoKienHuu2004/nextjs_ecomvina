@@ -249,187 +249,217 @@ export default function Page(): JSX.Element {
       <FullHeader showClassicTopBar={true} showTopNav={false} />
 
       <AccountShell title="Sổ địa chỉ" current="addresses">
-                <div className="flex-between gap-16 flex-wrap mb-20 ">
-          <h6 className="mb-0 text-gray-900">Sổ địa chỉ</h6>
-          <div className="position-relative flex-align gap-16 flex-wrap">
-            <button type="button" className="w-44 h-44 d-lg-none d-flex flex-center border border-gray-100 rounded-6 text-2xl sidebar-btn">
-              <i className="ph-bold ph-folder-user" />
-            </button>
-          </div>
-        </div>
-
-        <div className="border border-gray-100 rounded-8 p-16">
-          <a
-            role="button"
-            onClick={handleAdd}
-            className="w-100 border-dashed border-2 border-info-300 bg-info-50 hover-bg-info-100 text-main-900 rounded-4 px-20 py-12 mb-10 d-flex justify-content-center align-items-center"
-          >
-            <div className="text-center">
-              <div className="flex-align flex-center gap-12">
-                <i className="ph-bold ph-plus text-xl fw-bold text-info-600" />
-                <span className="fw-medium text-info-600 text-md pe-10 pb-0 mb-0">Thêm địa chỉ giao hàng</span>
-              </div>
+        {!editing && (
+          <>
+          <div className="flex-between gap-16 flex-wrap mb-20 ">
+            <h6 className="mb-0 text-gray-900">Sổ địa chỉ</h6>
+            <div className="position-relative flex-align gap-16 flex-wrap">
+              <button type="button" className="w-44 h-44 d-lg-none d-flex flex-center border border-gray-100 rounded-6 text-2xl sidebar-btn">
+                <i className="ph-bold ph-folder-user" />
+              </button>
             </div>
-          </a>
+          </div>
 
-          <div className="row gy-2">
-            {loading ? (
-              <div className="col-12 py-20 text-center">Đang tải...</div>
-            ) : addresses.length === 0 ? (
-              <div className="col-12 py-24 text-center text-muted">
-                Chưa có địa chỉ. Thêm địa chỉ giao hàng để sử dụng khi đặt hàng.
+          <div className="border border-gray-100 rounded-8 p-16">
+            <a
+              role="button"
+              onClick={handleAdd}
+              className="w-100 border-dashed border-2 border-info-300 bg-info-50 hover-bg-info-100 text-main-900 rounded-4 px-20 py-12 mb-10 d-flex justify-content-center align-items-center"
+            >
+              <div className="text-center">
+                <div className="flex-align flex-center gap-12">
+                  <i className="ph-bold ph-plus text-xl fw-bold text-info-600" />
+                  <span className="fw-medium text-info-600 text-md pe-10 pb-0 mb-0">Thêm địa chỉ giao hàng</span>
+                </div>
               </div>
-            ) : (
-              addresses
-                .sort((a, b) => (a.trangthai === "Mặc định" ? -1 : 1))
-                .map((a) => {
-                  const isDefault = a.trangthai === "Mặc định";
-                  return (
-                    <div key={a.id} className="col-lg-12 col-xl-12">
-                      <div className={`border border-gray-200 box-shadow-sm text-main-900 rounded-4 px-20 py-16 mb-10`}>
-                        <div className="d-flex flex-align flex-between gap-24">
-                          <div className="flex-align gap-12">
-                            <div>
-                              <div className="fw-semibold text-gray-900 text-md">
-                                {a.ten_nguoinhan}
+            </a>
+
+            {/* danh sách địa chỉ (ẩn khi đang editing) */}
+            {!editing && (
+              <div className="row gy-2">
+                {loading ? (
+                  <div className="col-12 py-20 text-center">Đang tải...</div>
+                ) : addresses.length === 0 ? (
+                  <div className="col-12 py-24 text-center text-muted">
+                    Chưa có địa chỉ. Thêm địa chỉ giao hàng để sử dụng khi đặt hàng.
+                  </div>
+                ) : (
+                  addresses
+                    .sort((a, b) => (a.trangthai === "Mặc định" ? -1 : 1))
+                    .map((a) => {
+                      const isDefault = a.trangthai === "Mặc định";
+                      return (
+                        <div key={a.id} className="col-lg-12 col-xl-12">
+                          <div className="border border-gray-200 box-shadow-sm text-main-900 rounded-4 px-20 py-16 mb-10">
+                            <div className="d-flex flex-align flex-between gap-24">
+                              <div className="flex-align gap-12">
+                                <div>
+                                  <div className="fw-semibold text-gray-900 text-md">{a.ten_nguoinhan}</div>
+                                  <div className="fw-semibold text-gray-900 text-md">{a.sodienthoai}</div>
+                                </div>
+                                {isDefault && (
+                                  <span className="fw-medium text-xs text-success-700 bg-success-100 px-6 py-2 rounded-4 flex-align gap-8">
+                                    Mặc định
+                                  </span>
+                                )}
                               </div>
-                              <div className="fw-semibold text-gray-900 text-md">{a.sodienthoai}</div>
-                            </div>
-                            {isDefault && (
-                              <span className="fw-medium text-xs text-success-700 bg-success-100 px-6 py-2 rounded-4 flex-align gap-8">Mặc định</span>
-                            )}
-                          </div>
 
-                          <div className="d-flex flex-align gap-24 pt-10">
-                            <div className="flex-align gap-4">
-                              <i className="ph-bold ph-pencil-simple text-main-600"></i>
-                              <a
-                                role="button"
-                                onClick={() => handleEdit(a)}
-                                className="text-sm text-main-600 rounded-4 py-6 w-100 transition-1 gap-8"
-                              >
-                                Chỉnh sửa
-                              </a>
-                            </div>
+                              <div className="d-flex flex-align gap-24 pt-10">
+                                <div className="flex-align gap-4">
+                                  <i className="ph-bold ph-pencil-simple text-main-600" />
+                                  <a role="button" onClick={() => handleEdit(a)} className="text-sm text-main-600 rounded-4 py-6 w-100 transition-1 gap-8">
+                                    Chỉnh sửa
+                                  </a>
+                                </div>
 
-                            <div className={`flex-align gap-4 ${isDefault ? 'opacity-50' : ''}`}>
-                              <i className="ph-bold ph-trash text-main-600"></i>
-                              <span
-                                role="button"
-                                onClick={() => !isDefault && handleDelete(a.id)}
-                                className="text-sm text-main-600 rounded-4 py-6 w-100 transition-1 gap-8"
-                              >
-                                Xóa
-                              </span>
-                            </div>
+                                <div className={`flex-align gap-4 ${isDefault ? "opacity-50" : ""}`}>
+                                  <i className="ph-bold ph-trash text-main-600" />
+                                  <span role="button" onClick={() => !isDefault && handleDelete(a.id)} className="text-sm text-main-600 rounded-4 py-6 w-100 transition-1 gap-8">
+                                    Xóa
+                                  </span>
+                                </div>
 
-                            {!isDefault && (
-                              <div className="flex-align gap-4">
-                                <i className="ph-bold ph-check text-main-600"></i>
-                                <a
-                                  role="button"
-                                  onClick={() => handleSetDefault(a.id)}
-                                  className="text-sm text-main-600 rounded-4 py-6 w-100 transition-1 gap-8"
-                                >
-                                  Thiết lập mặc định
-                                </a>
+                                {!isDefault && (
+                                  <div className="flex-align gap-4">
+                                    <i className="ph-bold ph-check text-main-600" />
+                                    <a role="button" onClick={() => handleSetDefault(a.id)} className="text-sm text-main-600 rounded-4 py-6 w-100 transition-1 gap-8">
+                                      Thiết lập mặc định
+                                    </a>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        </div>
+                            </div>
 
-                        <div className="d-flex flex-align gap-24 pt-10">
-                          <div className="flex-align gap-12">
-                            <span className="fw-medium text-gray-900 text-sm">Địa chỉ: {a.diachi}</span>
-                          </div>
-                        </div>
+                            <div className="d-flex flex-align gap-24 pt-10">
+                              <div className="flex-align gap-12">
+                                <span className="fw-medium text-gray-900 text-sm">Địa chỉ: {a.diachi}</span>
+                              </div>
+                            </div>
 
-                        <div className="d-flex flex-align gap-24 pt-10">
-                          <div className="flex-align gap-4 opacity-70">
-                            <i className="ph-bold ph-map-pin-area text-main-600" />
-                            <span className="text-sm text-gray-900">{a.tinhthanh}</span>
+                            <div className="d-flex flex-align gap-24 pt-10">
+                              <div className="flex-align gap-4 opacity-70">
+                                <i className="ph-bold ph-map-pin-area text-main-600" />
+                                <span className="text-sm text-gray-900">{a.tinhthanh}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })
+                      );
+                    })
+                )}
+              </div>
             )}
           </div>
-        </div>
+          </>
+        )}
 
         {/* Form Sửa / Thêm (Modal hoặc Drawer) */}
         {editing && (
-          <div className="top-0 position-fixed start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 1050, background: "rgba(0,0,0,0.5)" }}>
-            <div className="p-24 bg-white rounded-16 w-100" style={{ maxWidth: 500 }}>
-              <h4 className="mb-16">{editing.id === 0 ? "Thêm địa chỉ mới" : "Cập nhật địa chỉ"}</h4>
-              
-              <div className="mb-12">
-                <label className="form-label fw-medium">Tên người nhận</label>
-                <input 
-                  className="form-control" 
-                  value={editing.ten_nguoinhan} 
-                  onChange={(e) => setEditing({ ...editing, ten_nguoinhan: e.target.value })} 
-                  placeholder="Ví dụ: Nguyễn Văn A"
-                />
-              </div>
-              
-              <div className="mb-12">
-                <label className="form-label fw-medium">Số điện thoại</label>
-                <input 
-                  className="form-control" 
-                  value={editing.sodienthoai} 
-                  onChange={(e) => setEditing({ ...editing, sodienthoai: e.target.value })} 
-                  placeholder="Ví dụ: 0909xxxxxx"
-                />
-              </div>
-              
-              <div className="mb-12">
-                <label className="form-label fw-medium">Tỉnh / Thành phố</label>
-                <select 
-                  className="form-select" 
-                  value={selectedProvinceId} 
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setSelectedProvinceId(val);
-                    // Tìm tên tỉnh dựa vào ID để lưu vào state editing
-                    const province = PROVINCES_FALLBACK.find(p => p.id === val);
-                    setEditing({ ...editing, tinhthanh: province ? province.ten : "" });
-                  }}
+          <div> {/*  className="border border-gray-100 rounded-8 p-16 mb-16" */}
+            <div className="flex-between gap-16 flex-wrap mb-12">
+              <h6 className="mb-0 text-gray-900">{editing.id === 0 ? "Thêm địa chỉ giao hàng" : "Cập nhật địa chỉ"}</h6>
+              <div className="position-relative flex-align gap-16 flex-wrap">
+                <button
+                  type="button"
+                  className="w-44 h-44 d-lg-none d-flex flex-center border border-gray-100 rounded-6 text-2xl sidebar-btn"
+                  onClick={() => setEditing(null)}
                 >
-                  <option value="">-- Chọn Tỉnh/Thành --</option>
-                  {PROVINCES_FALLBACK.map((t) => (
-                    <option key={t.id} value={t.id}>{t.ten}</option>
-                  ))}
-                </select>
+                  <i className="ph-bold ph-x" />
+                </button>
               </div>
-              
-              <div className="mb-24">
-                <label className="form-label fw-medium">Địa chỉ chi tiết</label>
-                <textarea 
-                  className="form-control" 
-                  rows={3}
-                  value={editing.diachi} 
-                  onChange={(e) => setEditing({ ...editing, diachi: e.target.value })} 
-                  placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."
-                />
+            </div>
+
+            <div className="border border-gray-100 rounded-8 p-16">
+              <div className="row">
+                <div className="col-md-6 mb-24">
+                  <label className="text-neutral-900 text-md mb-8 fw-medium">Họ và tên <span className="text-danger">*</span></label>
+                  <input
+                    type="text"
+                    className="placeholder-italic py-12 px-18 text-sm common-input"
+                    value={editing.ten_nguoinhan}
+                    onChange={(e) => setEditing({ ...editing, ten_nguoinhan: e.target.value })}
+                    placeholder="Nhập họ và tên"
+                  />
+                </div>
+                <div className="col-md-6 mb-24">
+                  <label className="text-neutral-900 text-md mb-8 fw-medium">Số điện thoại <span className="text-danger">*</span></label>
+                  <input
+                    type="tel"
+                    className="placeholder-italic py-12 px-18 text-sm common-input"
+                    value={editing.sodienthoai}
+                    onChange={(e) => setEditing({ ...editing, sodienthoai: e.target.value })}
+                    placeholder="Nhập số điện thoại"
+                  />
+                </div>
               </div>
-              <div className="mb-12">
-                <label className="form-label fw-medium">Trạng thái</label>
-                <select
-                  className="form-select"
-                  value={editing.trangthai ?? ""}
-                  onChange={(e) => setEditing({ ...editing, trangthai: e.target.value })}
-                >
-                  <option value="">-- Chọn trạng thái (không bắt buộc) --</option>
-                  <option value="Mặc định">Mặc định</option>
-                  {/* <option value="Khác">Khác</option> */}
-                </select>
+
+              <div className="row">
+                <div className="col-md-6 mb-24">
+                  <label className="text-neutral-900 text-md mb-8 fw-medium">Địa chỉ <span className="text-danger">*</span></label>
+                  <input
+                    type="text"
+                    className="placeholder-italic py-12 px-18 text-sm common-input"
+                    value={editing.diachi}
+                    onChange={(e) => setEditing({ ...editing, diachi: e.target.value })}
+                    placeholder="Nhập địa chỉ giao hàng"
+                  />
+                </div>
+                <div className="col-md-6 mb-24">
+                  <label className="text-neutral-900 text-md mb-8 fw-medium">Tỉnh thành <span className="text-danger">*</span></label>
+                  <select
+                    className="placeholder-italic common-input py-11 px-14 text-sm"
+                    value={selectedProvinceId || ""}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setSelectedProvinceId(val);
+                      const province = PROVINCES_FALLBACK.find(p => p.id === val);
+                      setEditing({ ...editing, tinhthanh: province ? province.ten : "" });
+                    }}
+                  >
+                    <option value="">-- Chọn Tỉnh/Thành --</option>
+                    {PROVINCES_FALLBACK.map((t) => (
+                      <option key={t.id} value={t.id}>{t.ten}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              
-              <div className="gap-12 d-flex justify-content-end">
-                <button className="px-24 btn btn-black rounded-pill" onClick={() => setEditing(null)}>Trở lại</button>
-                <button className="px-24 btn btn-primary rounded-pill" onClick={handleSaveEdit}>Hoàn thành</button>
+
+              <div className="row">
+                <div className="col-md-6 mb-24">
+                  <div className="form-check common-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="defaultInline"
+                      checked={editing.trangthai === "Mặc định"}
+                      onChange={(e) => setEditing({ ...editing, trangthai: e.target.checked ? "Mặc định" : "" })}
+                    />
+                    <label className="form-check-label flex-grow-1" htmlFor="defaultInline">
+                      Đặt địa chỉ làm mặc định <span className="fst-italic text-xs text-gray-600 fw-normal">(Địa chỉ sẽ được đặt mặc định cho việc thanh toán và giao hàng của bạn)</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row">
+                <div className="col-md-6 mb-24">
+                  <div className="d-flex gap-12">
+                    <button
+                      type="button"
+                      onClick={() => { handleSaveEdit(); }}
+                      className="btn btn-main py-14 px-32"
+                    >
+                      {editing.id === 0 ? "Thêm địa chỉ mới" : "Lưu thay đổi"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(null)}
+                      className="btn btn-outline-secondary py-14 px-24"
+                    >
+                      Hủy
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

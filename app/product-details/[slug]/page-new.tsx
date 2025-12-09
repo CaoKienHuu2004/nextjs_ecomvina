@@ -117,7 +117,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
         <>
             <FullHeader showClassicTopBar={true} showTopNav={false} />
 
-            <section className="product-details pt-40">
+            <section className="pt-40 product-details">
                 <div className="container container-lg">
                     <div className="row gy-4">
                         {/* Left Column - Image Gallery */}
@@ -126,7 +126,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                 <div className="col-xl-6">
                                     <div className="product-details__left">
                                         {/* Main Image */}
-                                        <div className="product-details__thumb-slider border border-gray-100 rounded-16 p-0 mb-24">
+                                        <div className="p-0 mb-24 border border-gray-100 product-details__thumb-slider rounded-16">
                                             <div className="product-details__thumb flex-center h-100">
                                                 <img
                                                     src={images[selectedImage]}
@@ -139,7 +139,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
                                         {/* Thumbnail Gallery */}
                                         <div className="product-details__images-slider">
-                                            <div className="d-flex gap-8 overflow-auto">
+                                            <div className="gap-8 overflow-auto d-flex">
                                                 {images.map((img, idx) => (
                                                     <div
                                                         key={idx}
@@ -166,27 +166,27 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                         <h5 className="mb-12">{product.ten}</h5>
 
                                         {/* Rating & Sales */}
-                                        <div className="flex-align flex-wrap gap-12 mt-10">
-                                            <div className="flex-align gap-4 flex-wrap">
-                                                <div className="flex-align gap-8">
+                                        <div className="flex-wrap gap-12 mt-10 flex-align">
+                                            <div className="flex-wrap gap-4 flex-align">
+                                                <div className="gap-8 flex-align">
                                                     <span className="text-xl fw-medium text-warning-600 d-flex">
                                                         <i className="ph-fill ph-star"></i>
                                                     </span>
                                                 </div>
                                                 <span className="text-md fw-medium text-neutral-600">{productRating} </span>
-                                                <span className="text-sm fw-medium text-gray-500">({productSold})</span>
+                                                <span className="text-sm text-gray-500 fw-medium">({productSold})</span>
                                             </div>
-                                            <span className="text-md fw-medium text-gray-500">|</span>
-                                            <div className="flex-align gap-8">
+                                            <span className="text-gray-500 text-md fw-medium">|</span>
+                                            <div className="gap-8 flex-align">
                                                 <span className="text-md fw-medium text-neutral-600">Lượt bán: </span>
-                                                <span className="text-md fw-medium text-gray-500">{productSold}</span>
+                                                <span className="text-gray-500 text-md fw-medium">{productSold}</span>
                                             </div>
                                         </div>
 
                                         {/* Product Details List */}
                                         <ul className="mt-30">
                                             <li className="text-gray-400 mb-14 flex-align gap-14">
-                                                <span className="w-20 h-20 bg-main-50 text-main-600 text-xs flex-center rounded-circle">
+                                                <span className="w-20 h-20 text-xs bg-main-50 text-main-600 flex-center rounded-circle">
                                                     <i className="ph ph-check"></i>
                                                 </span>
                                                 <span className="text-heading fw-medium">
@@ -194,7 +194,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 </span>
                                             </li>
                                             <li className="text-gray-400 mb-14 flex-align gap-14">
-                                                <span className="w-20 h-20 bg-main-50 text-main-600 text-xs flex-center rounded-circle">
+                                                <span className="w-20 h-20 text-xs bg-main-50 text-main-600 flex-center rounded-circle">
                                                     <i className="ph ph-check"></i>
                                                 </span>
                                                 <span className="text-heading fw-medium">
@@ -204,9 +204,9 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                         </ul>
 
                                         {/* Price */}
-                                        <div className="mb-32 flex-align gap-16 flex-wrap mt-30">
-                                            <div className="flex-align gap-8">
-                                                <h6 className="mb-0 text-main-600 text-2xl">
+                                        <div className="flex-wrap gap-16 mb-32 flex-align mt-30">
+                                            <div className="gap-8 flex-align">
+                                                <h6 className="mb-0 text-2xl text-main-600">
                                                     {discountedPrice.toLocaleString('vi-VN')} ₫
                                                 </h6>
                                             </div>
@@ -217,14 +217,14 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                             )}
                                         </div>
 
-                                        <span className="mt-32 pt-30 text-gray-700 border-top border-gray-100 d-block"></span>
+                                        <span className="mt-32 text-gray-700 border-gray-100 pt-30 border-top d-block"></span>
 
                                         {/* Contact Button */}
                                         <a
                                             href="https://www.whatsapp.com"
-                                            className="btn btn-black flex-center gap-8 rounded-8 py-16 mt-32"
+                                            className="gap-8 py-16 mt-32 btn btn-black flex-center rounded-8"
                                         >
-                                            <i className="ph ph-whatsapp-logo text-lg"></i>
+                                            <i className="text-lg ph ph-whatsapp-logo"></i>
                                             Liên hệ với cửa hàng
                                         </a>
                                     </div>
@@ -233,9 +233,9 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
                             {/* Description & Reviews Tabs */}
                             <div className="pt-80">
-                                <div className="product-dContent border rounded-24">
-                                    <div className="product-dContent__header border-bottom border-gray-100 flex-between flex-wrap gap-16">
-                                        <ul className="nav common-tab nav-pills mb-3">
+                                <div className="border product-dContent rounded-24">
+                                    <div className="flex-wrap gap-16 border-gray-100 product-dContent__header border-bottom flex-between">
+                                        <ul className="mb-3 nav common-tab nav-pills">
                                             <li className="nav-item">
                                                 <button
                                                     className={`nav-link ${activeTab === 'description' ? 'active' : ''}`}
@@ -255,12 +255,12 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                         </ul>
                                     </div>
 
-                                    <div className="product-dContent__box py-20">
+                                    <div className="py-20 product-dContent__box">
                                         {activeTab === 'description' && (
                                             <div className="tab-pane fade show active">
-                                                <div className="mb-40 p-24">
+                                                <div className="p-24 mb-40">
                                                     <h6 className="mb-24">Mô tả về sản phẩm</h6>
-                                                    <p className="text-gray-600 mb-16">{product.ten}</p>
+                                                    <p className="mb-16 text-gray-600">{product.ten}</p>
                                                     <ul className="mt-32 list-inside ms-16">
                                                         <li className="mb-4 text-gray-400">Sản phẩm chất lượng cao</li>
                                                         <li className="mb-4 text-gray-400">Giá cạnh tranh trên thị trường</li>
@@ -277,27 +277,27 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                     <div className="row g-4">
                                                         <div className="col-lg-6">
                                                             <h6 className="mb-24 title">Đánh giá từ khách hàng</h6>
-                                                            <div className="d-flex align-items-start gap-24 pb-24">
-                                                                <div className="w-52 h-52 bg-main-100 text-main-600 rounded-circle flex-center flex-shrink-0">
-                                                                    <i className="ph-fill ph-user text-2xl"></i>
+                                                            <div className="gap-24 pb-24 d-flex align-items-start">
+                                                                <div className="flex-shrink-0 w-52 h-52 bg-main-100 text-main-600 rounded-circle flex-center">
+                                                                    <i className="text-2xl ph-fill ph-user"></i>
                                                                 </div>
                                                                 <div className="flex-grow-1">
                                                                     <h6 className="mb-12 text-md">Khách hàng ẩn danh</h6>
-                                                                    <div className="flex-align gap-8">
+                                                                    <div className="gap-8 flex-align">
                                                                         {Array(5).fill(0).map((_, i) => (
                                                                             <span key={i} className="text-md fw-medium text-warning-600 d-flex">
                                                                                 <i className="ph-fill ph-star"></i>
                                                                             </span>
                                                                         ))}
                                                                     </div>
-                                                                    <p className="text-gray-700 mt-10">Sản phẩm tốt, giao hàng nhanh</p>
+                                                                    <p className="mt-10 text-gray-700">Sản phẩm tốt, giao hàng nhanh</p>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                         <div className="col-lg-6">
-                                                            <div className="border border-gray-100 rounded-8 px-40 py-52 flex-center flex-column text-center">
+                                                            <div className="px-40 text-center border border-gray-100 rounded-8 py-52 flex-center flex-column">
                                                                 <h2 className="mb-6 text-main-600">{productRating}</h2>
-                                                                <div className="flex-center gap-8">
+                                                                <div className="gap-8 flex-center">
                                                                     {Array(5).fill(0).map((_, i) => (
                                                                         <span key={i} className="text-xs fw-medium text-warning-600 d-flex">
                                                                             <i className="ph-fill ph-star"></i>
@@ -318,13 +318,13 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
                         {/* Right Column - Sidebar */}
                         <div className="col-xl-3">
-                            <div className="product-details__sidebar py-40 px-32 border border-gray-100 rounded-16">
+                            <div className="px-32 py-40 border border-gray-100 product-details__sidebar rounded-16">
                                 <div className="mb-20">
                                     <h6 className="mb-8 text-heading fw-semibold d-block">Giỏ hàng</h6>
-                                    <div className="d-flex rounded-4 overflow-hidden">
+                                    <div className="overflow-hidden d-flex rounded-4">
                                         <button
                                             type="button"
-                                            className="quantity__minus flex-shrink-0 h-48 w-48 text-neutral-600 bg-gray-50 flex-center hover-bg-main-600 hover-text-white"
+                                            className="flex-shrink-0 w-48 h-48 quantity__minus text-neutral-600 bg-gray-50 flex-center hover-bg-main-600 hover-text-white"
                                             onClick={() => setQuantity(Math.max(1, quantity - 1))}
                                         >
                                             <i className="ph ph-minus"></i>
@@ -333,12 +333,12 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                             type="number"
                                             value={quantity}
                                             min="1"
-                                            className="quantity__input flex-grow-1 border border-gray-100 border-start-0 border-end-0 text-center w-32 px-16"
+                                            className="w-32 px-16 text-center border border-gray-100 quantity__input flex-grow-1 border-start-0 border-end-0"
                                             onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                                         />
                                         <button
                                             type="button"
-                                            className="quantity__plus flex-shrink-0 h-48 w-48 text-neutral-600 bg-gray-50 flex-center hover-bg-main-600 hover-text-white"
+                                            className="flex-shrink-0 w-48 h-48 quantity__plus text-neutral-600 bg-gray-50 flex-center hover-bg-main-600 hover-text-white"
                                             onClick={() => setQuantity(quantity + 1)}
                                         >
                                             <i className="ph ph-plus"></i>
@@ -348,15 +348,15 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
                                 <Link
                                     href="/gio-hang"
-                                    className="btn btn-main flex-center gap-8 rounded-8 py-16 fw-normal mt-10 w-100"
+                                    className="gap-8 py-16 mt-10 btn btn-main flex-center rounded-8 fw-normal w-100"
                                 >
-                                    <i className="ph ph-shopping-cart-simple text-lg"></i>
+                                    <i className="text-lg ph ph-shopping-cart-simple"></i>
                                     Thêm vào giỏ hàng
                                 </Link>
 
                                 <div className="mt-32">
-                                    <a href="#" className="px-16 py-8 bg-main-50 rounded-8 flex-between gap-12 mb-0 d-flex align-items-center">
-                                        <span className="bg-white text-main-600 rounded-circle flex-center text-xl flex-shrink-0" style={{ width: '40px', height: '40px' }}>
+                                    <a href="#" className="gap-12 px-16 py-8 mb-0 bg-main-50 rounded-8 flex-between d-flex align-items-center">
+                                        <span className="flex-shrink-0 text-xl bg-white text-main-600 rounded-circle flex-center" style={{ width: '40px', height: '40px' }}>
                                             <i className="ph-fill ph-storefront"></i>
                                         </span>
                                         <span className="text-sm text-neutral-600">
@@ -366,17 +366,17 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                 </div>
 
                                 <div className="mt-32">
-                                    <div className="px-32 py-16 rounded-8 border border-gray-100 flex-between gap-8">
+                                    <div className="gap-8 px-32 py-16 border border-gray-100 rounded-8 flex-between">
                                         <a href="#" className="d-flex text-main-600 text-28">
                                             <i className="ph-fill ph-chats-teardrop"></i>
                                         </a>
-                                        <span className="h-26 border border-gray-100"></span>
+                                        <span className="border border-gray-100 h-26"></span>
                                         <div className="dropdown on-hover-item">
                                             <button className="d-flex text-main-600 text-28" type="button">
                                                 <i className="ph-fill ph-share-network"></i>
                                             </button>
-                                            <div className="on-hover-dropdown common-dropdown border-0">
-                                                <ul className="flex-align gap-16">
+                                            <div className="border-0 on-hover-dropdown common-dropdown">
+                                                <ul className="gap-16 flex-align">
                                                     {[
                                                         { icon: 'ph-fill ph-facebook-logo', url: 'https://www.facebook.com' },
                                                         { icon: 'ph-fill ph-twitter-logo', url: 'https://www.twitter.com' },
@@ -385,7 +385,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                         <li key={idx}>
                                                             <a
                                                                 href={social.url}
-                                                                className="w-44 h-44 flex-center bg-main-100 text-main-600 text-xl rounded-circle hover-bg-main-600 hover-text-white"
+                                                                className="text-xl w-44 h-44 flex-center bg-main-100 text-main-600 rounded-circle hover-bg-main-600 hover-text-white"
                                                             >
                                                                 <i className={social.icon}></i>
                                                             </a>
@@ -404,7 +404,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
             {/* Related Products */}
             {relatedProducts.length > 0 && (
-                <section className="new-arrival pb-80 mt-40">
+                <section className="mt-40 new-arrival pb-80">
                     <div className="container">
                         <div className="section-heading">
                             <div className="flex-wrap gap-8 flex-between">

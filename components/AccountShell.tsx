@@ -126,9 +126,9 @@ export default function AccountShell({
             
 
             <main className="col-lg-9">
-              <div className="p-16 bg-white border border-gray-100 rounded-12">
+              
                 {children}
-              </div>
+              
             </main>
           </div>
         </div>

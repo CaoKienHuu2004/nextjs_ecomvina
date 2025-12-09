@@ -112,7 +112,7 @@ server.get('/api/sanphams/:id', (req, res) => {
 
 // map /api/... -> resource trong db.json
 const rewriter = jsonServer.rewriter({
-  '/api/yeuthichs*': '/yeuthichs',
+  '/api/toi/yeuthichs*': '/yeuthichs',
   '/api/bannerquangcaos*': '/bannerquangcaos',
   '/api/danhmucs-selection*': '/danhmucs_selection',
   '/api/sanphams-selection?selection=best_products*': '/api_sanphams_selection_best_products',
@@ -562,7 +562,7 @@ server.put('/api/auth/thong-tin-nguoi-dung', upload.single('avatar'), (req, res)
 });
 
 // ===== Wishlist theo người dùng =====
-server.get('/api/yeuthichs', (req, res) => {
+server.get('/api/toi/yeuthichs', (req, res) => {
   const uid = getUserIdFromCookie(req);
   if (uid) {
     const rows = router.db.get('yeuthichs_user').filter({ user_id: String(uid) }).value();
@@ -575,7 +575,7 @@ server.get('/api/yeuthichs', (req, res) => {
   return res.json({ status: true, data });
 });
 
-server.post('/api/yeuthichs', (req, res) => {
+server.post('/api/toi/yeuthichs', (req, res) => {
   const uid = getUserIdFromCookie(req);
   if (!uid) return res.status(401).json({ message: 'Chưa đăng nhập' });
   const { product_id } = req.body || {};
@@ -588,7 +588,7 @@ server.post('/api/yeuthichs', (req, res) => {
   return res.status(201).json({ status: true, data: row });
 });
 
-server.delete('/api/yeuthichs/:product_id', (req, res) => {
+server.delete('/api/toi/yeuthichs/:product_id', (req, res) => {
   const uid = getUserIdFromCookie(req);
   if (!uid) return res.status(401).json({ message: 'Chưa đăng nhập' });
   const pid = parseInt(req.params.product_id, 10);

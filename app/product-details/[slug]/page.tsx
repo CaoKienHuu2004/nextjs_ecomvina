@@ -10,13 +10,23 @@ import "slick-carousel/slick/slick-theme.css";
 import { fetchProductDetail, type ProductDetail, type SimilarProduct } from "@/lib/api";
 import Image from "next/image";
 import { useCart } from "@/hooks/useCart";
+import Cookies from "js-cookie";
 
+// Thêm type cho item favorite
+type FavoriteItem = {
+  id?: number;
+  id_sanpham?: number | string;
+  sanpham_id?: number | string;
+  sanpham?: { id?: number } | null;
+  // thêm fields nếu API trả thêm (vd: created_at, user_id, ...)
+};
 export default function ProductDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
     const searchParams = useSearchParams();
     const categoryName = searchParams?.get("category") || "";
     const resolvedParams = use(params);
     const slug = resolvedParams.slug;
     const sliderRef = useRef<Slider>(null);
+    const API = process.env.NEXT_PUBLIC_SERVER_API ?? "http://148.230.100.215";
 
     const { addToCart } = useCart();
 
@@ -30,6 +40,9 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     const [selectedImage, setSelectedImage] = useState(0);
     const [addingToCart, setAddingToCart] = useState(false);
     const [addedSuccess, setAddedSuccess] = useState(false);
+    const [isFavorited, setIsFavorited] = useState(false);
+    const [favLoading, setFavLoading] = useState(false);
+    const [favoriteId, setFavoriteId] = useState<number | null>(null);
 
     // Lấy biến thể đang chọn (hoặc biến thể đầu tiên nếu chưa chọn)
     const selectedVariant = product?.bienthe_khichon_loaibienthe_themvaogio?.find(
@@ -42,17 +55,23 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     const originalPrice = selectedVariant?.giagoc || firstVariant?.giagoc || product?.gia?.before_discount || displayPrice;
     const discountPercent = selectedVariant?.giamgia || firstVariant?.giamgia || product?.gia?.discount_percent || 0;
 
-    // Debug log
-    console.log("=== Price Debug ===", {
-        selectedVariant,
-        firstVariant,
-        displayPrice,
-        originalPrice,
-        discountPercent,
-        productGia: product?.gia,
-        bienthe: product?.bienthe_khichon_loaibienthe_themvaogio
-    });
+    // // Debug log
+    // console.log("=== Price Debug ===", {
+    //     selectedVariant,
+    //     firstVariant,
+    //     displayPrice,
+    //     originalPrice,
+    //     discountPercent,
+    //     productGia: product?.gia,
+    //     bienthe: product?.bienthe_khichon_loaibienthe_themvaogio
+    // });
 
+    const getAuthHeaders = (): Record<string, string> => {
+        if (typeof window === "undefined") return {};
+        
+        const token = Cookies.get("token") || Cookies.get("access_token") || null;
+        return token ? { Authorization: `Bearer ${token}` } : {};
+    };
     // Xử lý thêm vào giỏ hàng
     const handleAddToCart = async () => {
         if (!product) return;
@@ -102,9 +121,9 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
         setLoading(true);
         fetchProductDetail(slug)
             .then((res) => {
-                console.log("=== API Response ===", res);
-                console.log("=== Product Data ===", res.data);
-                console.log("=== Bien the ===", res.data?.bienthe_khichon_loaibienthe_themvaogio);
+                // console.log("=== API Response ===", res);
+                // console.log("=== Product Data ===", res.data);
+                // console.log("=== Bien the ===", res.data?.bienthe_khichon_loaibienthe_themvaogio);
                 if (res.data) {
                     setProduct(res.data);
                     setSimilarProducts(res.sanpham_tuongtu || []);
@@ -123,6 +142,88 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
             })
             .finally(() => setLoading(false));
     }, [slug]);
+    useEffect(() => {
+        if (!product) return;
+        setFavLoading(true);
+        fetch(`${API}/api/toi/yeuthichs`, { credentials: "include" , headers: { ...getAuthHeaders() } })
+            .then(async (res) => {
+                if (!res.ok) return { status: false, data: [] as FavoriteItem[] };
+                return await res.json();
+            })
+            .then((json) => {
+                const list = Array.isArray(json?.data) ? (json.data as FavoriteItem[]) : (Array.isArray(json) ? json as FavoriteItem[] : []);
+                const found = list.find((item) =>
+                    // phù hợp nhiều trường trả về
+                    item.id_sanpham == product.id || item.sanpham?.id == product.id || item.id == product.id
+                );
+                if (found) {
+                    setIsFavorited(true);
+                    setFavoriteId(typeof found.id === "number" ? found.id : (found.id ? Number(found.id) : null));
+                } else {
+                    setIsFavorited(false);
+                    setFavoriteId(null);
+                }
+            })
+            .catch((err: unknown) => {
+                console.error("Load favorites error", err);
+            })
+            .finally(() => setFavLoading(false));
+    }, [product]);
+
+    // NEW: toggle favorite (POST để thêm, PUT để cập nhật/xóa)
+    const toggleFavorite = async () => {
+        if (!product) return;
+        setFavLoading(true);
+        try {
+            if (!isFavorited) {
+                const res = await fetch(`${API}/api/toi/yeuthichs`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+                    credentials: "include",
+                    body: JSON.stringify({ id_sanpham: product.id }),
+                });
+                const json = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    setIsFavorited(true);
+                    // API thường trả data object chứa id record
+                    setFavoriteId(json?.data?.id ?? json?.id ?? null);
+                } else {
+                    console.error("Failed to add favorite", json);
+                }
+            } else {
+                // dùng favoriteId (id record) để gọi PUT theo API mẫu
+                let idToToggle = favoriteId;
+                if (!idToToggle) {
+                    // không có favoriteId: refetch list nhanh để tìm id
+                    const r = await fetch(`${API}/api/toi/yeuthichs`, { credentials: "include" , headers: { ...getAuthHeaders() } });
+                    const j = await r.json().catch(() => ({}));
+                    const list = Array.isArray(j?.data) ? j.data as FavoriteItem[] : [];
+                    const found = list.find(item => item.id_sanpham == product.id || item.sanpham?.id == product.id);
+                    idToToggle = found?.id ?? null;
+                }
+                if (!idToToggle) {
+                    console.error("Cannot find favorite record id to remove");
+                } else {
+                    const res = await fetch(`${API}/api/toi/yeuthichs/${idToToggle}`, {
+                        method: "PATCH",
+                        credentials: "include",
+                        headers: { ...getAuthHeaders() },
+                    });
+                    const json = await res.json().catch(() => ({}));
+                    if (res.ok) {
+                        setIsFavorited(false);
+                        setFavoriteId(null);
+                    } else {
+                        console.error("Failed to remove favorite", json);
+                    }
+                }
+            }
+        } catch (err: unknown) {
+            console.error("Toggle favorite error", err);
+        } finally {
+            setFavLoading(false);
+        }
+    };
 
     // Xử lý danh sách hình ảnh từ API mới
     const productImages = product?.anh_san_pham && product.anh_san_pham.length > 0
@@ -165,7 +266,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     if (loading) {
         return (
             <>
-                <FullHeader showClassicTopBar={true} showTopNav={false} showCategoriesBar={false} />
+                <FullHeader showClassicTopBar={true} showTopNav={false} />
                 <div className="container text-center py-80">
                     <div className="spinner-border text-main-600" role="status">
                         <span className="visually-hidden">Đang tải...</span>
@@ -179,7 +280,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     if (error || !product) {
         return (
             <>
-                <FullHeader showClassicTopBar={false} showTopNav={true} showCategoriesBar={false} />
+                <FullHeader showClassicTopBar={true} showTopNav={false} />
                 <div className="container text-center py-80">
                     <h4 className="text-danger">Lỗi: {error || "Không tìm thấy sản phẩm"}</h4>
                     <Link href="/" className="mt-3 btn btn-main-600">Về trang chủ</Link>
@@ -191,7 +292,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
     return (
         <>
-            <FullHeader showClassicTopBar={false} showTopNav={true} showCategoriesBar={false} />
+            <FullHeader showClassicTopBar={true} showTopNav={false} />
 
             {/* Breadcrumb */}
             <section className="mb-0 breadcrumb py-26 bg-main-two-50">
@@ -410,7 +511,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 <h6 className="mb-16">Loại sản phẩm</h6>
                                                 <div className="flex-wrap gap-16 flex-between align-items-start">
                                                     <div>
-                                                        <div className="gap-8 flex-align flex-wrap">
+                                                        <div className="flex-wrap gap-8 flex-align">
                                                             {product.bienthe_khichon_loaibienthe_themvaogio.map((variant) => {
                                                                 // Tìm tên loại biến thể tương ứng
                                                                 const variantType = product.loai_bien_the?.find(
@@ -549,9 +650,19 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
                             <div className="mt-32">
                                 <div className="gap-8 px-32 py-16 border border-gray-100 rounded-8 flex-between">
-                                    <a href="#" className="d-flex text-main-600 text-28" title="Liên hệ hỗ trợ" aria-label="Liên hệ hỗ trợ">
-                                        <i className="ph-fill ph-chats-teardrop" />
-                                    </a>
+                                                                        <button
+                                        type="button"
+                                        onClick={toggleFavorite}
+                                        disabled={favLoading}
+                                        className="d-flex text-main-600 text-28 btn-reset"
+                                        title={isFavorited ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+                                        aria-pressed={isFavorited}
+                                    >
+                                        <i
+                                            className={isFavorited ? "ph-fill ph-heart" : "ph ph-heart"}
+                                            style={isFavorited ? { color: "#E53935" } : undefined}
+                                        />
+                                    </button>
                                     <span className="border border-gray-100 h-26" />
                                     <div className="dropdown on-hover-item">
                                         <button className="d-flex text-main-600 text-28" type="button" title="Chia sẻ sản phẩm" aria-label="Chia sẻ sản phẩm">
@@ -863,7 +974,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 }}
                                             />
                                             {similarProduct.have_gift && (
-                                                <span className="product-card__badge bg-success-600 px-8 py-4 text-sm text-white position-absolute inset-inline-start-0 inset-block-start-0">
+                                                <span className="px-8 py-4 text-sm text-white product-card__badge bg-success-600 position-absolute inset-inline-start-0 inset-block-start-0">
                                                     Có quà
                                                 </span>
                                             )}

@@ -102,6 +102,21 @@ export default function OrdersPage() {
     return status || "Chưa rõ";
   };
 
+  // Helper lấy props cho badge: icon và className theo trạng thái
+  const getStatusBadgeProps = (status?: string) => {
+    const s = (status || "").toString().toLowerCase();
+    // Completed (thành công / đã giao)
+    if (s.includes("đã giao") || s.includes("đã giao hàng") || s.includes("thành công") || s.includes("delivered") || s.includes("completed")) {
+      return { icon: "ph-check-fat", className: "text-white bg-cyan-500 px-6 py-4 rounded-lg" };
+    }
+    // Cancelled
+    if (s.includes("đã hủy") || s.includes("hủy") || s.includes("cancel")) {
+      return { icon: "ph-prohibit", className: "text-white bg-danger-600 px-6 py-4 rounded-4" };
+    }
+    // Default / warning
+    return { icon: "ph-clock-countdown", className: "text-white px-6 py-2 rounded-4 fw-medium text-xs", style: { backgroundColor: "var(--main-600)" } };
+  };
+
   // --- FETCH DATA ---
   useEffect(() => {
     const fetchOrders = async () => {
@@ -344,12 +359,68 @@ export default function OrdersPage() {
                 </div>
               </div>
 
+<<<<<<< HEAD
               {/* Content */}
               <div className="flex-grow-1" style={{ overflowY: "auto", padding: 24 }}>
                 {loadingDetail ? (
                   <div className="py-40 text-center">
                     <div className="mb-16 spinner-border text-main-600" role="status"></div>
                     <div className="text-gray-600">Đang tải chi tiết đơn hàng...</div>
+=======
+                    {/* Shipping */}
+                    <div style={{ width: "32%" }}>
+                      <h6 className="text-sm fw-semibold">Hình thức vận chuyển</h6>
+                      <div className="p-10 border rounded-4">
+                        <div className="fw-medium">{detailOrder.phivanchuyen?.ten ?? "-"}</div>
+                        <div className="mt-5 text-sm"><span className="fw-medium">Phí:</span> {fmtMoney(detailOrder.phivanchuyen?.phi ?? 0)}</div>
+                        {/* Khu vực giao: fallback từ địa chỉ nhận */}
+                        <div className="mt-5 text-sm"><span className="fw-medium">Khu vực giao:</span> {detailOrder.phivanchuyen?.ten ?? detailOrder.diachigiaohang?.tinhthanh ?? "-"}</div>
+                      </div>
+                    </div>
+
+                    {/* Payment method */}
+                    <div style={{ width: "32%" }}>
+                      <h6 className="text-sm fw-semibold">Thanh toán</h6>
+                      <div className="p-10 border rounded-4">
+                        <div className="fw-medium">
+                          {formatPaymentMethod(detailOrder.phuongthuc)}
+                        </div>
+                        <div className="mt-5 text-sm"><span className="fw-medium">Trạng thái:</span>{" "}
+                          {(() => {
+                            const st = detailOrder.trangthaithanhtoan ?? detailOrder.trangthai ?? "-";
+                            const badge = getStatusBadgeProps(st);
+                            return <span className={`fw-medium text-xs ${badge.className}`}><i className={`ph-bold ${badge.icon}`} /> {displayStatusLabel(st)}</span>;
+                          })()}
+                        </div>
+                        {/* {detailOrder.phuongthuc?.maphuongthuc && (
+                          <div className="mt-5 text-sm"><span className="fw-medium">Mã PT:</span> {detailOrder.phuongthuc.maphuongthuc}</div>
+                        )} */}
+
+                        {/*  Thêm nút thanh toán lại nếu cần */}
+                        {/* Thanh toán lại VNPay nếu phương thức là dbt (VNPay) và trạng thái thanh toán còn pending */}
+                        {detailOrder.phuongthuc?.maphuongthuc === "dbt" && isPaymentPending(detailOrder) && (
+                          <button
+                            type="button"
+                            onClick={() => retryPayment(detailOrder.id, "dbt")}
+                            className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
+                          >
+                            <i className="ph-bold ph-credit-card" /> Thanh toán lại (VNPay)
+                          </button>
+                        )}
+
+                        {/* Tùy chọn VietQR nếu provider 'cp' */}
+                        {detailOrder.phuongthuc?.maphuongthuc === "cp" && isPaymentPending(detailOrder) && (
+                          <button
+                            type="button"
+                            onClick={() => retryPayment(detailOrder.id, "cp")}
+                            className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
+                          >
+                            <i className="ph-bold ph-qrcode" /> Thanh toán lại (VietQR)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+>>>>>>> 5b15ce02da55ecefb1019828678cbadd7d5e04ac
                   </div>
                 ) : detailOrder ? (
                   <>
@@ -626,11 +697,14 @@ export default function OrdersPage() {
                           <span className="text-gray-900 fw-semibold text-md">Đơn hàng #{order.madon}</span>
                         </div>
                         <div className="gap-12 flex-align">
-                          <span className={`fw-medium text-xs ${order.trangthai.includes("Hoàn") ? "text-success-700 bg-success-100 px-6 py-4 rounded-4" : order.trangthai.includes("Hủy") ? "text-danger-700 bg-danger-100 px-6 py-4 rounded-4" : "text-warning-700 bg-warning-100 px-6 py-4 rounded-4"}`}>
-                            {/* <i className="ph-bold ph-clock-countdown" /> {getTrangThaiDonHang(order.trangthai)} */}
-                            {/* displayStatusLabel là helper dùng để lọc và hiển thị thành công thay vì đã giao, xét đánh giá */}
-                            <i className="ph-bold ph-clock-countdown" /> {displayStatusLabel(order.trangthai)}
-                          </span>
+                          {(() => {
+                            const badge = getStatusBadgeProps(order.trangthai);
+                            return (
+                              <span className={`fw-medium text-xs ${badge.className}`}>
+                                <i className={`ph-bold ${badge.icon}`} /> {displayStatusLabel(order.trangthai)}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
 

@@ -114,7 +114,7 @@ export default function ProductCardV2(props: Props) {
         if (Number.isFinite(parsed)) id = parsed;
       }
       if (!id) {
-        console.error("❌ Không xác định được sản phẩm");
+        // console.error("❌ Không xác định được sản phẩm");
         return;
       }
 

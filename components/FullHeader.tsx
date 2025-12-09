@@ -273,7 +273,7 @@ export default function FullHeader({
           className="py-10 header-middle border-bottom border-neutral-40"
           style={{ overflow: "visible", position: "sticky", top: 0, zIndex: 300, background: "#fff" }}//position: "relative"
         >
-          <div className="container container-lg">
+          <div className="container px-0 container-lg">
             <nav className="gap-8 header-inner flex-between align-items-center">
               {/* Logo */}
               <div className="logo">
@@ -383,6 +383,7 @@ export default function FullHeader({
                     <ul
                       role="menu"
                       className="bg-white rounded-md shadow common-dropdown nav-submenu scroll-sm position-absolute"
+                      style={{ zIndex: 9999 }} // thêm zIndex để dropdown không bị che khuất
                     >
                       <li
                         className="common-dropdown__item nav-submenu__item"
@@ -502,7 +503,7 @@ export default function FullHeader({
             className="pt-24 bg-white header"
             style={{ overflow: "visible", zIndex: 100 }}
           >
-            <div className="container container-lg">
+            <div className="container px-0 container-lg">
               <nav className="gap-16 header-inner d-flex justify-content-between">
                 <div className="d-flex flex-grow-1">
                   {/* Category Button */}
@@ -563,27 +564,6 @@ export default function FullHeader({
                       </div>
                     )}
                   </div>
-
-                  {/* Search */}
-                  {/* <form
-                    action="#"
-                    className="position-relative ms-20 w-100 d-md-block d-none me-16"
-                    role="search"
-                  >
-                    <input
-                      type="text"
-                      className="py-16 form-control ps-30 pe-60 bg-neutral-30 placeholder-italic placeholder-light"
-                      placeholder="Search for products, categories or brands..."
-                      aria-label="Search products"
-                    />
-                    <button
-                      type="submit"
-                      className="text-xl position-absolute top-50 translate-middle-y text-main-600 end-0 me-36 line-height-1 js-open-search"
-                      aria-label="Search"
-                    >
-                      <i className="ph-bold ph-magnifying-glass"></i>
-                    </button>
-                  </form> */}
                 </div>
 
                 {/* Right actions */}
@@ -660,7 +640,7 @@ export default function FullHeader({
                           href="/lien-he"
                           onClick={() => setMobileOpen(false)}
                         >
-                          Contact
+                          Liên Hệ
                         </Link>
                       </li>
                       <li className="mt-8">
@@ -678,7 +658,7 @@ export default function FullHeader({
         <>
           {showClassicTopBar && (
             <div className="py-10 header-top bg-main-600 d-none d-lg-block">
-              <div className="container container-lg">
+              <div className="container px-0 container-lg">
                 <div className="flex-wrap gap-8 flex-between">
                   <ul className="flex-wrap gap-16 header-top__right flex-align">
                     {/* <li className="flex-align">
@@ -692,7 +672,7 @@ export default function FullHeader({
                       </Link>
                     </li> */}
                     <li className="flex-align">
-                      <Link href="#" className="text-sm text-white-6 hover-text-white pe-1">
+                      <Link href="/gioi-thieu" className="text-sm text-white-6 hover-text-white pe-1">
                         <i className="ph-bold ph-info text-white-6"></i> Giới thiệu về Siêu Thị Vina
                       </Link>
                     </li>
@@ -742,8 +722,8 @@ export default function FullHeader({
 
           )}
 
-          <header className="header border-bottom border-neutral-40 pt-14 pb-14">
-            <div className="container">
+          <header className="header border-bottom border-neutral-40 pt-14 pb-14" style={{ overflow: "visible", position: "relative", zIndex: 200 }}>
+            <div className="container px-0 container-lg">
               <nav className="gap-8 header-inner flex-between">
                 <div className="logo">
                   <Link href="/" className="link" aria-label="Home">
@@ -827,6 +807,7 @@ export default function FullHeader({
                         <ul
                           role="menu"
                           className="bg-white rounded-md shadow common-dropdown nav-submenu scroll-sm position-absolute"
+                          style={{ zIndex: 9999 }} // thêm zIndex để dropdown không bị che khuất
                         >
                           <li className="common-dropdown__item nav-submenu__item" role="none">
                             <Link

@@ -210,19 +210,31 @@ export default function Page() {
     (async () => {
       try {
         if (tab === "wishlist") {
-          const res = await fetch(`${API}/api/yeuthichs`, { credentials: "include" });
+          const token = Cookies.get("access_token") || Cookies.get("token") || null;
+          const headers: Record<string,string> = { Accept: "application/json" };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          const res = await fetch(`${API}/api/toi/yeuthichs`, { credentials: "include", headers });
           const data = await res.json();
           setWishlist(Array.isArray(data) ? (data as WishlistRow[]) : (data?.data ?? []));
         } else if (tab === "cart") {
-          const res = await fetch(`${API}/api/toi/giohang`, { credentials: "include" });
+          const token = Cookies.get("access_token") || Cookies.get("token") || null;
+          const headers: Record<string,string> = { Accept: "application/json" };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          const res = await fetch(`${API}/api/toi/giohang`, { credentials: "include", headers });
           const j = await res.json();
           setCart((j?.data as CartRow[]) ?? []);
         } else if (tab === "orders") {
-          const res = await fetch(`${API}/api/toi/donhangs`, { credentials: "include" });
+          const token = Cookies.get("access_token") || Cookies.get("token") || null;
+          const headers: Record<string,string> = { Accept: "application/json" };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          const res = await fetch(`${API}/api/toi/donhangs`, { credentials: "include", headers });
           const j = await res.json();
           setOrders((j?.data as Order[]) ?? []);
         } else if (tab === "profile") {
-          const res = await fetch(`${API}/api/auth/thong-tin-nguoi-dung`, { credentials: "include" });
+          const token = Cookies.get("access_token") || Cookies.get("token") || null;
+          const headers: Record<string,string> = { Accept: "application/json" };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          const res = await fetch(`${API}/api/auth/thong-tin-nguoi-dung`, { credentials: "include", headers });
           const j = await res.json();
           setProfile((j?.data as AuthUser) ?? null);
         }
@@ -356,7 +368,7 @@ export default function Page() {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             credentials: "include",
-            body: JSON.stringify({ product_id: id }),
+            body: JSON.stringify({ id_sanpham: id }),
           })
         )
       );
@@ -430,9 +442,13 @@ export default function Page() {
   };
   const handleRemoveWish = async (productId: number) => {
     try {
-      await fetch(`${API}/api/yeuthichs/${productId}`, {
-        method: "DELETE",
+      const token = Cookies.get("access_token") || Cookies.get("token") || null;
+      const headers: Record<string,string> = { Accept: "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      await fetch(`${API}/api/toi/yeuthichs/${productId}`, {
+        method: "PATCH",
         credentials: "include",
+        headers,
       });
       setWishlist((prev) =>
         prev.filter((w) => (w.product?.id ?? w.product_id) !== productId)
@@ -452,17 +468,17 @@ export default function Page() {
             <form onSubmit={handleChangePassword}>
               <div className="mb-12">
                 <label className="form-label">Mật khẩu hiện tại</label>
-                <input name="current_password" type="password" className="form-control p-10" required />
+                <input name="current_password" type="password" className="p-10 form-control" required />
               </div>
               <div className="mb-12">
                 <label className="form-label">Mật khẩu mới</label>
-                <input name="new_password" type="password" className="form-control p-10" required />
+                <input name="new_password" type="password" className="p-10 form-control" required />
               </div>
               <div className="mb-12">
                 <label className="form-label">Xác nhận mật khẩu</label>
-                <input name="new_password_confirmation" type="password" className="form-control p-10" required />
+                <input name="new_password_confirmation" type="password" className="p-10 form-control" required />
               </div>
-              <div className="d-flex gap-8">
+              <div className="gap-8 d-flex">
                 <button type="submit" className="btn btn-main-two">Đổi mật khẩu</button>
                 <button type="button" onClick={() => setShowChangePassword(false)} className="btn btn-outline-main-two">Hủy</button>
               </div>
@@ -523,7 +539,7 @@ export default function Page() {
                   <input
                   name="hoten"
                   defaultValue={(profile?.hoten as string) || (user?.hoten ?? "")}
-                  className="form-control p-10"
+                  className="p-10 form-control"
                   placeholder="Nhập họ và tên của bạn..."
                   required
                 />
@@ -561,14 +577,14 @@ export default function Page() {
       ) : (
         <form key={String(profile?.id ?? "no-profile")} onSubmit={handleSaveProfile} className="row">
           <div className="row g-12">
-            <div className="border border-gray-100 rounded-8 p-16 w-100">
+            <div className="p-16 border border-gray-100 rounded-8 w-100">
               <div className="row">
-                <div className="col-xl-8 py-10">
-                  <h6 className="mb-20 fw-semibold text-gray-700 text-md">Thông tin cá nhân</h6>
+                <div className="py-10 col-xl-8">
+                  <h6 className="mb-20 text-gray-700 fw-semibold text-md">Thông tin cá nhân</h6>
 
-                  <div className="row mb-20">
-                    <div className="col-xl-3 flex-align flex-center flex-wrap gap-2">
-                      <div className="avatar-container mx-16 mt-10 mb-0">
+                  <div className="mb-20 row">
+                    <div className="flex-wrap gap-2 col-xl-3 flex-align flex-center">
+                      <div className="mx-16 mt-10 mb-0 avatar-container">
                         <img
                           id="avatarImage"
                           src={avatarPreview || "/assets/images/default-avatar.png"}
@@ -589,29 +605,29 @@ export default function Page() {
                           }}
                         />
                       </div>
-                      <label className="form-label text-xs text-gray-500 fw-medium" htmlFor="fileInput" style={{ cursor: 'pointer' }}>
+                      <label className="text-xs text-gray-500 form-label fw-medium" htmlFor="fileInput" style={{ cursor: 'pointer' }}>
                         <i className="ph-bold ph-pencil-simple" /> đổi ảnh
                       </label>
                     </div>
 
                     <div className="col-xl-9">
                       <div className="form-group">
-                        <label className="form-label text-md text-gray-900">Tên người dùng:</label>
+                        <label className="text-gray-900 form-label text-md">Tên người dùng:</label>
                         <input
                           type="text"
                           id="username"
-                          className="form-control p-10 bg-gray-50 disabled"
+                          className="p-10 form-control bg-gray-50 disabled"
                           value={String(profile?.username ?? user?.username ?? '')}
                           readOnly
                         />
                       </div>
 
-                      <div className="form-group mt-10">
-                        <label className="form-label text-md text-gray-900">Họ và tên:</label>
+                      <div className="mt-10 form-group">
+                        <label className="text-gray-900 form-label text-md">Họ và tên:</label>
                         <input
                           name="name"
                           defaultValue={(profile?.name as string) || (user?.hoten ?? "")}
-                          className="form-control p-10"
+                          className="p-10 form-control"
                           placeholder="Nhập họ và tên của bạn..."
                           required
                         />
@@ -619,15 +635,15 @@ export default function Page() {
                     </div>
                   </div>
 
-                  <div className="row mb-20">
+                  <div className="mb-20 row">
                     <div className="col-xl-6">
                       <div className="form-group">
-                        <label className="form-label text-md text-gray-900" htmlFor="gioitinh">Giới tính:</label>
+                        <label className="text-gray-900 form-label text-md" htmlFor="gioitinh">Giới tính:</label>
                         <select
                           name="gioitinh"
                           id="gioitinh"
                           defaultValue={(profile?.gioitinh as string) || ""}
-                          className="form-control p-10"
+                          className="p-10 form-control"
                           required
                         >
                           <option value="">Không xác định</option>
@@ -639,13 +655,13 @@ export default function Page() {
 
                     <div className="col-xl-6">
                       <div className="form-group">
-                        <label className="form-label text-md text-gray-900" htmlFor="ngaysinh">Ngày sinh:</label>
+                        <label className="text-gray-900 form-label text-md" htmlFor="ngaysinh">Ngày sinh:</label>
                         <input
                           type="date"
                           id="ngaysinh"
                           name="ngaysinh"
                           defaultValue={(profile?.ngaysinh as string) || ""}
-                          className="form-control p-10"
+                          className="p-10 form-control"
                         />
                       </div>
                     </div>
@@ -655,24 +671,24 @@ export default function Page() {
                     title="Lưu thông tin cá nhân"
                     disabled={loading}
                     type="submit"
-                    className="btn bg-main-600 text-white hover-bg-main-300 hover-text-main-600 rounded-8 px-32 py-12 w-100 flex-center flex-align gap-8"
+                    className="gap-8 px-32 py-12 text-white btn bg-main-600 hover-bg-main-300 hover-text-main-600 rounded-8 w-100 flex-center flex-align"
                   >
                     <i className="ph-bold ph-floppy-disk" /> {loading ? 'Đang lưu...' : 'Lưu thông tin'}
                   </button>
                 </div>
 
-                <div className="col-xl-4 border-start border-gray-200 py-10">
-                  <h6 className="mb-20 fw-semibold text-gray-700 text-md">Thông tin liên hệ</h6>
+                <div className="py-10 border-gray-200 col-xl-4 border-start">
+                  <h6 className="mb-20 text-gray-700 fw-semibold text-md">Thông tin liên hệ</h6>
 
-                  <div className="form-group mb-10">
+                  <div className="mb-10 form-group">
                     <div className="flex-align flex-between">
-                      <label className="form-label text-md text-gray-900 flex-align gap-8" htmlFor="sodienthoai">
+                      <label className="gap-8 text-gray-900 form-label text-md flex-align" htmlFor="sodienthoai">
                         <i className="ph-bold ph-phone" /> Số điện thoại:
                       </label>
                       <button
                         type="button"
                         onClick={() => { setEditingPhone((v) => !v); if (!editingPhone) setTimeout(() => document.getElementById('sodienthoai')?.focus(), 0); }}
-                        className="text-xs text-primary-700 flex-align gap-4 fw-normal bg-transparent border-0 p-0"
+                        className="gap-4 p-0 text-xs bg-transparent border-0 text-primary-700 flex-align fw-normal"
                         style={{ cursor: 'pointer' }}
                       >
                         <i className="ph-bold ph-pencil-simple" /> {editingPhone ? 'Hủy' : 'Chỉnh sửa'}
@@ -690,13 +706,13 @@ export default function Page() {
 
                   <div className="form-group">
                     <div className="flex-align flex-between">
-                      <label className="form-label text-md text-gray-900 flex-align gap-8" htmlFor="email">
+                      <label className="gap-8 text-gray-900 form-label text-md flex-align" htmlFor="email">
                         <i className="ph-bold ph-envelope" /> Email:
                       </label>
                       <button
                         type="button"
                         onClick={() => { setEditingEmail((v) => !v); if (!editingEmail) setTimeout(() => document.getElementById('email')?.focus(), 0); }}
-                        className="text-xs text-primary-700 flex-align gap-4 fw-normal bg-transparent border-0 p-0"
+                        className="gap-4 p-0 text-xs bg-transparent border-0 text-primary-700 flex-align fw-normal"
                         style={{ cursor: 'pointer' }}
                       >
                         <i className="ph-bold ph-pencil-simple" /> {editingEmail ? 'Hủy' : 'Chỉnh sửa'}
@@ -712,15 +728,15 @@ export default function Page() {
                     />
                   </div>
 
-                  <span className="mt-20 pt-20 text-gray-700 border-top border-gray-100 d-block" />
+                  <span className="pt-20 mt-20 text-gray-700 border-gray-100 border-top d-block" />
 
-                  <h6 className="mb-20 fw-semibold text-gray-700 text-md">Thông tin bảo mật</h6>
-                  <div className="form-group mb-10">
+                  <h6 className="mb-20 text-gray-700 fw-semibold text-md">Thông tin bảo mật</h6>
+                  <div className="mb-10 form-group">
                     <div className="flex-align flex-between">
-                      <label className="form-label text-md text-gray-900 flex-align gap-8 m-0">
+                      <label className="gap-8 m-0 text-gray-900 form-label text-md flex-align">
                         <i className="ph-bold ph-lock" /> Đổi mật khẩu:
                       </label>
-                      <button type="button" onClick={() => setShowChangePassword(true)} className="text-sm text-primary-700 flex-align gap-4 fw-normal bg-transparent border-0 p-0" style={{ cursor: 'pointer' }}>
+                      <button type="button" onClick={() => setShowChangePassword(true)} className="gap-4 p-0 text-sm bg-transparent border-0 text-primary-700 flex-align fw-normal" style={{ cursor: 'pointer' }}>
                         <i className="ph-bold ph-pencil-simple"></i> Chỉnh sửa
                       </button>
                     </div>

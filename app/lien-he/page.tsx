@@ -10,10 +10,10 @@ import { APP_CONFIG } from "../../src/config/appConfig";
 const endpoint_routes_api_fectch_datapost_gui_lien_he_ =
   APP_CONFIG.API_BASE_URL + APP_CONFIG.API_ENDPOINTS.API_GUI_LIEN_HE;
 
-const sodienthoai_call_lienhe_cua_web = "02862523434";
-const sodienthoai_lienhe_cua_web = "+028 6252 3434";
-const email_lienhe_cua_web = "caodangfpt.hcm@fpt.edu.vn";
-const diachi_lienhe_cua_web = "Lô 2, đường số 1, Công viên phần mềm Quang Trung, P. Tân Chánh Hiệp, Quận 12, TP.HCM.";
+const sodienthoai_call_lienhe_cua_web = "8860911975996";
+const sodienthoai_lienhe_cua_web = "+886 0911 975 996";
+const email_lienhe_cua_web = "hotro@sieuthivina.com";
+const diachi_lienhe_cua_web = "801/2A Phạm Thế Hiển, Phường 4, Quận 8, TP.HCM.";
 // config
 
 type ResponseMessage = {
@@ -157,7 +157,7 @@ export default function Page() {
                         className="common-input px-16"
                         id="name"
                         name="hoten"
-                        placeholder="Full name"
+                        placeholder="Họ tên"
                         value={formData.hoten}
                         onChange={handleChange}
                         required
@@ -176,7 +176,7 @@ export default function Page() {
                         className="common-input px-16"
                         id="email"
                         name="email"
-                        placeholder="Email address"
+                        placeholder="Email"
                         value={formData.email}
                         onChange={handleChange}
                       />
@@ -194,7 +194,7 @@ export default function Page() {
                         className="common-input px-16"
                         id="phone"
                         name="sodienthoai"
-                        placeholder="Phone Number*"
+                        placeholder="Số điện thoại*"
                         value={formData.sodienthoai}
                         onChange={handleChange}
                         required
@@ -213,7 +213,7 @@ export default function Page() {
                         className="common-input px-16"
                         id="subject"
                         name="tieude"
-                        placeholder="Subject"
+                        placeholder="Tiêu đề"
                         value={formData.tieude}
                         onChange={handleChange}
                         required
@@ -231,7 +231,7 @@ export default function Page() {
                         className="common-input px-16"
                         id="message"
                         name="noidung"
-                        placeholder="Type your message"
+                        placeholder="Nội dung"
                         value={formData.noidung}
                         onChange={handleChange}
                         required
