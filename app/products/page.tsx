@@ -14,6 +14,8 @@ type ProductListItem = {
   original_price?: number;
   is_free?: boolean;
   gia?: { current?: number; before_discount?: number };
+  loaibienthe?: string;
+  thuonghieu?: string;
 };
 
 export default function ProductsPage() {
@@ -86,7 +88,18 @@ export default function ProductsPage() {
       ? ({ text: "Miễn phí", color: "primary" } as const)
       : undefined;
 
-    return { href, img, title, price, oldPrice, variantId, badge };
+    return {
+      href,
+      img,
+      title,
+      price,
+      oldPrice,
+      variantId,
+      badge,
+      loaibienthe: p.loaibienthe || "",
+      thuonghieu: p.thuonghieu || "",
+      slug: String(p.slug || ""),
+    };
   };
 
   return (
@@ -118,6 +131,9 @@ export default function ProductsPage() {
                     oldPrice={card.oldPrice}
                     variantId={card.variantId}
                     badge={card.badge}
+                    loaibienthe={card.loaibienthe}
+                    thuonghieu={card.thuonghieu}
+                    slug={card.slug}
                   />
                 </div>
               );

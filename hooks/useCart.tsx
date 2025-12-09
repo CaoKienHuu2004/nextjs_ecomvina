@@ -146,7 +146,7 @@ export type ProductDisplayInfo = {
 export type CartItem = {
   id_giohang: number | string;
   id_bienthe: number | string;
-  quantity: number;
+  soluong: number;
   product?: ProductDisplayInfo;
 };
 
@@ -177,6 +177,7 @@ interface ServerCartItemRaw {
       tensanpham?: string;
       loaisanpham?: string;
       loaibienthe?: string;
+      ten_loaibienthe?: string;  // Thêm field này cho API có thể trả về
       giamgia?: string | number;
       giagoc?: number;
       giaban?: number;
@@ -219,7 +220,11 @@ export type AddToCartInput = {
   id?: number | string;
   ten?: string;
   hinhanh?: string;
+  mediaurl?: string;
   gia?: number | Gia;
+  loaibienthe?: string;
+  thuonghieu?: string;
+  slug?: string;
   [key: string]: unknown;
 };
 
@@ -243,6 +248,12 @@ export function useCart() {
 
   const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
 
+  // Kiểm tra đăng nhập dựa vào token thực sự có trong cookie
+  const hasValidToken = useCallback((): boolean => {
+    const token = Cookies.get("access_token");
+    return !!token && token.length > 0;
+  }, []);
+
   const getAuthHeaders = useCallback((): Record<string, string> => {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -258,8 +269,11 @@ export function useCart() {
     const sItem = serverItem as ServerCartItemRaw;
 
     const id_giohang = sItem.id_giohang ?? `temp_${Date.now()}_${Math.random()}`;
-    const quantity = Number(sItem.bienthe?.soluong ?? 1);
+    const soluong = Number(sItem.bienthe?.soluong ?? 1);
     const detail = sItem.bienthe?.detail;
+
+    // DEBUG: Log detail để xem cấu trúc
+    console.log('📦 Cart item detail:', detail);
 
     let productInfo: ProductDisplayInfo | undefined = undefined;
 
@@ -269,6 +283,10 @@ export function useCart() {
       const discountPercent = originPrice > currentPrice && originPrice > 0
         ? Math.round(((originPrice - currentPrice) / originPrice) * 100)
         : (typeof detail.giamgia === 'number' ? detail.giamgia : Number(detail.giamgia) || 0);
+
+      // Lấy loaibienthe từ nhiều nguồn có thể
+      const loaibienthe = detail.loaibienthe || detail.ten_loaibienthe || detail.loaisanpham || '';
+      console.log('🏷️ loaibienthe:', loaibienthe, '| detail.loaibienthe:', detail.loaibienthe);
 
       productInfo = {
         id: id_giohang,
@@ -283,7 +301,7 @@ export function useCart() {
         ratingAverage: 5,
         ratingCount: 0,
         thuonghieu: detail.thuonghieu,
-        loaibienthe: detail.loaibienthe || detail.loaisanpham, // Ưu tiên loaibienthe, fallback sang loaisanpham
+        loaibienthe: loaibienthe,
         slug: detail.slug
       };
     }
@@ -291,7 +309,7 @@ export function useCart() {
     return {
       id_giohang,
       id_bienthe: id_giohang,
-      quantity,
+      soluong,
       product: productInfo
     };
   }, []);
@@ -299,11 +317,20 @@ export function useCart() {
   // --- FETCH CART ---
   const loadServerCart = useCallback(async (): Promise<{ items: CartItem[], gifts: GiftItem[] }> => {
     try {
-      const res = await fetch(`${API}/api/toi/giohang`, {
-        headers: getAuthHeaders(),
-        cache: "no-store",
-      });
-      if (!res.ok) return { items: [], gifts: [] };
+      let res: Response;
+      try {
+        res = await fetch(`${API}/api/tai-khoan/giohang`, {
+          headers: getAuthHeaders(),
+          cache: "no-store",
+        });
+      } catch (fetchErr) {
+        console.warn("⚠️ Network error khi load cart (server có thể không khả dụng):", fetchErr);
+        return { items: [], gifts: [] };
+      }
+      if (!res.ok) {
+        console.warn("⚠️ API trả về lỗi:", res.status);
+        return { items: [], gifts: [] };
+      }
       const j: unknown = await res.json();
 
       // DEBUG: Log raw response để xem cấu trúc
@@ -411,12 +438,13 @@ export function useCart() {
     setLoading(true);
     try {
       for (const item of localItems) {
-        await fetch(`${API}/api/toi/giohang`, {
+        await fetch(`${API}/api/tai-khoan/giohang`, {
           method: "POST",
           headers: getAuthHeaders(),
+          credentials: "include",
           body: JSON.stringify({
-            id_bienthe: item.id_bienthe,
-            soluong: item.quantity,
+            id_bienthe: String(item.id_bienthe),
+            soluong: Number(item.soluong || 1),
           }),
         }).catch(() => { });
       }
@@ -424,10 +452,8 @@ export function useCart() {
       const { items: serverItems, gifts: serverGifts } = await loadServerCart();
       setItems(serverItems);
       setGifts(serverGifts);
-      try {
-        const count = serverItems.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
-        window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
-      } catch { }
+      const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+      window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
     } finally { setLoading(false); }
   }, [API, getAuthHeaders, loadLocalCart, clearLocalCart, loadServerCart]);
 
@@ -435,7 +461,8 @@ export function useCart() {
   const fetchCart = useCallback(async () => {
     setLoading(true);
     try {
-      if (isLoggedIn) {
+      const hasToken = hasValidToken();
+      if (hasToken) {
         const { items: serverItems, gifts: serverGifts } = await loadServerCart();
         setItems(serverItems);
         setGifts(serverGifts);
@@ -445,26 +472,31 @@ export function useCart() {
         setGifts([]);
       }
     } finally { setLoading(false); }
-  }, [isLoggedIn, loadServerCart, loadLocalCart]);
+  }, [hasValidToken, loadServerCart, loadLocalCart]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      if (isLoggedIn) {
-        const localItems = loadLocalCart();
-        if (localItems.length > 0 && !hasSyncedRef.current) {
-          hasSyncedRef.current = true;
-          await syncLocalToServer();
-        } else if (localItems.length === 0) {
+      try {
+        const hasToken = hasValidToken();
+        if (hasToken) {
+          const localItems = loadLocalCart();
+          if (localItems.length > 0 && !hasSyncedRef.current) {
+            hasSyncedRef.current = true;
+            await syncLocalToServer();
+          } else if (localItems.length === 0) {
+            if (mounted) await fetchCart();
+          }
+        } else {
+          hasSyncedRef.current = false;
           if (mounted) await fetchCart();
         }
-      } else {
-        hasSyncedRef.current = false;
-        if (mounted) await fetchCart();
+      } catch (err) {
+        console.warn("⚠️ Lỗi khởi tạo giỏ hàng:", err);
       }
     })();
     return () => { mounted = false; };
-  }, [isLoggedIn, syncLocalToServer, fetchCart, loadLocalCart]);
+  }, [hasValidToken, syncLocalToServer, fetchCart, loadLocalCart]);
 
   useEffect(() => {
     const onUpdated = () => fetchCart();
@@ -473,78 +505,128 @@ export function useCart() {
   }, [fetchCart]);
 
   // --- ACTIONS ---
-  const addToCart = useCallback(async (product: AddToCartInput, quantity = 1) => {
+  const addToCart = useCallback(async (product: AddToCartInput, soluong = 1) => {
     const id_bienthe = product.id_bienthe ?? product.id;
-    if (!id_bienthe) return;
+    if (!id_bienthe) {
+      console.error("❌ addToCart: Không có id_bienthe");
+      return;
+    }
+
+    // Kiểm tra token thực sự có trong cookie, không chỉ dựa vào isLoggedIn state
+    const hasToken = hasValidToken();
+    console.log("🛒 addToCart called:", { id_bienthe, soluong, isLoggedIn, hasToken });
 
     setLoading(true);
     try {
-      if (isLoggedIn) {
-        const res = await fetch(`${API}/api/toi/giohang`, {
+      if (hasToken) {
+        const requestBody = {
+          id_bienthe: String(id_bienthe),
+          soluong: Number(soluong)
+        };
+
+        console.log("📤 Sending to API:", requestBody);
+        console.log("🌐 API URL:", `${API}/api/tai-khoan/giohang`);
+
+        const res = await fetch(`${API}/api/tai-khoan/giohang`, {
           method: "POST",
           headers: getAuthHeaders(),
-          body: JSON.stringify({
-            id_bienthe: String(id_bienthe),
-            soluong: quantity
-          }),
+          credentials: "include",
+          body: JSON.stringify(requestBody),
         });
+
+        console.log("📥 API Response status:", res.status);
+        const responseData = await res.json().catch(() => null);
+        console.log("📥 API Response data:", responseData);
+
         if (res.ok) {
           const { items: serverItems, gifts: serverGifts } = await loadServerCart();
           setItems(serverItems);
           setGifts(serverGifts);
-          const count = serverItems.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+          const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
           window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+          console.log("✅ Cart updated successfully");
+        } else {
+          console.error("❌ API Error:", res.status, responseData);
         }
       } else {
+        console.log("💾 User not logged in, saving to localStorage");
         const localCart = loadLocalCart();
         const existingIndex = localCart.findIndex(i => i.id_bienthe == id_bienthe);
 
-        const priceVal = typeof product.gia === 'number' ? product.gia : (product.gia?.current ?? 0);
+        // Lấy đầy đủ thông tin giá
+        const giaObj = typeof product.gia === 'number'
+          ? { current: product.gia, before_discount: 0, discount_percent: 0 }
+          : {
+            current: Number(product.gia?.current ?? 0),
+            before_discount: Number(product.gia?.before_discount ?? 0),
+            discount_percent: Number(product.gia?.discount_percent ?? 0)
+          };
+
         const displayItem: CartItem = {
           id_giohang: `local_${Date.now()}`,
           id_bienthe: id_bienthe,
-          quantity: quantity,
+          soluong: soluong,
           product: {
             id: id_bienthe,
             ten: product.ten ?? "Sản phẩm",
-            mediaurl: product.hinhanh ?? "/assets/images/thumbs/placeholder.png",
-            gia: { current: Number(priceVal) }
+            mediaurl: product.hinhanh || product.mediaurl || "/assets/images/thumbs/placeholder.png",
+            gia: giaObj,
+            loaibienthe: product.loaibienthe ?? "",
+            thuonghieu: product.thuonghieu ?? "",
+            slug: product.slug ?? ""
           }
         };
 
-        if (existingIndex >= 0) localCart[existingIndex].quantity += quantity;
-        else localCart.push(displayItem);
+        console.log("📦 Product info to save:", displayItem);
+
+        if (existingIndex >= 0) {
+          localCart[existingIndex].soluong += soluong;
+          // Cập nhật thông tin sản phẩm nếu có thêm data
+          if (displayItem.product) {
+            localCart[existingIndex].product = {
+              ...localCart[existingIndex].product,
+              ...displayItem.product
+            };
+          }
+          console.log("📝 Updated existing item soluong");
+        } else {
+          localCart.push(displayItem);
+          console.log("📝 Added new item to local cart");
+        }
 
         saveLocalCart(localCart);
         setItems(localCart);
-        const count = localCart.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+        const count = localCart.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
         window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+        console.log("✅ Local cart saved:", localCart.length, "items, total count:", count);
       }
     } finally { setLoading(false); }
-  }, [isLoggedIn, API, getAuthHeaders, loadServerCart, loadLocalCart, saveLocalCart]);
+  }, [hasValidToken, API, getAuthHeaders, loadServerCart, loadLocalCart, saveLocalCart, isLoggedIn]);
 
-  const updateQuantity = useCallback(async (id_giohang: number | string, quantity: number) => {
-    if (quantity < 1) return;
-    setItems(prev => prev.map(it => it.id_giohang === id_giohang ? { ...it, quantity } : it));
+  const updatesoluong = useCallback(async (id_giohang: number | string, soluong: number) => {
+    if (soluong < 1) return;
+    setItems(prev => prev.map(it => it.id_giohang === id_giohang ? { ...it, soluong } : it));
 
-    if (isLoggedIn) {
-      await fetch(`${API}/api/toi/giohang/${id_giohang}`, {
+    const hasToken = hasValidToken();
+    if (hasToken) {
+      await fetch(`${API}/api/tai-khoan/giohang/${id_giohang}`, {
         method: "PUT",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ soluong: quantity }),
+        body: JSON.stringify({ soluong: soluong }),
       }).catch(() => fetchCart());
     } else {
       const local = loadLocalCart();
-      const updated = local.map(it => it.id_giohang === id_giohang ? { ...it, quantity } : it);
+      const updated = local.map(it => it.id_giohang === id_giohang ? { ...it, soluong } : it);
       saveLocalCart(updated);
     }
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent("cart:updated"));
-  }, [isLoggedIn, API, getAuthHeaders, fetchCart, loadLocalCart, saveLocalCart]);
+  }, [hasValidToken, API, getAuthHeaders, fetchCart, loadLocalCart, saveLocalCart]);
 
   const removeItem = useCallback(async (id_giohang: number | string) => {
     setItems(prev => prev.filter(it => it.id_giohang !== id_giohang));
-    if (isLoggedIn) {
-      await fetch(`${API}/api/toi/giohang/${id_giohang}`, {
+    const hasToken = hasValidToken();
+    if (hasToken) {
+      await fetch(`${API}/api/tai-khoan/giohang/${id_giohang}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       }).catch(() => fetchCart());
@@ -554,13 +636,14 @@ export function useCart() {
       saveLocalCart(updated);
     }
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent("cart:updated"));
-  }, [isLoggedIn, API, getAuthHeaders, fetchCart, loadLocalCart, saveLocalCart]);
+  }, [hasValidToken, API, getAuthHeaders, fetchCart, loadLocalCart, saveLocalCart]);
 
   const clearCart = useCallback(() => {
     setItems([]);
-    if (!isLoggedIn) clearLocalCart();
+    const hasToken = hasValidToken();
+    if (!hasToken) clearLocalCart();
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count: 0 } }));
-  }, [isLoggedIn, clearLocalCart]);
+  }, [hasValidToken, clearLocalCart]);
 
   // ========================================================================
   // 3. VOUCHER LOGIC
@@ -569,7 +652,7 @@ export function useCart() {
   const subtotal = items.reduce((sum, it) => {
     const pPrice = it.product?.gia?.current;
     const price = Number(pPrice || 0);
-    const qty = Number(it.quantity) || 0;
+    const qty = Number(it.soluong) || 0;
     return sum + price * qty;
   }, 0);
 
@@ -584,10 +667,16 @@ export function useCart() {
   // Lấy danh sách voucher
   const fetchVouchers = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/ma-giam-gia`, {
-        headers: getAuthHeaders(),
-        cache: "no-store"
-      });
+      let res: Response;
+      try {
+        res = await fetch(`${API}/api/ma-giam-gia`, {
+          headers: getAuthHeaders(),
+          cache: "no-store"
+        });
+      } catch (fetchErr) {
+        console.warn("⚠️ Network error khi fetch vouchers:", fetchErr);
+        return;
+      }
 
       if (res.ok) {
         const json: unknown = await res.json();
@@ -626,11 +715,11 @@ export function useCart() {
         setAvailableVouchers(activeVouchers);
       }
     } catch (e) {
-      console.error("Lỗi lấy danh sách voucher:", e);
+      console.warn("⚠️ Lỗi lấy danh sách voucher:", e);
     }
   }, [API, getAuthHeaders]);
 
-  useEffect(() => { fetchVouchers(); }, [fetchVouchers]);
+  useEffect(() => { fetchVouchers().catch(() => { }); }, [fetchVouchers]);
 
   const applyVoucherByCode = useCallback(async (code: string) => {
     if (!code) return;
@@ -685,11 +774,11 @@ export function useCart() {
 
   const discountAmount = appliedVoucher ? appliedVoucher.giatri : 0;
   const total = Math.max(0, subtotal - discountAmount);
-  const totalItems = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+  const totalItems = items.reduce((sum, it) => sum + (Number(it.soluong) || 0), 0);
   const totalGifts = gifts.reduce((sum, g) => sum + (g.soluong || 0), 0);
 
   return {
-    items, loading, addToCart, updateQuantity, removeItem, clearCart, refreshCart: fetchCart,
+    items, loading, addToCart, updatesoluong, removeItem, clearCart, refreshCart: fetchCart,
     subtotal,
     totalItems,
     gifts,

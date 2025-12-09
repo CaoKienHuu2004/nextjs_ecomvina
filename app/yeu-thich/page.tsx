@@ -22,6 +22,9 @@ type WishProduct = {
   is_free?: boolean;
   gia?: { current?: number; before_discount?: number };
   bienthes?: { gia?: number | string; giagiam?: number | string }[];
+  loaibienthe?: string;
+  thuonghieu?: string;
+  thuong_hieu?: string;
 };
 
 export default function WishlistPage() {
@@ -89,108 +92,111 @@ export default function WishlistPage() {
 
   return (
     <>
-    <FullHeader showClassicTopBar={true} showTopNav={false} />
-    <AccountShell title="Yêu thích" current="wishlist">
-      {loading ? (
-        <div>Đang tải…</div>
-      ) : items.length === 0 ? (
-        <div>Danh sách trống.</div>
-      ) : (
-        <div className="row g-12">
-          {items.map((p) => {
-            const pid = getPid(p);
-            const img =
-              p.mediaurl ||
-              p?.anhsanphams?.[0]?.media ||
-              "/assets/images/thumbs/product-two-img1.png";
-            const name = p.ten || p.name || p.title || `Sản phẩm #${pid}`;
+      <FullHeader showClassicTopBar={true} showTopNav={false} />
+      <AccountShell title="Yêu thích" current="wishlist">
+        {loading ? (
+          <div>Đang tải…</div>
+        ) : items.length === 0 ? (
+          <div>Danh sách trống.</div>
+        ) : (
+          <div className="row g-12">
+            {items.map((p) => {
+              const pid = getPid(p);
+              const img =
+                p.mediaurl ||
+                p?.anhsanphams?.[0]?.media ||
+                "/assets/images/thumbs/product-two-img1.png";
+              const name = p.ten || p.name || p.title || `Sản phẩm #${pid}`;
 
-            // Lấy giá: ưu tiên selling_price → giá biến thể → gia.current
-            const toNumLoose = (x: unknown): number =>
-              typeof x === "string"
-                ? parseFloat(x)
-                : typeof x === "number"
-                ? x
-                : 0;
+              // Lấy giá: ưu tiên selling_price → giá biến thể → gia.current
+              const toNumLoose = (x: unknown): number =>
+                typeof x === "string"
+                  ? parseFloat(x)
+                  : typeof x === "number"
+                    ? x
+                    : 0;
 
-            const v0 = p?.bienthes?.[0];
-            const baseGia = v0
-              ? { gia: toNumLoose(v0.gia), giagiam: toNumLoose(v0.giagiam) }
-              : {
+              const v0 = p?.bienthes?.[0];
+              const baseGia = v0
+                ? { gia: toNumLoose(v0.gia), giagiam: toNumLoose(v0.giagiam) }
+                : {
                   gia: toNumLoose(p?.gia?.before_discount),
                   giagiam: toNumLoose(p?.gia?.current),
                 };
 
-            const sellingFromVariant = v0
-              ? baseGia.giagiam > 0 && baseGia.giagiam < baseGia.gia
-                ? baseGia.giagiam
-                : Math.max(baseGia.gia - baseGia.giagiam, 0)
-              : undefined;
-
-            const price =
-              typeof p.selling_price === "number"
-                ? p.selling_price
-                : sellingFromVariant ??
-                  (typeof p?.gia?.current === "number" ? p.gia.current! : 0);
-
-            const oldPrice =
-              typeof p.original_price === "number"
-                ? p.original_price
-                : typeof p?.gia?.before_discount === "number"
-                ? p.gia!.before_discount!
-                : sellingFromVariant !== undefined
-                ? baseGia.gia
+              const sellingFromVariant = v0
+                ? baseGia.giagiam > 0 && baseGia.giagiam < baseGia.gia
+                  ? baseGia.giagiam
+                  : Math.max(baseGia.gia - baseGia.giagiam, 0)
                 : undefined;
 
-            const isFree = price === 0 || p.is_free === true;
-            const discount =
-              !isFree && typeof oldPrice === "number" && oldPrice > price
-                ? oldPrice - price
-                : 0;
+              const price =
+                typeof p.selling_price === "number"
+                  ? p.selling_price
+                  : sellingFromVariant ??
+                  (typeof p?.gia?.current === "number" ? p.gia.current! : 0);
 
-            const badge = isFree
-              ? { text: "Miễn phí", color: "primary" as const }
-              : discount > 0
-              ? {
-                  text: `Giảm ${discount.toLocaleString("vi-VN")} đ`,
-                  color: "warning" as const,
-                }
-              : undefined;
+              const oldPrice =
+                typeof p.original_price === "number"
+                  ? p.original_price
+                  : typeof p?.gia?.before_discount === "number"
+                    ? p.gia!.before_discount!
+                    : sellingFromVariant !== undefined
+                      ? baseGia.gia
+                      : undefined;
 
-            return (
-              <div
-                key={pid || String(p.id)}
-                className="col-xxl-3 col-xl-4 col-lg-4 col-sm-6"
-              >
-                <ProductCardV2
-                  href={`/products/${p.slug || pid}`}
-                  img={img}
-                  title={name}
-                  price={price}
-                  oldPrice={oldPrice}
-                  variantId={pid || undefined}
-                  badge={badge}
-                  showHeart
-                  isWished={pid !== 0 && isWished(pid)}
-                  onToggleWish={() => {
-                    const currently = pid !== 0 && isWished(pid);
-                    if (currently)
-                      setItems((prev) => prev.filter((it) => getPid(it) !== pid));
-                    if (pid !== 0) toggle(pid);
-                  }}
-                  showUnwishButton
-                  onUnwish={() => {
-                    if (pid !== 0 && isWished(pid))
-                      setItems((prev) => prev.filter((it) => getPid(it) !== pid));
-                    if (pid !== 0) toggle(pid);
-                  }}
-                />
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </AccountShell>
+              const isFree = price === 0 || p.is_free === true;
+              const discount =
+                !isFree && typeof oldPrice === "number" && oldPrice > price
+                  ? oldPrice - price
+                  : 0;
+
+              const badge = isFree
+                ? { text: "Miễn phí", color: "primary" as const }
+                : discount > 0
+                  ? {
+                    text: `Giảm ${discount.toLocaleString("vi-VN")} đ`,
+                    color: "warning" as const,
+                  }
+                  : undefined;
+
+              return (
+                <div
+                  key={pid || String(p.id)}
+                  className="col-xxl-3 col-xl-4 col-lg-4 col-sm-6"
+                >
+                  <ProductCardV2
+                    href={`/products/${p.slug || pid}`}
+                    img={img}
+                    title={name}
+                    price={price}
+                    oldPrice={oldPrice}
+                    variantId={pid || undefined}
+                    badge={badge}
+                    loaibienthe={p.loaibienthe || ""}
+                    thuonghieu={p.thuonghieu || p.thuong_hieu || ""}
+                    slug={p.slug || String(pid)}
+                    showHeart
+                    isWished={pid !== 0 && isWished(pid)}
+                    onToggleWish={() => {
+                      const currently = pid !== 0 && isWished(pid);
+                      if (currently)
+                        setItems((prev) => prev.filter((it) => getPid(it) !== pid));
+                      if (pid !== 0) toggle(pid);
+                    }}
+                    showUnwishButton
+                    onUnwish={() => {
+                      if (pid !== 0 && isWished(pid))
+                        setItems((prev) => prev.filter((it) => getPid(it) !== pid));
+                      if (pid !== 0) toggle(pid);
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </AccountShell>
     </>
   );
 }

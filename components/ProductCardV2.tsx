@@ -3,8 +3,8 @@
 import React, { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { addToCart } from "@/utils/cartClient";
 import { flyToCart } from "@/utils/flyToCart";
+import { useCart } from "@/hooks/useCart";
 
 type BadgeColor = "primary" | "danger" | "warning";
 type SoldInfo = string | { current: number; total: number } | number;
@@ -28,6 +28,9 @@ type Props = {
   onUnwish?: () => void;
   badge?: { text: string; color: BadgeColor }; // vd: { text: "Miễn phí", color: "primary" }
   variantId?: number; // id biến thể chuẩn để AddToCart chính xác
+  loaibienthe?: string; // Loại biến thể (ví dụ: "Đỏ - Size M")
+  thuonghieu?: string;  // Thương hiệu
+  slug?: string;        // Slug sản phẩm
 };
 
 const colorMap: Record<BadgeColor, string> = {
@@ -80,6 +83,9 @@ export default function ProductCardV2(props: Props) {
     variantId,
     showUnwishButton,
     onUnwish,
+    loaibienthe,
+    thuonghieu,
+    slug,
   } = props;
 
   const dest = href || "/product-details";
@@ -92,11 +98,12 @@ export default function ProductCardV2(props: Props) {
   const soldInfo = deriveSold(sold);
 
   const thumbRef = useRef<HTMLAnchorElement | null>(null);
+  const { addToCart } = useCart();
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    e.nativeEvent.stopImmediatePropagation();
+    (e.nativeEvent as any).stopImmediatePropagation?.();
 
     try {
       let id = variantId;
@@ -111,13 +118,27 @@ export default function ProductCardV2(props: Props) {
         return;
       }
 
-      await addToCart(id, 1);
+      // Xây dựng payload theo AddToCartInput của useCart
+      const productInput = {
+        id_bienthe: id,
+        id,
+        ten: title,
+        hinhanh: img,
+        gia: typeof price === "number" ? { current: price, before_discount: typeof oldPrice === "number" ? oldPrice : 0 } : undefined,
+        loaibienthe: loaibienthe || "",
+        thuonghieu: thuonghieu || "",
+        slug: slug || href?.split('/').pop() || "",
+      };
+
+      await addToCart(productInput, 1);
       const el = thumbRef.current;
       if (el) flyToCart(el);
     } catch (err) {
       console.error("❌ ProductCardV2: Error:", err);
     }
-  }; return (
+  };
+
+  return (
     <div
       className="p-16 bg-white border border-gray-100 product-card h-100 hover-border-main-600 rounded-16 position-relative transition-2"
       style={{ position: "relative" }} // mốc định vị cho badge + tim

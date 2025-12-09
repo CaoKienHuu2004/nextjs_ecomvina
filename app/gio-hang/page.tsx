@@ -27,7 +27,7 @@ const getOriginPrice = (gia: PriceInput): number => {
   if (typeof gia === "object" && gia !== null) {
     return Number(gia.before_discount ?? 0);
   }
-  return 0; 
+  return 0;
 };
 
 // Helper format ngày
@@ -330,7 +330,7 @@ function CartPageContent() {
     const currentPrice = Number(item.product?.gia?.current ?? 0);
     const beforePrice = Number(item.product?.gia?.before_discount ?? 0);
     if (beforePrice > currentPrice) {
-      return sum + (beforePrice - currentPrice) * item.quantity;
+      return sum + (beforePrice - currentPrice) * item.soluong;
     }
     return sum;
   }, 0);
@@ -428,7 +428,7 @@ function CartPageContent() {
                             const productPrice = Number(item.product?.gia?.current) || 0;
                             const originalPrice = Number(item.product?.gia?.before_discount) || 0;
                             const discountPercent = item.product?.gia?.discount_percent || 0;
-                            const itemTotal = productPrice * item.quantity;
+                            const itemTotal = productPrice * item.soluong;
                             const brandName = item.product?.thuonghieu || '';
                             const variantName = item.product?.loaibienthe || '';
                             const productSlug = item.product?.slug || '';
@@ -493,7 +493,7 @@ function CartPageContent() {
                                 </td>
                                 <td className="px-5 py-20">
                                   <QuantityControl
-                                    quantity={item.quantity}
+                                    quantity={item.soluong}
                                     onUpdate={(qty) => updateQuantity(item.id_giohang, qty)}
                                   />
                                 </td>

@@ -61,6 +61,11 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
         try {
             const mainImage = product.anh_san_pham?.[0]?.hinhanh || product.hinh_anh;
 
+            // Lấy loại biến thể từ variant đang chọn
+            const variantName = selectedVariant?.loaibienthe ||
+                product?.bienthe_khichon_loaibienthe_themvaogio?.[0]?.loaibienthe ||
+                "";
+
             const productInput = {
                 id_bienthe: selectedVariant?.id_bienthe || product.id,
                 ten: product.ten,
@@ -72,7 +77,12 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                     discount_percent: discountPercent
                 },
                 price: displayPrice,
+                loaibienthe: variantName,
+                thuonghieu: product.thuong_hieu || "",
+                slug: product.slug || slug
             };
+
+            console.log("📦 Adding to cart with full info:", productInput);
 
             await addToCart(productInput, quantity);
 

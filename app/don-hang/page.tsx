@@ -36,7 +36,7 @@ type Order = {
   id: number;
   madon: string;
   created_at: string;
-  trangthai: string; 
+  trangthai: string;
   thanhtien: number;
   trangthaithanhtoan?: string;
   chitietdonhang: OrderItem[];
@@ -49,11 +49,11 @@ type Order = {
 };
 
 type DetailedOrder = Order & {
-    phuongthuc?: { id?: number; ten?: string; maphuongthuc?: string };
-    phivanchuyen?: { id?: number; ten?: string; phi?: number };
-    diachigiaohang?: { hoten?: string; sodienthoai?: string; diachi?: string; tinhthanh?: string; trangthai?: string };
-    magiamgia?: { magiamgia?: string; giatri?: number; mota?: string };
-    tamtinh?: number;
+  phuongthuc?: { id?: number; ten?: string; maphuongthuc?: string };
+  phivanchuyen?: { id?: number; ten?: string; phi?: number };
+  diachigiaohang?: { hoten?: string; sodienthoai?: string; diachi?: string; tinhthanh?: string; trangthai?: string };
+  magiamgia?: { magiamgia?: string; giatri?: number; mota?: string };
+  tamtinh?: number;
 };
 
 type OrderGroup = {
@@ -67,13 +67,13 @@ type OrderGroup = {
 type FilterStatus = "all" | "pending" | "confirmed" | "processing" | "shipping" | "completed" | "cancelled";
 
 // Map mã phương thức thanh toán (maphuongthuc) sang label hiển thị
-  const formatPaymentMethod = (ph?: DetailedOrder["phuongthuc"]) => {
-    const code = ph?.maphuongthuc ?? "";
-    if (code === "cod") return "Thanh toán khi nhận hàng (COD)";
-    if (code === "dbt") return "Chuyển khoản ngân hàng (tự động)";
-    if (code === "cp") return "Thanh toán trực tiếp (thủ công)";
-    return ph?.ten ?? getPhuongThucThanhToan(ph?.id ?? undefined) ?? "-";
-  };
+const formatPaymentMethod = (ph?: DetailedOrder["phuongthuc"]) => {
+  const code = ph?.maphuongthuc ?? "";
+  if (code === "cod") return "Thanh toán khi nhận hàng (COD)";
+  if (code === "dbt") return "Chuyển khoản ngân hàng (tự động)";
+  if (code === "cp") return "Thanh toán trực tiếp (thủ công)";
+  return ph?.ten ?? getPhuongThucThanhToan(ph?.id ?? undefined) ?? "-";
+};
 
 // --- 2. COMPONENT CHÍNH ---
 
@@ -81,7 +81,7 @@ export default function OrdersPage() {
   const { user, isLoggedIn } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // State Filter & Pagination
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [page, setPage] = useState(1);
@@ -89,18 +89,18 @@ export default function OrdersPage() {
 
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
-  
+
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<DetailedOrder | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const displayStatusLabel = (status?: string) => {
-  const s = (status || "").toString().toLowerCase();
-  if (s.includes("đã giao") || s.includes("đã giao hàng") || s.includes("delivered")) return "Đã giao";
-  const label = getTrangThaiDonHang(status);
-  if (label && label !== "Chưa rõ") return label;
-  return status || "Chưa rõ";
-};
+    const s = (status || "").toString().toLowerCase();
+    if (s.includes("đã giao") || s.includes("đã giao hàng") || s.includes("delivered")) return "Đã giao";
+    const label = getTrangThaiDonHang(status);
+    if (label && label !== "Chưa rõ") return label;
+    return status || "Chưa rõ";
+  };
 
   // --- FETCH DATA ---
   useEffect(() => {
@@ -126,16 +126,16 @@ export default function OrdersPage() {
 
           // Sắp xếp theo ID giảm dần (mới nhất lên đầu)
           const sortedList = allOrders.sort((a, b) => b.id - a.id);
-          
+
           setOrders(sortedList);
           // Xử lý response: { data: [...] } hoặc [...]
           // const list = Array.isArray(json) ? json : (json.data || []);
-          
+
           // // Sắp xếp mới nhất lên đầu
           // const sortedList = list.sort((a: Order, b: Order) => b.id - a.id);
           setOrders(sortedList);
         } else {
-           console.error("Lỗi API:", res.status);
+          console.error("Lỗi API:", res.status);
         }
       } catch (error) {
         console.error("Lỗi tải đơn hàng:", error);
@@ -145,9 +145,9 @@ export default function OrdersPage() {
     };
 
     if (isLoggedIn) {
-        fetchOrders();
+      fetchOrders();
     } else {
-        setLoading(false);
+      setLoading(false);
     }
   }, [isLoggedIn]);
 
@@ -217,50 +217,50 @@ export default function OrdersPage() {
   };
 
   // Kiểm tra trạng thái thanh toán chưa thành công / chưa thanh toán
-const isPaymentPending = (order?: DetailedOrder) => {
-  if (!order) return false;
-  const pay = (order.trangthaithanhtoan || "").toString().toLowerCase();
-  const state = (order.trangthai || "").toString().toLowerCase();
-  if (pay.includes("chưa") || pay.includes("pending") || pay.includes("unpaid")) return true;
-  // fallback: nếu trạng thái chung chỉ ra chưa giao / chưa hoàn tất thanh toán
-  if (state.includes("chờ") || state.includes("pending")) return true;
-  return false;
-};
+  const isPaymentPending = (order?: DetailedOrder) => {
+    if (!order) return false;
+    const pay = (order.trangthaithanhtoan || "").toString().toLowerCase();
+    const state = (order.trangthai || "").toString().toLowerCase();
+    if (pay.includes("chưa") || pay.includes("pending") || pay.includes("unpaid")) return true;
+    // fallback: nếu trạng thái chung chỉ ra chưa giao / chưa hoàn tất thanh toán
+    if (state.includes("chờ") || state.includes("pending")) return true;
+    return false;
+  };
 
-// Kiểm tra trạng thái có thể đánh giá
-const isReviewableStatus = (status?: string) => {
-  const s = (status || "").toString().toLowerCase();
-  // Chỉ khi trạng thái rõ ràng là 'thành công' hoặc 'delivered' được coi là reviewable
-  return s.includes("thành công") || s.includes("delivered") || s.includes("hoàn tất") || s.includes("completed");
-};
+  // Kiểm tra trạng thái có thể đánh giá
+  const isReviewableStatus = (status?: string) => {
+    const s = (status || "").toString().toLowerCase();
+    // Chỉ khi trạng thái rõ ràng là 'thành công' hoặc 'delivered' được coi là reviewable
+    return s.includes("thành công") || s.includes("delivered") || s.includes("hoàn tất") || s.includes("completed");
+  };
 
-// Gọi API để lấy payment_url rồi chuyển hướng
-const retryPayment = async (orderId: number, provider?: string) => {
-  try {
-    const token = Cookies.get("access_token");
-    const url = `${API}/api/toi/donhangs/${orderId}/payment-url`;
-    const body = provider ? JSON.stringify({ provider }) : undefined;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": body ? "application/json" : "application/json",
-        "Authorization": token ? `Bearer ${token}` : "",
-      },
-      body,
-    });
-    const json = await res.json().catch(() => ({}));
-    if (res.ok && json.payment_url) {
-      // Option A: điều hướng ngay lập tức
-      window.location.href = json.payment_url;
-      return;
+  // Gọi API để lấy payment_url rồi chuyển hướng
+  const retryPayment = async (orderId: number, provider?: string) => {
+    try {
+      const token = Cookies.get("access_token");
+      const url = `${API}/api/toi/donhangs/${orderId}/payment-url`;
+      const body = provider ? JSON.stringify({ provider }) : undefined;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": body ? "application/json" : "application/json",
+          "Authorization": token ? `Bearer ${token}` : "",
+        },
+        body,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.payment_url) {
+        // Option A: điều hướng ngay lập tức
+        window.location.href = json.payment_url;
+        return;
+      }
+      alert(json.message || "Không tạo được liên kết thanh toán. Vui lòng thử lại hoặc liên hệ hỗ trợ.");
+    } catch (e) {
+      console.error("retryPayment error", e);
+      alert("Lỗi kết nối. Vui lòng thử lại.");
     }
-    alert(json.message || "Không tạo được liên kết thanh toán. Vui lòng thử lại hoặc liên hệ hỗ trợ.");
-  } catch (e) {
-    console.error("retryPayment error", e);
-    alert("Lỗi kết nối. Vui lòng thử lại.");
-  }
-};
+  };
 
   // --- LOGIC FILTER ---
   // Helper map trạng thái từ API sang key filter
@@ -303,10 +303,10 @@ const retryPayment = async (orderId: number, provider?: string) => {
     }
   };
 
-  
+
 
   const toggleExpand = (id: number) => {
-      setExpandedOrderId(expandedOrderId === id ? null : id);
+    setExpandedOrderId(expandedOrderId === id ? null : id);
   };
 
   // --- RENDER UI ---
@@ -317,163 +317,271 @@ const retryPayment = async (orderId: number, provider?: string) => {
       <AccountShell title="Đơn hàng của tôi" current="orders">
         {/* Order Detail Modal / Drawer */}
         {detailOpen && (
-          <div className="top-0 position-fixed start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 2000, background: "rgba(0,0,0,0.5)" }}>
-            <div className="p-20 bg-white rounded-12" style={{ maxWidth: 1100, width: "95%", maxHeight: "90%", overflowY: "auto" }}>
-              <div className="mb-12 d-flex flex-between">
-                <h5 className="mb-0">Chi tiết đơn hàng {detailOrder ? `#${detailOrder.madon}` : ""}</h5>
-                <button type="button" className="btn btn-black" onClick={closeDetail}>Đóng</button>
+          <div className="top-0 position-fixed start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 2000, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
+            <div className="bg-white shadow-lg rounded-16" style={{ maxWidth: 900, width: "95%", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              {/* Header */}
+              <div className="px-24 py-16 text-white" style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%)" }}>
+                <div className="d-flex flex-between align-items-center">
+                  <div className="gap-12 d-flex align-items-center">
+                    <div className="flex-center" style={{ width: 48, height: 48, background: "rgba(255,255,255,0.15)", borderRadius: 12 }}>
+                      <i className="text-2xl ph-bold ph-package text-white"></i>
+                    </div>
+                    <div>
+                      <h5 className="mb-0 text-white fw-bold" style={{ fontSize: 20 }}>Chi tiết đơn hàng</h5>
+                      <span className="text-white" style={{ opacity: 0.85, fontSize: 14 }}>#{detailOrder?.madon || "..."}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-white border-0 flex-center"
+                    onClick={closeDetail}
+                    style={{ width: 40, height: 40, background: "rgba(255,255,255,0.15)", borderRadius: 10, cursor: "pointer", transition: "all 0.2s" }}
+                    onMouseOver={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.25)"}
+                    onMouseOut={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+                  >
+                    <i className="text-xl ph-bold ph-x"></i>
+                  </button>
+                </div>
               </div>
-              {loadingDetail ? (
-                <div className="py-20 text-center">Đang tải chi tiết...</div>
-              ) : detailOrder ? (
-                <>
-                  <div className="flex-wrap mb-16 d-flex flex-between">
-                    {/* Recipient: ưu tiên diachigiaohang, fallback chitietnguoidung */}
-                    <div style={{ width: "32%" }}>
-                      <h6 className="text-sm fw-semibold">Người nhận</h6>
-                      <div className="p-10 border rounded-4">
-                        <div className="fw-medium">
-                          {detailOrder.diachigiaohang?.hoten ?? detailOrder.chitietnguoidung?.hoten ?? "-"}
-                        </div>
-                        <div className="mt-5 text-sm">
-                          <span className="fw-medium">Địa chỉ:</span>{" "}
-                          {detailOrder.diachigiaohang?.diachi ?? detailOrder.chitietnguoidung?.diachi ?? "-"}
-                        </div>
-                        <div className="mt-5 text-sm">
-                          <span className="fw-medium">SĐT:</span>{" "}
-                          {detailOrder.diachigiaohang?.sodienthoai ?? detailOrder.chitietnguoidung?.sodienthoai ?? "-"}
-                        </div>
-                        {detailOrder.diachigiaohang?.tinhthanh && (
-                          <div className="mt-5 text-sm">
-                            <span className="fw-medium">Khu vực:</span> {detailOrder.diachigiaohang.tinhthanh}
-                          </div>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Shipping */}
-                    <div style={{ width: "32%" }}>
-                      <h6 className="text-sm fw-semibold">Hình thức vận chuyển</h6>
-                      <div className="p-10 border rounded-4">
-                        <div className="fw-medium">{detailOrder.phivanchuyen?.ten ?? "-"}</div>
-                        <div className="mt-5 text-sm"><span className="fw-medium">Phí:</span> {fmtMoney(detailOrder.phivanchuyen?.phi ?? 0)}</div>
-                        {/* Khu vực giao: fallback từ địa chỉ nhận */}
-                        <div className="mt-5 text-sm"><span className="fw-medium">Khu vực giao:</span> {detailOrder.phivanchuyen?.ten ?? detailOrder.diachigiaohang?.tinhthanh ?? "-"}</div>
-                      </div>
-                    </div>
-
-                    {/* Payment method */}
-                    <div style={{ width: "32%" }}>
-                      <h6 className="text-sm fw-semibold">Thanh toán</h6>
-                      <div className="p-10 border rounded-4">
-                        <div className="fw-medium">
-                          {formatPaymentMethod(detailOrder.phuongthuc)}
-                        </div>
-                        <div className="mt-5 text-sm"><span className="fw-medium">Trạng thái:</span> {detailOrder.trangthaithanhtoan ?? detailOrder.trangthai ?? "-"}</div>
-                        {/* {detailOrder.phuongthuc?.maphuongthuc && (
-                          <div className="mt-5 text-sm"><span className="fw-medium">Mã PT:</span> {detailOrder.phuongthuc.maphuongthuc}</div>
-                        )} */}
-
-                        {/*  Thêm nút thanh toán lại nếu cần */}
-                        {/* Thanh toán lại VNPay nếu phương thức là dbt (VNPay) và trạng thái thanh toán còn pending */}
-                        {detailOrder.phuongthuc?.maphuongthuc === "dbt" && isPaymentPending(detailOrder) && (
-                          <button
-                            type="button"
-                            onClick={() => retryPayment(detailOrder.id, "dbt")}
-                            className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
-                          >
-                            <i className="ph-bold ph-credit-card" /> Thanh toán lại (VNPay)
-                          </button>
-                        )}
-
-                        {/* Tùy chọn VietQR nếu provider 'cp' */}
-                        {detailOrder.phuongthuc?.maphuongthuc === "cp" && isPaymentPending(detailOrder) && (
-                          <button
-                            type="button"
-                            onClick={() => retryPayment(detailOrder.id, "cp")}
-                            className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
-                          >
-                            <i className="ph-bold ph-qrcode" /> Thanh toán lại (VietQR)
-                          </button>
-                        )}
-                      </div>
-                    </div>
+              {/* Content */}
+              <div className="flex-grow-1" style={{ overflowY: "auto", padding: 24 }}>
+                {loadingDetail ? (
+                  <div className="py-40 text-center">
+                    <div className="mb-16 spinner-border text-main-600" role="status"></div>
+                    <div className="text-gray-600">Đang tải chi tiết đơn hàng...</div>
                   </div>
-                  <div className="p-16 border rounded-4">
-                    <h6 className="mb-8 text-md fw-semibold"><i className="ph-bold ph-shopping-cart text-main-600" /> Chi tiết mua hàng</h6>
-                    {(detailOrder.chitietdonhang ?? []).map((it) => {
-                      const sp = it.bienthe?.sanpham || {};
-                      return (
-                        <div key={it.id} className="gap-12 py-6 d-flex align-items-center">
-                          <div style={{ width: 90, height: 90 }} className="overflow-hidden border rounded-8 flex-center">
-                            <img
-                              src={sp.hinhanhsanpham?.[0]?.hinhanh ?? sp.hinhanh ?? "/assets/images/thumbs/placeholder.png"}
-                              alt={sp.ten ?? ""}
-                              className="w-100 rounded-8"
-                            />
+                ) : detailOrder ? (
+                  <>
+                    {/* 3 Cards Info - Luôn trên 1 hàng */}
+                    <div className="gap-16 mb-24 d-flex" style={{ flexWrap: "nowrap" }}>
+                      {/* Người nhận */}
+                      <div style={{ flex: "1 1 33.33%", minWidth: 0 }}>
+                        <div className="h-100 p-16 border border-gray-100 rounded-12" style={{ background: "#f8fafc" }}>
+                          <div className="gap-10 mb-12 d-flex align-items-center">
+                            <div className="flex-center" style={{ width: 36, height: 36, background: "#e0f2fe", borderRadius: 8 }}>
+                              <i className="ph-bold ph-user text-main-600" style={{ fontSize: 18 }}></i>
+                            </div>
+                            <h6 className="mb-0 fw-bold text-gray-900" style={{ fontSize: 14 }}>Người nhận</h6>
                           </div>
-                          <div className="text-start w-100">
-                            <div className="fw-semibold">{sp.ten ?? it.name ?? "Sản phẩm"}</div>
-                            <div className="text-sm text-gray-600">Số lượng: {it.soluong}</div>
-                          </div>
-                          <div className="text-end">
-                            <div className="text-sm text-gray-600">Đơn giá</div>
-                            <div className="fw-semibold">{fmtMoney(it.dongia)}</div>
+                          <div className="text-gray-700" style={{ fontSize: 14, lineHeight: 1.7 }}>
+                            <div className="mb-6 fw-semibold text-gray-900" style={{ fontSize: 15 }}>
+                              {detailOrder.diachigiaohang?.hoten ?? detailOrder.chitietnguoidung?.hoten ?? "-"}
+                            </div>
+                            <div className="gap-6 mb-4 d-flex">
+                              <i className="ph ph-map-pin text-gray-400" style={{ marginTop: 2 }}></i>
+                              <span>{detailOrder.diachigiaohang?.diachi ?? detailOrder.chitietnguoidung?.diachi ?? "-"}</span>
+                            </div>
+                            <div className="gap-6 mb-4 d-flex">
+                              <i className="ph ph-phone text-gray-400" style={{ marginTop: 2 }}></i>
+                              <span>{detailOrder.diachigiaohang?.sodienthoai ?? detailOrder.chitietnguoidung?.sodienthoai ?? "-"}</span>
+                            </div>
+                            {detailOrder.diachigiaohang?.tinhthanh && (
+                              <div className="gap-6 d-flex">
+                                <i className="ph ph-map-trifold text-gray-400" style={{ marginTop: 2 }}></i>
+                                <span>{detailOrder.diachigiaohang.tinhthanh}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      );
-                    })}
+                      </div>
 
-                    <div className="pt-16 mt-16 border-top">
-                      <div className="mb-8 d-flex flex-between">
-                        <div>Tạm tính:</div>
-                        <div className="fw-semibold">{fmtMoney(detailOrder.tamtinh)}</div>
+                      {/* Vận chuyển */}
+                      <div style={{ flex: "1 1 33.33%", minWidth: 0 }}>
+                        <div className="h-100 p-16 border border-gray-100 rounded-12" style={{ background: "#f8fafc" }}>
+                          <div className="gap-10 mb-12 d-flex align-items-center">
+                            <div className="flex-center" style={{ width: 36, height: 36, background: "#fef3c7", borderRadius: 8 }}>
+                              <i className="ph-bold ph-truck" style={{ fontSize: 18, color: "#d97706" }}></i>
+                            </div>
+                            <h6 className="mb-0 fw-bold text-gray-900" style={{ fontSize: 14 }}>Vận chuyển</h6>
+                          </div>
+                          <div className="text-gray-700" style={{ fontSize: 14, lineHeight: 1.7 }}>
+                            <div className="mb-6 fw-semibold text-gray-900" style={{ fontSize: 15 }}>
+                              {detailOrder.phivanchuyen?.ten ?? "Giao hàng tiêu chuẩn"}
+                            </div>
+                            <div className="gap-6 mb-4 d-flex align-items-center">
+                              <i className="ph ph-money text-gray-400"></i>
+                              <span>Phí: <span className="fw-semibold text-gray-900">{fmtMoney(detailOrder.phivanchuyen?.phi ?? 0)}</span></span>
+                            </div>
+                            <div className="gap-6 d-flex align-items-center">
+                              <i className="ph ph-navigation-arrow text-gray-400"></i>
+                              <span>Khu vực: {detailOrder.phivanchuyen?.ten ?? detailOrder.diachigiaohang?.tinhthanh ?? "-"}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="mb-8 d-flex flex-between">
-                        <div>Phí giao hàng:</div>
-                        <div className="fw-semibold">{fmtMoney(detailOrder.phivanchuyen?.phi ?? 0)}</div>
-                      </div>
-                      <div className="d-flex flex-between">
-                        <div className="text-xl fw-bold">Tổng tiền:</div>
-                        <div className="text-xl text-main-600 fw-bold">{fmtMoney(detailOrder.thanhtien)}</div>
+
+                      {/* Thanh toán */}
+                      <div style={{ flex: "1 1 33.33%", minWidth: 0 }}>
+                        <div className="h-100 p-16 border border-gray-100 rounded-12" style={{ background: "#f8fafc" }}>
+                          <div className="gap-10 mb-12 d-flex align-items-center">
+                            <div className="flex-center" style={{ width: 36, height: 36, background: "#dcfce7", borderRadius: 8 }}>
+                              <i className="ph-bold ph-credit-card" style={{ fontSize: 18, color: "#16a34a" }}></i>
+                            </div>
+                            <h6 className="mb-0 fw-bold text-gray-900" style={{ fontSize: 14 }}>Thanh toán</h6>
+                          </div>
+                          <div className="text-gray-700" style={{ fontSize: 14, lineHeight: 1.7 }}>
+                            <div className="mb-6 fw-semibold text-gray-900" style={{ fontSize: 15 }}>
+                              {formatPaymentMethod(detailOrder.phuongthuc)}
+                            </div>
+                            <div className="gap-6 mb-8 d-flex align-items-center">
+                              <i className="ph ph-clock text-gray-400"></i>
+                              <span>Trạng thái: <span className={`fw-semibold ${(detailOrder.trangthaithanhtoan || "").toLowerCase().includes("chưa") ? "text-warning-600" : "text-success-600"}`}>
+                                {detailOrder.trangthaithanhtoan ?? detailOrder.trangthai ?? "-"}
+                              </span></span>
+                            </div>
+
+                            {/* Nút thanh toán lại */}
+                            {detailOrder.phuongthuc?.maphuongthuc === "dbt" && isPaymentPending(detailOrder) && (
+                              <button
+                                type="button"
+                                onClick={() => retryPayment(detailOrder.id, "dbt")}
+                                className="gap-6 px-12 py-6 mt-4 text-white border-0 fw-medium rounded-8 flex-center"
+                                style={{ background: "#2563eb", fontSize: 13, cursor: "pointer", width: "100%" }}
+                              >
+                                <i className="ph-bold ph-credit-card" /> Thanh toán VNPay
+                              </button>
+                            )}
+                            {detailOrder.phuongthuc?.maphuongthuc === "cp" && isPaymentPending(detailOrder) && (
+                              <button
+                                type="button"
+                                onClick={() => retryPayment(detailOrder.id, "cp")}
+                                className="gap-6 px-12 py-6 mt-4 text-white border-0 fw-medium rounded-8 flex-center"
+                                style={{ background: "#7c3aed", fontSize: 13, cursor: "pointer", width: "100%" }}
+                              >
+                                <i className="ph-bold ph-qr-code" /> Thanh toán VietQR
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Chi tiết sản phẩm */}
+                    <div className="p-20 border border-gray-100 rounded-12" style={{ background: "#fff" }}>
+                      <div className="gap-10 pb-16 mb-16 border-bottom border-gray-100 d-flex align-items-center">
+                        <div className="flex-center" style={{ width: 36, height: 36, background: "#fee2e2", borderRadius: 8 }}>
+                          <i className="ph-bold ph-shopping-cart" style={{ fontSize: 18, color: "#dc2626" }}></i>
+                        </div>
+                        <h6 className="mb-0 fw-bold text-gray-900" style={{ fontSize: 15 }}>Chi tiết mua hàng</h6>
+                        <span className="px-8 py-2 text-xs text-white fw-medium rounded-pill" style={{ background: "#64748b" }}>
+                          {(detailOrder.chitietdonhang ?? []).length} sản phẩm
+                        </span>
+                      </div>
+
+                      <div className="gap-12 d-flex flex-column">
+                        {(detailOrder.chitietdonhang ?? []).map((it) => {
+                          const sp = it.bienthe?.sanpham || {};
+                          const imgUrl = sp.hinhanhsanpham?.[0]?.hinhanh ?? sp.hinhanh ?? "/assets/images/thumbs/placeholder.png";
+                          return (
+                            <div key={it.id} className="gap-16 p-12 d-flex align-items-center rounded-10" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                              <div className="overflow-hidden flex-shrink-0 flex-center" style={{ width: 80, height: 80, background: "#fff", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                                <img
+                                  src={imgUrl}
+                                  alt={sp.ten ?? ""}
+                                  style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
+                                />
+                              </div>
+                              <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                                <div className="mb-4 fw-semibold text-gray-900" style={{ fontSize: 14, lineHeight: 1.4 }}>
+                                  {sp.ten ?? it.name ?? "Sản phẩm"}
+                                </div>
+                                {it.bienthe?.loaibienthe?.ten && (
+                                  <span className="px-8 py-2 mb-4 text-xs text-gray-600 d-inline-block rounded-4" style={{ background: "#e2e8f0" }}>
+                                    {it.bienthe.loaibienthe.ten}
+                                  </span>
+                                )}
+                                <div className="text-sm text-gray-500">
+                                  Số lượng: <span className="fw-medium text-gray-700">{it.soluong}</span>
+                                </div>
+                              </div>
+                              <div className="flex-shrink-0 text-end">
+                                <div className="text-xs text-gray-500">Đơn giá</div>
+                                <div className="fw-bold text-main-600" style={{ fontSize: 15 }}>{fmtMoney(it.dongia)}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Tổng tiền */}
+                      <div className="pt-20 mt-20 border-top border-gray-200">
+                        <div className="gap-16 mb-10 d-flex flex-between">
+                          <span className="text-gray-600">Tạm tính:</span>
+                          <span className="fw-semibold text-gray-900">{fmtMoney(detailOrder.tamtinh)}</span>
+                        </div>
+                        <div className="gap-16 mb-10 d-flex flex-between">
+                          <span className="text-gray-600">Phí giao hàng:</span>
+                          <span className="fw-semibold text-gray-900">{fmtMoney(detailOrder.phivanchuyen?.phi ?? 0)}</span>
+                        </div>
+                        {detailOrder.magiamgia?.giatri && detailOrder.magiamgia.giatri > 0 && (
+                          <div className="gap-16 mb-10 d-flex flex-between">
+                            <span className="text-gray-600">Giảm giá ({detailOrder.magiamgia.magiamgia}):</span>
+                            <span className="fw-semibold text-success-600">-{fmtMoney(detailOrder.magiamgia.giatri)}</span>
+                          </div>
+                        )}
+                        <div className="gap-16 pt-12 mt-12 border-top border-gray-200 d-flex flex-between align-items-center">
+                          <span className="text-lg fw-bold text-gray-900">Tổng tiền:</span>
+                          <span className="fw-bold" style={{ fontSize: 22, color: "#dc2626" }}>{fmtMoney(detailOrder.thanhtien)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-40 text-center">
+                    <i className="mb-16 text-gray-300 ph-bold ph-warning-circle" style={{ fontSize: 48 }}></i>
+                    <div className="text-gray-600">Không có dữ liệu chi tiết.</div>
                   </div>
-                    <div className="gap-12 mt-10 flex-align flex-between" style={{ width: "100%" }}>
-                      <Link href="/don-hang" className="gap-8 mt-10 text-main-600 text-md fw-medium flex-align" onClick={closeDetail}>
-                        <i className="ph-bold ph-arrow-fat-lines-left text-main-600 text-md" /> Quay lại đơn hàng của tôi
+                )}
+              </div>
+
+              {/* Footer Actions */}
+              {detailOrder && (
+                <div className="px-24 py-16 border-top border-gray-100 d-flex flex-between align-items-center" style={{ background: "#f8fafc" }}>
+                  <button
+                    onClick={closeDetail}
+                    className="gap-8 px-16 py-10 text-gray-700 bg-white border border-gray-300 fw-medium rounded-10 d-flex align-items-center"
+                    style={{ cursor: "pointer", transition: "all 0.2s" }}
+                    onMouseOver={(e) => { e.currentTarget.style.borderColor = "#1e3a5f"; e.currentTarget.style.color = "#1e3a5f"; }}
+                    onMouseOut={(e) => { e.currentTarget.style.borderColor = "#d1d5db"; e.currentTarget.style.color = "#374151"; }}
+                  >
+                    <i className="ph-bold ph-arrow-left"></i>
+                    Quay lại
+                  </button>
+
+                  <div className="gap-12 d-flex">
+                    {isReviewableStatus(detailOrder.trangthai) ? (
+                      <Link
+                        href={`/danh-gia?order_id=${detailOrder.id}`}
+                        className="gap-8 px-16 py-10 text-white border-0 fw-medium rounded-10 d-flex align-items-center"
+                        style={{ background: "#f59e0b", cursor: "pointer" }}
+                      >
+                        <i className="ph-bold ph-star"></i>
+                        Đánh giá sản phẩm
                       </Link>
-                      <div className="gap-12 flex-align">
-                        {/* Nếu đơn ở trạng thái reviewable (thành công) hiển thị nút Đánh giá thay vì Hủy */}
-                        {detailOrder && isReviewableStatus(detailOrder.trangthai) ? (
-                          <Link href={`/danh-gia?order_id=${detailOrder.id}`} className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
-                            <i className="ph ph-star" /> Đánh giá
-                          </Link>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => detailOrder && handleCancelOrder(detailOrder.id)}
-                            disabled={!isCancellable(detailOrder.trangthai)}
-                            className={`fw-medium text-main-600 text-md border border-main-600 hover-bg-main-600 hover-text-white px-8 py-4 rounded-4 transition-1 flex-align gap-8 ${(!detailOrder || !isCancellable(detailOrder.trangthai)) ? "opacity-50 cursor-not-allowed" : ""}`}
-                          >
-                            <i className="ph-bold ph-trash" /> Hủy đơn
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                </>
-              ) : (
-                <div className="py-10 text-center">Không có dữ liệu chi tiết.</div>
+                    ) : isCancellable(detailOrder.trangthai) && (
+                      <button
+                        type="button"
+                        onClick={() => handleCancelOrder(detailOrder.id)}
+                        className="gap-8 px-16 py-10 text-white border-0 fw-medium rounded-10 d-flex align-items-center"
+                        style={{ background: "#dc2626", cursor: "pointer" }}
+                      >
+                        <i className="ph-bold ph-trash"></i>
+                        Hủy đơn hàng
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
         )}
         {/* End modal */}
-        
-        
+
+
         <section className="mt-10 overflow-hidden trending-productss fix-scale-80">
           <div style={{ paddingBottom: 120 }}>
-          {/* <div className="p-24 border border-gray-100 rounded-8"> */}
+            {/* <div className="p-24 border border-gray-100 rounded-8"> */}
             <div className="mb-20 section-heading">
               <div className="flex-wrap gap-8 flex-between flex-align">
                 <ul className="pb-2 m-0 mb-3 overflow-auto nav common-tab style-two nav-pills flex-nowrap">
@@ -567,22 +675,21 @@ const retryPayment = async (orderId: number, provider?: string) => {
                       <div className="d-flex flex-align flex-between">
                         <div className="gap-12 flex-align">
                           <div className="gap-12 flex-align">
-                            { isReviewableStatus(order.trangthai) ? (
+                            {isReviewableStatus(order.trangthai) ? (
                               <Link href={`/danh-gia?order_id=${order.id}`} className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
                                 <i className="ph ph-star" /> Đánh giá
                               </Link>
                             ) : (
-                            <button
-                              onClick={() => handleCancelOrder(order.id)}
-                              disabled={!isCancellable(order.trangthai)}
-                              className={`gap-8 px-8 py-4 text-sm border fw-medium rounded-4 transition-1 flex-align ${
-                                isCancellable(order.trangthai)
+                              <button
+                                onClick={() => handleCancelOrder(order.id)}
+                                disabled={!isCancellable(order.trangthai)}
+                                className={`gap-8 px-8 py-4 text-sm border fw-medium rounded-4 transition-1 flex-align ${isCancellable(order.trangthai)
                                   ? "text-danger-600 border-danger-600 hover-bg-danger-600 hover-text-white cursor-pointer"
                                   : "text-gray-400 border-gray-200 bg-gray-50 cursor-not-allowed opacity-50"
-                              }`}
-                            >
-                              <i className="ph-bold ph-trash" /> Hủy đơn
-                            </button>
+                                  }`}
+                              >
+                                <i className="ph-bold ph-trash" /> Hủy đơn
+                              </button>
                             )}
                             <button
                               type="button"

@@ -3,7 +3,7 @@
 import React, { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { addToCart } from "@/utils/cartClient";
+import { useCart } from "@/hooks/useCart";
 import { flyToCart } from "@/utils/flyToCart";
 
 export type ProductMiniCardProps = {
@@ -13,13 +13,17 @@ export type ProductMiniCardProps = {
   price?: number | null;
   priceBefore?: number | null;
   variantId?: number;
+  loaibienthe?: string;
+  thuonghieu?: string;
+  slug?: string;
 };
 
 const fmtVND = (v?: number | null) =>
   typeof v === "number" ? `${v.toLocaleString("vi-VN")} đ` : v == null ? "Liên hệ" : String(v);
 
-export default function ProductMiniCard({ href, img, title, price, priceBefore, variantId }: ProductMiniCardProps) {
+export default function ProductMiniCard({ href, img, title, price, priceBefore, variantId, loaibienthe, thuonghieu, slug }: ProductMiniCardProps) {
   const thumbRef = useRef<HTMLAnchorElement | null>(null);
+  const { addToCart } = useCart();
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -38,7 +42,22 @@ export default function ProductMiniCard({ href, img, title, price, priceBefore, 
         return;
       }
 
-      await addToCart(id, 1);
+      // Truyền đầy đủ thông tin sản phẩm
+      const productInput = {
+        id_bienthe: id,
+        id,
+        ten: title,
+        hinhanh: img,
+        gia: {
+          current: typeof price === "number" ? price : 0,
+          before_discount: typeof priceBefore === "number" ? priceBefore : 0,
+        },
+        loaibienthe: loaibienthe || "",
+        thuonghieu: thuonghieu || "",
+        slug: slug || href?.split('/').pop() || "",
+      };
+
+      await addToCart(productInput, 1);
       flyToCart(thumbRef.current as HTMLElement | null);
     } catch (err) {
       console.error("❌ ProductMiniCard: Error:", err);

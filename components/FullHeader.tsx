@@ -19,7 +19,7 @@ type FullHeaderProps = {
 
 type ApiCartItem = { quantity?: number };
 type ApiCartResponse = { data?: ApiCartItem[] };
-type Cat = { id: number|string; ten?: string; name?: string; slug?: string; children?: Cat[] };
+type Cat = { id: number | string; ten?: string; name?: string; slug?: string; children?: Cat[] };
 
 function useClickAway<T extends HTMLElement>(
   ref: React.RefObject<T | null>,
@@ -60,13 +60,14 @@ export default function FullHeader({
   // auth state
   const { user, isLoggedIn, logout } = useAuth();
 
- 
+
   // ---- Danh mục (All Categories) ----
   type DanhMuc = {
     id: number | string;
     ten?: string;    // API của bạn dùng "ten"
     name?: string;   // fallback nếu sau này đổi field
     slug?: string;
+    logo?: string;   // URL logo từ API
     children?: DanhMuc[]; // nếu API có trả con
   };
   const [cats, setCats] = useState<DanhMuc[]>([]);
@@ -95,45 +96,39 @@ export default function FullHeader({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        {[
-          { icon: 'suc-khoe.svg', label: 'Sức khỏe', value: 'suc-khoe' },
-          { icon: 'thuc-pham-chuc-nang.svg', label: 'Thực phẩm chức năng', value: 'thuc-pham-chuc-nang' },
-          { icon: 'cham-soc-ca-nhan.svg', label: 'Chăm sóc cá nhân', value: 'cham-soc-ca-nhan' },
-          { icon: 'lam-dep.svg', label: 'Làm đẹp', value: 'lam-dep' },
-          { icon: 'dien-may.svg', label: 'Điện máy', value: 'dien-may' },
-          { icon: 'thiet-bi-y-te.svg', label: 'Thiết bị y tế', value: 'thiet-bi-y-te' },
-          { icon: 'bach-hoa.svg', label: 'Bách hóa', value: 'bach-hoa' },
-          { icon: 'noi-that-trang-tri.svg', label: 'Nội thất - Trang trí', value: 'noi-that-trang-tri' },
-          { icon: 'me-va-be.svg', label: 'Mẹ & bé', value: 'me-va-be' },
-          { icon: 'thoi-trang.svg', label: 'Thời trang', value: 'thoi-trang' },
-          { icon: 'thuc-pham-do-an.svg', label: 'Thực phẩm - đồ ăn', value: 'thuc-pham-do-an' }
-        ].map((cat) => (
-          <Link
-            key={cat.value}
-            href={`/shop?category=${cat.value}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              color: '#666',
-              textDecoration: 'none',
-              fontSize: '15px',
-              transition: 'background 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          >
-            <span style={{ display: 'flex', width: '24px', height: '24px' }}>
-              <img
-                src={`https://sieuthivina.com/assets/client/images/categories/${cat.icon}`}
-                alt={cat.label}
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              />
-            </span>
-            <span>{cat.label}</span>
-          </Link>
-        ))}
+        {cats.length > 0 ? (
+          cats.map((cat) => (
+            <Link
+              key={cat.id}
+              href={`/shop?category=${cat.slug}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                color: '#666',
+                textDecoration: 'none',
+                fontSize: '15px',
+                transition: 'background 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={{ display: 'flex', width: '24px', height: '24px' }}>
+                <img
+                  src={cat.logo || `https://sieuthivina.com/assets/client/images/categories/${cat.slug}.svg`}
+                  alt={cat.ten || cat.name || ''}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              </span>
+              <span>{cat.ten || cat.name}</span>
+            </Link>
+          ))
+        ) : (
+          <div style={{ padding: '12px 16px', color: '#999', fontSize: '14px' }}>
+            Đang tải danh mục...
+          </div>
+        )}
       </div>
     );
   };
@@ -157,11 +152,11 @@ export default function FullHeader({
     setShowCategoryMenu(true);
   };
 
-  
+
 
   // Chuẩn hoá host để cookie không rớt (localhost ↔ 127.0.0.1)
   const API = useMemo(() => {
-    const raw = process.env.NEXT_PUBLIC_SERVER_API || "http://localhost:4000";
+    const raw = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
     try {
       if (typeof window === "undefined") return raw;
       const u = new URL(raw);
@@ -183,14 +178,28 @@ export default function FullHeader({
     (async () => {
       try {
         // dùng API đã chuẩn hoá origin ở biến API
-        const res = await fetch(`${API}/api/danhmucs?per_page=100`, {
+        const res = await fetch(`${API}/api/danhmucs-all`, {
           headers: { Accept: "application/json" },
           cache: "no-store",
         });
+        if (!res.ok) {
+          console.warn("API danhmucs-all error:", res.status);
+          if (!off) setCats([]);
+          return;
+        }
         const json = await res.json();
-        const list = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+        console.log("API danhmucs-all response:", json);
+        // API trả về mảng trực tiếp hoặc trong json.data
+        let list: DanhMuc[] = [];
+        if (Array.isArray(json)) {
+          list = json;
+        } else if (Array.isArray(json?.data)) {
+          list = json.data;
+        }
+        console.log("Danh mục loaded:", list.length, "items");
         if (!off) setCats(list);
-      } catch {
+      } catch (err) {
+        console.warn("Lỗi fetch danh mục (có thể server không khả dụng):", err);
         if (!off) setCats([]);
       }
     })();
@@ -297,7 +306,7 @@ export default function FullHeader({
                       <i className="ph-bold ph-magnifying-glass"></i>
                     </button>
                   </form> */}
-                  <SearchBoxWithSuggestions/>
+                  <SearchBoxWithSuggestions />
 
                   <div className="gap-12 mt-10 flex-align title">
                     <Link
@@ -335,7 +344,7 @@ export default function FullHeader({
               </div>
 
               {/* Right side + Mobile toggle */}
-              <div className="header-right flex-align"  style={{ marginLeft: 24 }}>
+              <div className="header-right flex-align" style={{ marginLeft: 24 }}>
                 <div
                   ref={userRef}
                   className="flex-wrap on-hover-item nav-menu__item has-submenu header-top__right style-two style-three flex-align d-lg-block d-none position-relative"
@@ -347,7 +356,7 @@ export default function FullHeader({
                     onClick={() =>
                       userOpen ? setUserOpen(false) : openOnly("user")
                     }
-                    className="gap-10 px-20 py-10 text-center text-white d-flex justify-content-center flex-align align-content-around fw-medium bg-success-600 rounded-pill line-height-1 hover-bg-success-500 hover-text-white btn-reset"
+                    className="gap-10 px-20 py-10 text-center text-white d-flex justify-content-center flex-align align-content-around fw-medium btn btn-main rounded-pill line-height-1 btn-reset"
                   >
                     <span className="line-height-1" aria-hidden style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {isLoggedIn ? (
@@ -485,7 +494,7 @@ export default function FullHeader({
         </header>
       )}
 
-      
+
       {/* SECOND HEADER (categories/search/actions) */}
       {showTopNav ? (
         showCategoriesBar ? (
@@ -655,7 +664,7 @@ export default function FullHeader({
                         </Link>
                       </li>
                       <li className="mt-8">
-                        <SearchBoxWithSuggestions/>
+                        <SearchBoxWithSuggestions />
                       </li>
                     </ul>
                   </div>
@@ -696,8 +705,8 @@ export default function FullHeader({
 
                   <ul className="flex-wrap gap-16 header-top__right flex-align">
                     {/* Danh mục */}
-                    <li 
-                      className="flex-shrink-0 d-block on-hover-item text-white-6" 
+                    <li
+                      className="flex-shrink-0 d-block on-hover-item text-white-6"
                       ref={categoryButtonRef}
                       onMouseEnter={handleMouseEnter}
                       onMouseLeave={handleMouseLeave}
@@ -705,7 +714,7 @@ export default function FullHeader({
                       <button
                         className="gap-4 text-sm category__button flex-align text-white-6 rounded-top js-open-menu"
                         type="button"
-                        aria-expanded={showCategoryMenu} 
+                        aria-expanded={showCategoryMenu}
                       >
                         <span className="text-sm icon d-md-flex d-none">
                           <i className="ph ph-squares-four"></i>
@@ -747,17 +756,17 @@ export default function FullHeader({
                 </div>
                 <div className="header-menu w-50 d-lg-block d-none">
                   <div className="relative mx-20">
-                    <SearchBoxWithSuggestions/>
+                    <SearchBoxWithSuggestions />
                   </div>
                 </div>
                 <div
                   className="d-lg-block d-none position-relative"
-                   style={{ marginLeft: "0px" }}// sát khung tìm kiếm hơn, giống hình
+                  style={{ marginLeft: "0px" }}// sát khung tìm kiếm hơn, giống hình
                 >
                   {isLoggedIn ? (
                     <div
                       ref={userRef}
-                      className="flex-wrap on-hover-item nav-menu__item has-submenu header-top__right style-two style-three flex-align position-relative" 
+                      className="flex-wrap on-hover-item nav-menu__item has-submenu header-top__right style-two style-three flex-align position-relative"
                     >
                       <button
                         type="button"
@@ -924,7 +933,7 @@ export default function FullHeader({
                         </Link>
                       </li>
                       <li className="mt-8">
-                        <SearchBoxWithSuggestions/>
+                        <SearchBoxWithSuggestions />
                       </li>
                     </ul>
                   </div>

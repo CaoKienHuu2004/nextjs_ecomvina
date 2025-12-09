@@ -191,7 +191,7 @@ export default function FeaturedProductsSection() {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 try {
-                                  const { addToCart } = await import("@/utils/gio-hangClient");
+                                  const { addToCart } = await import("@/utils/cartClient");
                                   await addToCart(p.id, 1);
                                 } catch (err) {
                                   console.error("❌ Lỗi:", err);
