@@ -213,7 +213,7 @@ export default function Page() {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
           const headers: Record<string,string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(`${API}/api/toi/yeuthichs`, { credentials: "include", headers });
+          const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, { credentials: "include", headers });
           const data = await res.json();
           setWishlist(Array.isArray(data) ? (data as WishlistRow[]) : (data?.data ?? []));
         } else if (tab === "cart") {
@@ -227,7 +227,7 @@ export default function Page() {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
           const headers: Record<string,string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(`${API}/api/toi/donhangs`, { credentials: "include", headers });
+          const res = await fetch(`${API}/api/tai-khoan/donhangs`, { credentials: "include", headers });
           const j = await res.json();
           setOrders((j?.data as Order[]) ?? []);
         } else if (tab === "profile") {
@@ -364,7 +364,7 @@ export default function Page() {
       if (!ids.length) return;
       await Promise.allSettled(
         ids.map((id) =>
-          fetch(`${API}/api/toi/yeuthichs`, {
+          fetch(`${API}/api/tai-khoan/yeuthichs`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             credentials: "include",
@@ -445,7 +445,7 @@ export default function Page() {
       const token = Cookies.get("access_token") || Cookies.get("token") || null;
       const headers: Record<string,string> = { Accept: "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
-      await fetch(`${API}/api/toi/yeuthichs/${productId}`, {
+      await fetch(`${API}/api/tai-khoan/yeuthichs/${productId}`, {
         method: "PATCH",
         credentials: "include",
         headers,

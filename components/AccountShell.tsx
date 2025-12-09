@@ -55,7 +55,7 @@ export default function AccountShell({
     { key: "addresses", label: "Sổ địa chỉ", href: "/dia-chi", icon: "ph ph-map-pin" },
     { key: "reviews", label: "Đánh giá sản phẩm", href: "/danh-gia", icon: "ph ph-star" },
     { key: "wishlist", label: "Sản phẩm yêu thích", href: "/yeu-thich", icon: "ph ph-heart" },
-    { key: "cart", label: "Giỏ hàng", href: "/gio-hang", icon: "ph ph-shopping-cart" },
+    // { key: "cart", label: "Giỏ hàng", href: "/gio-hang", icon: "ph ph-shopping-cart" },
     { key: "support", label: "Hỗ trợ khách hàng", href: "/tai-khoan/support", icon: "ph ph-headset" },
   ];
 

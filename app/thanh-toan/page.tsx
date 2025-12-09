@@ -24,6 +24,7 @@ type UserWithAddress = {
   diachi?: Address[];
   [key: string]: unknown;
 };
+
 // --- Helper Price ---
 type PriceInput = number | Gia | undefined | null;
 const getDefaultAddress = (user: UserWithAddress | null) => {
@@ -39,7 +40,8 @@ export default function ThanhToanPage() {
   const router = useRouter();
   const { user, isLoggedIn } = useAuth();
   const { items, subtotal, total, discountAmount, clearCart } = useCart();
-  
+
+  type CartItem = (typeof items)[number];
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod"); // 1: COD, 3: QR
@@ -83,83 +85,96 @@ export default function ThanhToanPage() {
         const token = Cookies.get("access_token");
 
         const payload = {
-            id_diachigiaohang: selectedAddress.id,
+            id_diachinguoidung: selectedAddress.id,
             ma_phuongthuc: paymentMethod, // 1 hoặc 3
-            //{
+            // {
             // "ma_phuongthuc": "cod",
-            // "ma_magiamgia": null
+            // "ma_magiamgia": NEWSTORE50K
             // }
-            
-        };
+            ma_magiamgia: null,nguoinhan: selectedAddress?.ten_nguoinhan ?? user?.hoten ?? "",
+            diachinhan: selectedAddress?.diachi ?? "",
+            sodienthoai: selectedAddress?.sodienthoai ?? "",
+            khuvucgiao: selectedAddress?.tinhthanh ?? "",
+            };
 
-        const res = await fetch(`${API}/api/toi/donhangs`, { 
+        const res = await fetch(`${API}/api/tai-khoan/donhangs`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Authorization": `Bearer ${token}`,
+                "Accept": "application/json",
             },
-            body: JSON.stringify(payload)
-        });
+            body: JSON.stringify(payload),
+            });
 
-        if (res.ok) {
-            const json = await res.json();
-            const orderId = json.data?.id || json.id;
+            // parse response
+            const json = await res.json().catch(() => ({}));
+            console.log("createOrder response:", res.status, json);
 
-            // COD
+            // nếu lỗi validation hoặc server trả status:false
+            if (!res.ok || json.status === false) {
+            const msg = json.message;
+            if (msg && typeof msg === "object") {
+                const flat = Object.values(msg).flat().filter(Boolean).join("\n");
+                alert(flat || "Đặt hàng thất bại. Vui lòng kiểm tra dữ liệu.");
+            } else {
+                alert(msg?.toString?.() || "Đặt hàng thất bại. Vui lòng thử lại.");
+            }
+            setIsSubmitting(false);
+            return; // bắt buộc: dừng ở đây khi có lỗi
+            }
+
+            // ==== thành công ở đây ====
+            const orderData = json.data ?? json;
+            const orderId = orderData?.id;
+            const orderCode = orderData?.madon;if (paymentMethod === "cod") {
             if (paymentMethod === "cod") {
                 clearCart();
-                router.push(`/hoan-tat-thanh-toan?order_id=${orderId}`);
+            router.push(`/hoan-tat-thanh-toan?order_id=${orderId}`);
+            return;
+            } else if (paymentMethod === "dbt") {
+            const resPay = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/payment-url`, {
+                method: "POST",
+                headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+                }
+            });
+
+            const payJson = await resPay.json().catch(() => ({}));
+
+            if (payJson.status && payJson.payment_url) {
+                clearCart();
+                setRedirecting(true);
+                setTimeout(() => {
+                window.location.href = payJson.payment_url;
+                }, 500);
+                return;
+            } else {
+                alert(payJson.message || "Không tạo được liên kết VNPay");
                 return;
             }
-
-            // VNPay / QR
-            if (paymentMethod === "dbt") {
-                const resPay = await fetch(`${API}/api/toi/donhangs/${orderId}/payment-url`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    }
-                });
-
-                const payJson = await resPay.json();
-
-                if (payJson.status && payJson.payment_url) {
-                    clearCart();
-
-                    // Hiện animation loading
-                    setRedirecting(true);
-
-                    // Delay 500ms cho UI kịp hiển thị
-                    setTimeout(() => {
-                        window.location.href = payJson.payment_url;
-                    }, 500);
-
-                    return;
-                } else {
-                    alert(payJson.message || "Không tạo được liên kết VNPay");
-                }
             }
-            if (paymentMethod === "cp") {
-                const resPay = await fetch(`${API}/api/toi/donhangs/${orderId}/payment-url`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ provider: "cp" }) // hoặc server chấp nhận khác
-                });
+            // if (paymentMethod === "cp") {
+            //     const resPay = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/payment-url`, {
+            //         method: "POST",
+            //         headers: {
+            //             "Content-Type": "application/json",
+            //             "Authorization": `Bearer ${token}`
+            //         },
+            //         body: JSON.stringify({ provider: "cp" }) // hoặc server chấp nhận khác
+            //     });
 
-                const payJson = await resPay.json();
-                if (payJson.status && payJson.payment_url) {
-                    clearCart();
-                    setRedirecting(true);
-                    setTimeout(() => { window.location.href = payJson.payment_url; }, 500);
-                    return;
-                } else {
-                    alert(payJson.message || "Không tạo được liên kết VietQR");
-                }
-            }
+            //     const payJson = await resPay.json();
+            //     if (payJson.status && payJson.payment_url) {
+            //         clearCart();
+            //         setRedirecting(true);
+            //         setTimeout(() => { window.location.href = payJson.payment_url; }, 500);
+            //         return;
+            //     } else {
+            //         alert(payJson.message || "Không tạo được liên kết VietQR");
+            //     }
+            // }
         } else {
             alert("Đặt hàng thất bại. Vui lòng thử lại.");
         }
@@ -176,46 +191,67 @@ export default function ThanhToanPage() {
     }
 
   // Render 1 dòng sản phẩm trong bảng tóm tắt
-  const renderSummaryRow = (item: typeof items[0], isGift = false) => {
-    const sp = item.product || {};
-    const price = getPrice(sp.gia);
-    const totalRow = price * item.quantity;
-    const img = sp.mediaurl || "/assets/images/thumbs/placeholder.png";
-    const name = sp.ten || sp.name || "Sản phẩm";
+//   const renderSummaryRow = (item: typeof items[0], isGift = false) => {
+//     const sp = item.product || {};
+//     const price = getPrice(sp.gia);
+//     const totalRow = price * item.quantity;
+//     const img = sp.mediaurl || "/assets/images/thumbs/placeholder.png";
+//     const name = sp.ten || sp.name || "Sản phẩm";
+    const renderSummaryRow = (item: CartItem, isGift = false, idx = 0): React.ReactElement => {
+    const rec = item as unknown as Record<string, unknown>;
+    const spCandidate = (rec.product as Record<string, unknown> | undefined) ?? rec;
+    const sp = (spCandidate ?? {}) as {
+        gia?: number | Gia;
+        mediaurl?: string;
+        hinhanhsanpham?: string;
+        ten?: string;
+        name?: string;
+        category?: string;
+        [k: string]: unknown;
+    };
+
+    const price = getPrice(sp.gia ?? (sp as unknown as Record<string, unknown>).giagiam_min ?? (sp as unknown as Record<string, unknown>).gia_min ?? 0);
+    const quantity = Number(rec.quantity ?? rec.so_luong ?? 1);
+    const totalRow = price * quantity;
+    const img = sp.mediaurl ?? sp.hinhanhsanpham ?? "/assets/images/thumbs/placeholder.png";
+    const name = sp.ten ?? sp.name ?? (sp as unknown as Record<string, unknown>).ten_sanpham ?? "Sản phẩm";
+
+    const keyVal =
+        (rec.id_giohang ?? rec.id ?? rec.id_sanpham) ?? `${name}_${idx}`;
 
     return (
-        <tr key={item.id_giohang}>
-            <td className="px-5 py-10 rounded-4">
-                {isGift && (
-                     <span className="mb-10 text-sm flex-align fw-medium">
-                        <i className="text-lg ph-bold ph-gift text-main-600 pe-4"></i>Quà tặng nhận được
-                     </span>
-                )}
-                <div className="gap-12 d-flex align-items-center">
-                    <div className="border border-gray-100 rounded-8 flex-center" style={{maxWidth: 80, maxHeight: 80, width: "100%", height: "100%"}}>
-                        <Image src={img} alt={name} width={80} height={80} className="w-100 rounded-8 object-fit-contain" />
-                    </div>
-                    <div className="table-product__content text-start">
-                        <h6 className="mb-0 text-sm title fw-semibold">
-                            <span className="link text-line-2" title={name}>{name}</span>
-                        </h6>
-                        <div className="gap-16 mb-6 flex-align">
-                            <span className="gap-8 px-6 py-4 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">
-                                {sp.category || "Sản phẩm"}
-                            </span>
-                        </div>
-                        <div className="mb-6 product-card__price">
-                            <div className="gap-12 flex-align">
-                                <span className="px-6 py-4 text-xs bg-gray-100 text-heading fw-medium rounded-4">x {item.quantity}</span>
-                                <span className="text-sm text-main-600 fw-bold">{totalRow.toLocaleString("vi-VN")} ₫</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </td>
-        </tr>
-    );
-  };
+    <tr key={String(keyVal)}>
+      <td className="px-5 py-10 rounded-4">
+        {isGift && (
+          <span className="mb-10 text-sm flex-align fw-medium">
+            <i className="text-lg ph-bold ph-gift text-main-600 pe-4"></i>Quà tặng nhận được
+          </span>
+        )}
+        <div className="gap-12 d-flex align-items-center">
+          <div className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: 80, maxHeight: 80, width: "100%", height: "100%" }}>
+            <Image src={String(img)} alt={String(name)} width={80} height={80} className="w-100 rounded-8 object-fit-contain" />
+          </div>
+          <div className="table-product__content text-start">
+            <h6 className="mb-0 text-sm title fw-semibold">
+              <span className="link text-line-2" title={String(name)}>{String(name)}</span>
+            </h6>
+            <div className="gap-16 mb-6 flex-align">
+              <span className="px-6 py-4 text-xs bg-gray-100 text-heading fw-medium rounded-4">x {quantity}</span>
+              <span className="gap-8 px-6 py-4 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">
+                {sp.category ?? "Sản phẩm"}
+              </span>
+            </div>
+            <div className="mb-6 product-card__price">
+              <div className="gap-12 flex-align">
+                <span className="text-sm text-main-600 fw-bold">{totalRow.toLocaleString("vi-VN")} ₫</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
+};
 
   return (
     <>
@@ -295,8 +331,8 @@ export default function ThanhToanPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {mainItems.map(item => renderSummaryRow(item, false))}
-                                {giftItems.map(item => renderSummaryRow(item, true))}
+                            {mainItems.map((item, i) => renderSummaryRow(item, false, i))}
+                            {giftItems.map((item, i) => renderSummaryRow(item, true, i))}
                             </tbody>
                         </table>
                     </div>
@@ -333,7 +369,7 @@ export default function ThanhToanPage() {
                             </label>
                         </div>
                     </label>
-                    <label 
+                    {/* <label 
                         className={`w-100 mt-10 border ${paymentMethod === "cp" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
                         onClick={() => setPaymentMethod("cp")}
                     >
@@ -343,7 +379,7 @@ export default function ThanhToanPage() {
                                 Thanh toán qua VietQR (QR Code)
                             </label>
                         </div>
-                    </label>
+                    </label> */}
                 </div>
             </div>
 

@@ -34,7 +34,7 @@ type WishProduct = {
   slug?: string;
 };
 
-// Kiểu record trả về từ /api/toi/yeuthichs
+// Kiểu record trả về từ /api/tai-khoan/yeuthichs
 type FavoriteRecord = {
   id?: number;
   id_nguoidung?: number;
@@ -66,7 +66,7 @@ export default function WishlistPage() {
   // Tìm favorite record id của product (trả về null nếu không tìm thấy)
   const findFavoriteRecordId = async (productId: number): Promise<number | null> => {
     try {
-      const res = await fetch(`${API}/api/toi/yeuthichs`, {
+      const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
         headers: getAuthHeaders(),
         credentials: "include",
       });
@@ -92,7 +92,7 @@ export default function WishlistPage() {
         console.warn("Không tìm record yêu thích, đã bỏ ở UI nhưng không gọi API");
         return;
       }
-      await fetch(`${API}/api/toi/yeuthichs/${recordId}`, {
+      await fetch(`${API}/api/tai-khoan/yeuthichs/${recordId}`, {
         method: "PATCH", // bạn yêu cầu dùng PATCH
         headers: getAuthHeaders(),
         credentials: "include",

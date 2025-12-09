@@ -112,7 +112,7 @@ server.get('/api/sanphams/:id', (req, res) => {
 
 // map /api/... -> resource trong db.json
 const rewriter = jsonServer.rewriter({
-  '/api/toi/yeuthichs*': '/yeuthichs',
+  '/api/tai-khoan/yeuthichs*': '/yeuthichs',
   '/api/bannerquangcaos*': '/bannerquangcaos',
   '/api/danhmucs-selection*': '/danhmucs_selection',
   '/api/sanphams-selection?selection=best_products*': '/api_sanphams_selection_best_products',
@@ -562,7 +562,7 @@ server.put('/api/auth/thong-tin-nguoi-dung', upload.single('avatar'), (req, res)
 });
 
 // ===== Wishlist theo người dùng =====
-server.get('/api/toi/yeuthichs', (req, res) => {
+server.get('/api/tai-khoan/yeuthichs', (req, res) => {
   const uid = getUserIdFromCookie(req);
   if (uid) {
     const rows = router.db.get('yeuthichs_user').filter({ user_id: String(uid) }).value();
@@ -575,7 +575,7 @@ server.get('/api/toi/yeuthichs', (req, res) => {
   return res.json({ status: true, data });
 });
 
-server.post('/api/toi/yeuthichs', (req, res) => {
+server.post('/api/tai-khoan/yeuthichs', (req, res) => {
   const uid = getUserIdFromCookie(req);
   if (!uid) return res.status(401).json({ message: 'Chưa đăng nhập' });
   const { product_id } = req.body || {};
@@ -588,7 +588,7 @@ server.post('/api/toi/yeuthichs', (req, res) => {
   return res.status(201).json({ status: true, data: row });
 });
 
-server.delete('/api/toi/yeuthichs/:product_id', (req, res) => {
+server.delete('/api/tai-khoan/yeuthichs/:product_id', (req, res) => {
   const uid = getUserIdFromCookie(req);
   if (!uid) return res.status(401).json({ message: 'Chưa đăng nhập' });
   const pid = parseInt(req.params.product_id, 10);
@@ -612,8 +612,8 @@ function safeResolveUserId(req) {
 // ensure orders collection exists
 if (!router.db.has('orders').value()) router.db.set('orders', []).write();
 
-// Create order handler — accepts POST /api/toi/donhang and POST /api/toi/donhangs
-server.post(['/api/toi/donhang', '/api/toi/donhangs'], (req, res) => {
+// Create order handler — accepts POST /api/toi/donhang and POST /api/tai-khoan/donhangs
+server.post(['/api/toi/donhang', '/api/tai-khoan/donhangs'], (req, res) => {
   try {
     const uid = safeResolveUserId(req) || (req.body && req.body.user_id) || null;
     const payload = req.body || {};
@@ -674,8 +674,8 @@ server.post(['/api/toi/donhang', '/api/toi/donhangs'], (req, res) => {
   }
 });
 
-// List orders for current user (GET /api/toi/donhangs) — now reads "orders" collection
-server.get('/api/toi/donhangs', (req, res) => {
+// List orders for current user (GET /api/tai-khoan/donhangs) — now reads "orders" collection
+server.get('/api/tai-khoan/donhangs', (req, res) => {
   try {
     const uid = safeResolveUserId(req);
     if (!router.db.has('orders').value()) router.db.set('orders', []).write();
@@ -689,7 +689,7 @@ server.get('/api/toi/donhangs', (req, res) => {
 });
 
 // Get single order by id (support several path variants) — now reads "orders"
-server.get(['/api/toi/donhangs/:id', '/api/toi/donhang/:id', '/api/donhang/:id', '/api/orders/:id'], (req, res) => {
+server.get(['/api/tai-khoan/donhangs/:id', '/api/toi/donhang/:id', '/api/donhang/:id', '/api/orders/:id'], (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!router.db.has('orders').value()) router.db.set('orders', []).write();
@@ -2113,7 +2113,7 @@ server.get('/api/orders/:id', (req, res) => {
 });
 
 // PATCH update order (status, address, tracking, etc.)
-server.patch(['/api/orders/:id', '/api/toi/donhangs/:id', '/api/toi/donhang/:id', '/api/donhang/:id'], express.json(), (req, res) => {
+server.patch(['/api/orders/:id', '/api/tai-khoan/donhangs/:id', '/api/toi/donhang/:id', '/api/donhang/:id'], express.json(), (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!router.db.has('orders').value()) router.db.set('orders', []).write();
@@ -2132,7 +2132,7 @@ server.patch(['/api/orders/:id', '/api/toi/donhangs/:id', '/api/toi/donhang/:id'
 });
 
 // POST cancel endpoint for convenience
-server.post(['/api/orders/:id/cancel', '/api/toi/donhangs/:id/cancel', '/api/toi/donhang/:id/cancel'], express.json(), (req, res) => {
+server.post(['/api/orders/:id/cancel', '/api/tai-khoan/donhangs/:id/cancel', '/api/toi/donhang/:id/cancel'], express.json(), (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!router.db.has('orders').value()) router.db.set('orders', []).write();
@@ -2433,10 +2433,10 @@ server.get('/api/toi/theodoi-donhang', (req, res) => {
 
 /**
  * Backwards-compatible endpoints used by other parts of app.
- * - /api/toi/donhangs  -> trả danh sách đơn hàng phẳng (mảng ApiDonHang)
+ * - /api/tai-khoan/donhangs  -> trả danh sách đơn hàng phẳng (mảng ApiDonHang)
  * - /api/donhang/:id hoặc /api/toi/donhang/:id -> trả 1 ApiDonHang
  */
-server.get('/api/toi/donhangs', (req, res) => {
+server.get('/api/tai-khoan/donhangs', (req, res) => {
   try {
     const db = router.db;
     const all = db.get('orders').value() || [];
