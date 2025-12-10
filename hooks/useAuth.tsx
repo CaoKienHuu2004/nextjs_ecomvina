@@ -42,6 +42,7 @@ export type AuthContextType = {
   logout: () => void;
   updateProfile: (payload: Partial<AuthUser>) => Promise<void>;
   setUser: (u: AuthUser | null) => void;
+  changePassword: (current_password: string, new_password: string, new_password_confirmation: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -60,6 +61,23 @@ export function AuthProvider({
   const router = useRouter();
   const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
 
+  const changePassword = useCallback(async (current_password: string, new_password: string, new_password_confirmation: string) => {
+    const t = Cookies.get(TOKEN_KEY) || token;
+    if (!t) throw new Error("Chưa đăng nhập");
+    const res = await fetch(`${API}/api/auth/cap-nhat-mat-khau`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${t}`,
+      },
+      credentials: "include",
+      body: JSON.stringify({ current_password, new_password, new_password_confirmation }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j?.message ?? "Không thể đổi mật khẩu");
+    return;
+  }, [API, token]);
   // Fix eslint: Thêm dependency 'token'
   // useEffect(() => {
   //   const currentToken = Cookies.get(TOKEN_KEY);
@@ -194,7 +212,8 @@ export function AuthProvider({
     updateProfile,
     logout,
     setUser: setUserState,
-  }), [user, token, login, register, updateProfile, logout]);
+    changePassword,
+  }), [user, token, login, register, updateProfile, logout, changePassword]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

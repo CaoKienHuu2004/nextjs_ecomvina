@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import FullHeader from "@/components/FullHeader";
 import AccountShell from "@/components/AccountShell";
 import { useAuth } from "@/hooks/useAuth";
-import { getTrangThaiDonHang, getPhuongThucThanhToan } from "@/utils/chitietdh"; // Helper Việt hóa trạng thái
+import { getTrangThaiDonHang, getPhuongThucThanhToan, getStatusBadgeProps, statusIcon, statusBadgeClass } from "@/utils/chitietdh";
 import Cookies from "js-cookie";
 
 // --- 1. ĐỊNH NGHĨA TYPE CHUẨN (Khớp với API Laravel) ---
@@ -16,52 +16,64 @@ type OrderItem = {
   id: number;
   soluong: number;
   dongia: number;
-  // Cấu trúc nested từ Laravel
-  bienthe?: {
-    sanpham?: {
-      // id: number;
-      ten?: string;
-      hinhanh?: string;
-      hinhanhsanpham?: { id?: number; hinhanh?: string }[];
-    };
-    loaibienthe?: { ten?: string };
-  };
+  tong_tien?: number;
+  // Thêm vài trường fallback vì backend có thể trả tên/ảnh ở các key khác
+  tensanpham?: string;
   name?: string;
   hinhanh?: string;
-  price?: number;
+  tenloaibienthe?: string;
   quantity?: number;
+  price?: number; 
+  bienthe?: {
+    id?: number;
+    giagoc?: number;
+    soluong_kho?: number;
+    loaibienthe?: { id?: number; ten?: string };
+    tenloaibienthe?: string;
+    sanpham?: {
+      id?: number;
+      ten?: string;
+      // backend trả đôi khi 'hinhanh' (string) hoặc 'hinhanhsanpham' (array)
+      hinhanh?: string;
+      hinhanhsanpham?: { hinhanh?: string }[];
+    };
+  };
 };
 
 type Order = {
   id: number;
   madon: string;
-  created_at: string;
-  trangthai: string;
-  thanhtien: number;
+  tongsoluong?: number;
+  tamtinh?: number;
+  thanhtien?: number;
   trangthaithanhtoan?: string;
+  trangthai?: string;
+  created_at?: string;
   chitietdonhang: OrderItem[];
-  chitietnguoidung?: {
-    hoten?: string;
-    sodienthoai?: string;
-    email?: string;
-    diachi?: string;
-  };
+  nguoinhan?: string;
+  diachinhan?: string;
+  sodienthoai?: string;
+  khuvucgiao?: string;
+  hinhthucvanchuyen?: string;
+  phigiaohang?: number;
+  mavoucher?: string;
+  giagiam?: number;
 };
+
+type OrderGroup = { label?: string; trangthai?: string; soluong?: number; donhang: Order[] };
 
 type DetailedOrder = Order & {
   phuongthuc?: { id?: number; ten?: string; maphuongthuc?: string };
   phivanchuyen?: { id?: number; ten?: string; phi?: number };
   diachigiaohang?: { hoten?: string; sodienthoai?: string; diachi?: string; tinhthanh?: string; trangthai?: string };
   magiamgia?: { magiamgia?: string; giatri?: number; mota?: string };
+  chitietnguoidung?: { hoten?: string; diachi?: string; sodienthoai?: string };
+  hinhthucthanhtoan?: string;
+  phuongthucvanchuyen?: string;
   tamtinh?: number;
 };
 
-type OrderGroup = {
-  label: string;
-  trangthai: string;
-  soluong: number;
-  donhang: Order[]; // Mảng đơn hàng nằm trong đây
-};
+
 
 // Type cho Filter
 type FilterStatus = "all" | "pending" | "confirmed" | "processing" | "shipping" | "completed" | "cancelled";
@@ -81,6 +93,7 @@ export default function OrdersPage() {
   const { user, isLoggedIn } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [groups, setGroups] = useState<OrderGroup[]>([]);
 
   // State Filter & Pagination
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
@@ -102,21 +115,6 @@ export default function OrdersPage() {
     return status || "Chưa rõ";
   };
 
-  // Helper lấy props cho badge: icon và className theo trạng thái
-  const getStatusBadgeProps = (status?: string) => {
-    const s = (status || "").toString().toLowerCase();
-    // Completed (thành công / đã giao)
-    if (s.includes("đã giao") || s.includes("đã giao hàng") || s.includes("thành công") || s.includes("delivered") || s.includes("completed")) {
-      return { icon: "ph-check-fat", className: "text-white bg-cyan-500 px-6 py-4 rounded-lg" };
-    }
-    // Cancelled
-    if (s.includes("đã hủy") || s.includes("hủy") || s.includes("cancel")) {
-      return { icon: "ph-prohibit", className: "text-white bg-danger-600 px-6 py-4 rounded-4" };
-    }
-    // Default / warning
-    return { icon: "ph-clock-countdown", className: "text-white px-6 py-2 rounded-4 fw-medium text-xs", style: { backgroundColor: "var(--main-600)" } };
-  };
-
   // --- FETCH DATA ---
   useEffect(() => {
     const fetchOrders = async () => {
@@ -125,7 +123,7 @@ export default function OrdersPage() {
         const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
         const token = Cookies.get("access_token");
 
-        const res = await fetch(`${API}/api/toi/donhangs`, {
+        const res = await fetch(`${API}/api/tai-khoan/donhangs`, {
           headers: {
             "Authorization": token ? `Bearer ${token}` : "",
             "Accept": "application/json",
@@ -134,24 +132,32 @@ export default function OrdersPage() {
         });
 
         if (res.ok) {
-          const json = await res.json();
-          const groups = (json.data || []) as OrderGroup[];
-          // Làm phẳng: Lấy tất cả đơn hàng từ tất cả các nhóm
-          const allOrders: Order[] = groups.flatMap(group => group.donhang || []);
+        const json = await res.json().catch(() => ({}));
+        // Normalize payload: accept either array-of-groups (server sample) or an array-of-orders
+        const payload = Array.isArray(json) ? json : (json.data ?? []);
 
-          // Sắp xếp theo ID giảm dần (mới nhất lên đầu)
-          const sortedList = allOrders.sort((a, b) => b.id - a.id);
+        // If payload looks like groups (items have `donhang`), treat as OrderGroup[]
+        const groupsResp: OrderGroup[] =
+            Array.isArray(payload) &&
+            payload.length > 0 &&
+            typeof ((payload[0] as Record<string, unknown>).donhang) !== "undefined"
+              ? (payload as OrderGroup[])
+              : [];
+        // Save groups (useful if you want to display server-provided counts later)
+        setGroups(groupsResp);
 
-          setOrders(sortedList);
-          // Xử lý response: { data: [...] } hoặc [...]
-          // const list = Array.isArray(json) ? json : (json.data || []);
+        // Build flat order list:
+        const allOrders: Order[] = groupsResp.length
+          ? groupsResp.flatMap(g => g.donhang ?? [])
+          : (Array.isArray(payload) ? (payload as Order[]) : []);
 
-          // // Sắp xếp mới nhất lên đầu
-          // const sortedList = list.sort((a: Order, b: Order) => b.id - a.id);
-          setOrders(sortedList);
-        } else {
-          console.error("Lỗi API:", res.status);
-        }
+        // Sort without mutating original
+        const sortedList = [...allOrders].sort((a, b) => b.id - a.id);
+
+        setOrders(sortedList);
+      } else {
+        console.error("Lỗi API:", res.status);
+      }
       } catch (error) {
         console.error("Lỗi tải đơn hàng:", error);
       } finally {
@@ -166,12 +172,26 @@ export default function OrdersPage() {
     }
   }, [isLoggedIn]);
 
+  //tự mở detail khi có openOrderId trong sessionStorage khi đặt hàng thành công
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const pending = sessionStorage.getItem("openOrderId");
+    if (!pending) return;
+    // clear immediately to avoid re-opening on refresh
+    sessionStorage.removeItem("openOrderId");
+    const id = Number(pending);
+    if (Number.isNaN(id)) return;
+    // Nếu trang vẫn đang tải dữ liệu đơn hàng, đợi đến khi loadingDetail false (openDetail sẽ fetch chi tiết)
+    // openDetail sẽ setDetailOpen(true) và setDetailOrder(...) khi xong
+    openDetail(id);
+  }, [/* note: empty deps OK since openDetail is stable in this module; if linter complains, wrap with useCallback or disable rule */]);
+
   const openDetail = async (id: number) => {
     setDetailOpen(true);
     setLoadingDetail(true);
     try {
       const token = Cookies.get("access_token");
-      const res = await fetch(`${API}/api/toi/donhangs/${id}`, {
+      const res = await fetch(`${API}/api/tai-khoan/donhangs/${id}`, {
         headers: {
           "Authorization": token ? `Bearer ${token}` : "",
           "Accept": "application/json",
@@ -204,7 +224,7 @@ export default function OrdersPage() {
     if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) return;
     try {
       const token = Cookies.get("access_token");
-      const res = await fetch(`${API}/api/toi/donhangs/${orderId}/huy`, {
+      const res = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/huy`, {
         method: "PATCH",
         headers: {
           "Authorization": token ? `Bearer ${token}` : "",
@@ -226,18 +246,17 @@ export default function OrdersPage() {
     }
   };
   // Cho phép hủy khi trạng thái còn 'chờ' (cập nhật theo rule dự án)
-  const isCancellable = (status: string) => {
-    const s = status?.toLowerCase() ?? "";
+  const isCancellable = (status?: string) => {
+  const s = (status || "").toLowerCase();
     return s.includes("chờ") || s.includes("pending");
   };
 
   // Kiểm tra trạng thái thanh toán chưa thành công / chưa thanh toán
-  const isPaymentPending = (order?: DetailedOrder) => {
+  const isPaymentPending = (order?: DetailedOrder | null) => {
     if (!order) return false;
     const pay = (order.trangthaithanhtoan || "").toString().toLowerCase();
     const state = (order.trangthai || "").toString().toLowerCase();
     if (pay.includes("chưa") || pay.includes("pending") || pay.includes("unpaid")) return true;
-    // fallback: nếu trạng thái chung chỉ ra chưa giao / chưa hoàn tất thanh toán
     if (state.includes("chờ") || state.includes("pending")) return true;
     return false;
   };
@@ -253,7 +272,7 @@ export default function OrdersPage() {
   const retryPayment = async (orderId: number, provider?: string) => {
     try {
       const token = Cookies.get("access_token");
-      const url = `${API}/api/toi/donhangs/${orderId}/payment-url`;
+      const url = `${API}/api/tai-khoan/donhangs/${orderId}/payment-url`;
       const body = provider ? JSON.stringify({ provider }) : undefined;
       const res = await fetch(url, {
         method: "POST",
@@ -279,7 +298,7 @@ export default function OrdersPage() {
 
   // --- LOGIC FILTER ---
   // Helper map trạng thái từ API sang key filter
-  const getFilterKey = (status: string): FilterStatus => {
+  const getFilterKey = (status?: string): FilterStatus => {
     const s = (status || "").toLowerCase();
     if (s.includes("chờ xử lý") || s.includes("chờ thanh toán") || s.includes("pending")) return "pending";
     if (s.includes("đã xác nhận") || s.includes("chờ xác nhận") || s.includes("xác nhận")) return "confirmed";
@@ -294,6 +313,18 @@ export default function OrdersPage() {
     if (filterStatus === "all") return orders;
     return orders.filter(o => getFilterKey(o.trangthai) === filterStatus);
   }, [orders, filterStatus]);
+
+  const countsByFilter = useMemo(() => {
+  const map: Record<FilterStatus, number> = {
+    all: 0, pending: 0, confirmed: 0, processing: 0, shipping: 0, completed: 0, cancelled: 0
+  };
+  map.all = orders.length;
+  for (const o of orders) {
+    const k = getFilterKey(o.trangthai);
+    map[k] = (map[k] ?? 0) + 1;
+  }
+  return map;
+}, [orders]);
 
   // Pagination
   const totalPages = Math.ceil(filteredOrders.length / pageSize);
@@ -330,344 +361,262 @@ export default function OrdersPage() {
       <FullHeader showClassicTopBar={true} showTopNav={false} />
 
       <AccountShell title="Đơn hàng của tôi" current="orders">
-        {/* Order Detail Modal / Drawer */}
-        {detailOpen && (
-          <div className="top-0 position-fixed start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 2000, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
-            <div className="bg-white shadow-lg rounded-16" style={{ maxWidth: 900, width: "95%", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              {/* Header */}
-              <div className="px-24 py-16 text-white" style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%)" }}>
-                <div className="d-flex flex-between align-items-center">
-                  <div className="gap-12 d-flex align-items-center">
-                    <div className="flex-center" style={{ width: 48, height: 48, background: "rgba(255,255,255,0.15)", borderRadius: 12 }}>
-                      <i className="text-2xl ph-bold ph-package text-white"></i>
-                    </div>
-                    <div>
-                      <h5 className="mb-0 text-white fw-bold" style={{ fontSize: 20 }}>Chi tiết đơn hàng</h5>
-                      <span className="text-white" style={{ opacity: 0.85, fontSize: 14 }}>#{detailOrder?.madon || "..."}</span>
-                    </div>
+        {/* Detail view replaces list when an order is opened */}
+        {detailOpen && detailOrder ? (
+          <div>
+            <div className="flex-wrap gap-16 mb-10 flex-between">
+              <h6 className="mb-0 text-gray-900">Chi tiết đơn hàng</h6>
+              <div className="flex-wrap gap-16 position-relative flex-align">
+                <button
+                  type="button"
+                  className="text-2xl border border-gray-100 w-44 h-44 d-lg-none d-flex flex-center rounded-6 sidebar-btn"
+                  onClick={closeDetail}
+                  title="Đóng"
+                >
+                  <i className="ph-bold ph-folder-user"></i>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-wrap gap-16 mb-20 flex-between">
+              <h6 className="gap-12 mb-0 text-gray-600 text-md fw-medium flex-align">
+                Mã đơn: #{detailOrder.madon}
+                <span className="p-4 text-sm bg-warning-200 text-warning-900 fw-semibold rounded-4 ms-2">
+                  {detailOrder.trangthai ?? "Chờ xác nhận"}
+                </span>
+              </h6>
+
+              <div className="gap-8 mb-20 flex-align">
+                <i className="text-gray-600 ph-bold ph-clock-countdown text-md"></i>
+                <span className="text-sm text-gray-600 fw-normal">
+                  <span className="fw-medium">Ngày đặt hàng:</span> {formatOrderDate(detailOrder.created_at)}
+                </span>
+              </div>
+            </div>
+
+            <div className="row">
+              {/* Địa chỉ người nhận */}
+              <div className="gap-5 p-0 px-6 col-lg-4 d-flex flex-column">
+                <span className="text-lg text-gray-900 fw-semibold">Địa chỉ người nhận</span>
+                <div className="px-10 py-10 border border-gray-300 rounded-4 h-100">
+                  <div className="text-sm text-gray-900 fw-semibold">
+                    {detailOrder.diachigiaohang?.hoten ?? detailOrder.nguoinhan ?? "-"}
                   </div>
-                  <button
-                    type="button"
-                    className="text-white border-0 flex-center"
-                    onClick={closeDetail}
-                    style={{ width: 40, height: 40, background: "rgba(255,255,255,0.15)", borderRadius: 10, cursor: "pointer", transition: "all 0.2s" }}
-                    onMouseOver={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.25)"}
-                    onMouseOut={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
-                  >
-                    <i className="text-xl ph-bold ph-x"></i>
-                  </button>
+                  <div className="mt-5 text-sm text-gray-800">
+                    <span className="fw-medium">Địa chỉ:</span>{" "}
+                    {detailOrder.diachigiaohang?.diachi ?? detailOrder.diachinhan ?? "-"}
+                  </div>
+                  <div className="mt-5 text-sm text-gray-800">
+                    <span className="fw-medium">Số điện thoại:</span>{" "}
+                    {detailOrder.diachigiaohang?.sodienthoai ?? detailOrder.sodienthoai ?? "-"}
+                  </div>
+                  {detailOrder.diachigiaohang?.tinhthanh && (
+                    <div className="mt-5 text-sm text-gray-800">
+                      <span className="fw-medium">Tỉnh / Thành:</span> {detailOrder.diachigiaohang.tinhthanh}
+                    </div>
+                  )}
                 </div>
               </div>
 
-<<<<<<< HEAD
-              {/* Content */}
-              <div className="flex-grow-1" style={{ overflowY: "auto", padding: 24 }}>
-                {loadingDetail ? (
-                  <div className="py-40 text-center">
-                    <div className="mb-16 spinner-border text-main-600" role="status"></div>
-                    <div className="text-gray-600">Đang tải chi tiết đơn hàng...</div>
-=======
-                    {/* Shipping */}
-                    <div style={{ width: "32%" }}>
-                      <h6 className="text-sm fw-semibold">Hình thức vận chuyển</h6>
-                      <div className="p-10 border rounded-4">
-                        <div className="fw-medium">{detailOrder.phivanchuyen?.ten ?? "-"}</div>
-                        <div className="mt-5 text-sm"><span className="fw-medium">Phí:</span> {fmtMoney(detailOrder.phivanchuyen?.phi ?? 0)}</div>
-                        {/* Khu vực giao: fallback từ địa chỉ nhận */}
-                        <div className="mt-5 text-sm"><span className="fw-medium">Khu vực giao:</span> {detailOrder.phivanchuyen?.ten ?? detailOrder.diachigiaohang?.tinhthanh ?? "-"}</div>
-                      </div>
-                    </div>
-
-                    {/* Payment method */}
-                    <div style={{ width: "32%" }}>
-                      <h6 className="text-sm fw-semibold">Thanh toán</h6>
-                      <div className="p-10 border rounded-4">
-                        <div className="fw-medium">
-                          {formatPaymentMethod(detailOrder.phuongthuc)}
-                        </div>
-                        <div className="mt-5 text-sm"><span className="fw-medium">Trạng thái:</span>{" "}
-                          {(() => {
-                            const st = detailOrder.trangthaithanhtoan ?? detailOrder.trangthai ?? "-";
-                            const badge = getStatusBadgeProps(st);
-                            return <span className={`fw-medium text-xs ${badge.className}`}><i className={`ph-bold ${badge.icon}`} /> {displayStatusLabel(st)}</span>;
-                          })()}
-                        </div>
-                        {/* {detailOrder.phuongthuc?.maphuongthuc && (
-                          <div className="mt-5 text-sm"><span className="fw-medium">Mã PT:</span> {detailOrder.phuongthuc.maphuongthuc}</div>
-                        )} */}
-
-                        {/*  Thêm nút thanh toán lại nếu cần */}
-                        {/* Thanh toán lại VNPay nếu phương thức là dbt (VNPay) và trạng thái thanh toán còn pending */}
-                        {detailOrder.phuongthuc?.maphuongthuc === "dbt" && isPaymentPending(detailOrder) && (
-                          <button
-                            type="button"
-                            onClick={() => retryPayment(detailOrder.id, "dbt")}
-                            className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
-                          >
-                            <i className="ph-bold ph-credit-card" /> Thanh toán lại (VNPay)
-                          </button>
-                        )}
-
-                        {/* Tùy chọn VietQR nếu provider 'cp' */}
-                        {detailOrder.phuongthuc?.maphuongthuc === "cp" && isPaymentPending(detailOrder) && (
-                          <button
-                            type="button"
-                            onClick={() => retryPayment(detailOrder.id, "cp")}
-                            className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
-                          >
-                            <i className="ph-bold ph-qrcode" /> Thanh toán lại (VietQR)
-                          </button>
-                        )}
-                      </div>
-                    </div>
->>>>>>> 5b15ce02da55ecefb1019828678cbadd7d5e04ac
+              {/* Vận chuyển (fallbacks: phivanchuyen, hinhthucvanchuyen, phigiaohang, khuvucgiao) */}
+              <div className="gap-5 p-0 px-6 col-lg-4 d-flex flex-column">
+                <span className="text-lg text-gray-900 fw-semibold">Hình thức vận chuyển</span>
+                <div className="px-10 py-10 border border-gray-300 rounded-4 h-100">
+                  <div className="text-sm text-gray-900 fw-semibold">
+                    {detailOrder.phivanchuyen?.ten ?? detailOrder.hinhthucthanhtoan ?? detailOrder.phuongthucvanchuyen ?? "Giao hàng tiêu chuẩn (Nội tỉnh)"}
                   </div>
-                ) : detailOrder ? (
-                  <>
-                    {/* 3 Cards Info - Luôn trên 1 hàng */}
-                    <div className="gap-16 mb-24 d-flex" style={{ flexWrap: "nowrap" }}>
-                      {/* Người nhận */}
-                      <div style={{ flex: "1 1 33.33%", minWidth: 0 }}>
-                        <div className="h-100 p-16 border border-gray-100 rounded-12" style={{ background: "#f8fafc" }}>
-                          <div className="gap-10 mb-12 d-flex align-items-center">
-                            <div className="flex-center" style={{ width: 36, height: 36, background: "#e0f2fe", borderRadius: 8 }}>
-                              <i className="ph-bold ph-user text-main-600" style={{ fontSize: 18 }}></i>
-                            </div>
-                            <h6 className="mb-0 fw-bold text-gray-900" style={{ fontSize: 14 }}>Người nhận</h6>
-                          </div>
-                          <div className="text-gray-700" style={{ fontSize: 14, lineHeight: 1.7 }}>
-                            <div className="mb-6 fw-semibold text-gray-900" style={{ fontSize: 15 }}>
-                              {detailOrder.diachigiaohang?.hoten ?? detailOrder.chitietnguoidung?.hoten ?? "-"}
-                            </div>
-                            <div className="gap-6 mb-4 d-flex">
-                              <i className="ph ph-map-pin text-gray-400" style={{ marginTop: 2 }}></i>
-                              <span>{detailOrder.diachigiaohang?.diachi ?? detailOrder.chitietnguoidung?.diachi ?? "-"}</span>
-                            </div>
-                            <div className="gap-6 mb-4 d-flex">
-                              <i className="ph ph-phone text-gray-400" style={{ marginTop: 2 }}></i>
-                              <span>{detailOrder.diachigiaohang?.sodienthoai ?? detailOrder.chitietnguoidung?.sodienthoai ?? "-"}</span>
-                            </div>
-                            {detailOrder.diachigiaohang?.tinhthanh && (
-                              <div className="gap-6 d-flex">
-                                <i className="ph ph-map-trifold text-gray-400" style={{ marginTop: 2 }}></i>
-                                <span>{detailOrder.diachigiaohang.tinhthanh}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Vận chuyển */}
-                      <div style={{ flex: "1 1 33.33%", minWidth: 0 }}>
-                        <div className="h-100 p-16 border border-gray-100 rounded-12" style={{ background: "#f8fafc" }}>
-                          <div className="gap-10 mb-12 d-flex align-items-center">
-                            <div className="flex-center" style={{ width: 36, height: 36, background: "#fef3c7", borderRadius: 8 }}>
-                              <i className="ph-bold ph-truck" style={{ fontSize: 18, color: "#d97706" }}></i>
-                            </div>
-                            <h6 className="mb-0 fw-bold text-gray-900" style={{ fontSize: 14 }}>Vận chuyển</h6>
-                          </div>
-                          <div className="text-gray-700" style={{ fontSize: 14, lineHeight: 1.7 }}>
-                            <div className="mb-6 fw-semibold text-gray-900" style={{ fontSize: 15 }}>
-                              {detailOrder.phivanchuyen?.ten ?? "Giao hàng tiêu chuẩn"}
-                            </div>
-                            <div className="gap-6 mb-4 d-flex align-items-center">
-                              <i className="ph ph-money text-gray-400"></i>
-                              <span>Phí: <span className="fw-semibold text-gray-900">{fmtMoney(detailOrder.phivanchuyen?.phi ?? 0)}</span></span>
-                            </div>
-                            <div className="gap-6 d-flex align-items-center">
-                              <i className="ph ph-navigation-arrow text-gray-400"></i>
-                              <span>Khu vực: {detailOrder.phivanchuyen?.ten ?? detailOrder.diachigiaohang?.tinhthanh ?? "-"}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Thanh toán */}
-                      <div style={{ flex: "1 1 33.33%", minWidth: 0 }}>
-                        <div className="h-100 p-16 border border-gray-100 rounded-12" style={{ background: "#f8fafc" }}>
-                          <div className="gap-10 mb-12 d-flex align-items-center">
-                            <div className="flex-center" style={{ width: 36, height: 36, background: "#dcfce7", borderRadius: 8 }}>
-                              <i className="ph-bold ph-credit-card" style={{ fontSize: 18, color: "#16a34a" }}></i>
-                            </div>
-                            <h6 className="mb-0 fw-bold text-gray-900" style={{ fontSize: 14 }}>Thanh toán</h6>
-                          </div>
-                          <div className="text-gray-700" style={{ fontSize: 14, lineHeight: 1.7 }}>
-                            <div className="mb-6 fw-semibold text-gray-900" style={{ fontSize: 15 }}>
-                              {formatPaymentMethod(detailOrder.phuongthuc)}
-                            </div>
-                            <div className="gap-6 mb-8 d-flex align-items-center">
-                              <i className="ph ph-clock text-gray-400"></i>
-                              <span>Trạng thái: <span className={`fw-semibold ${(detailOrder.trangthaithanhtoan || "").toLowerCase().includes("chưa") ? "text-warning-600" : "text-success-600"}`}>
-                                {detailOrder.trangthaithanhtoan ?? detailOrder.trangthai ?? "-"}
-                              </span></span>
-                            </div>
-
-                            {/* Nút thanh toán lại */}
-                            {detailOrder.phuongthuc?.maphuongthuc === "dbt" && isPaymentPending(detailOrder) && (
-                              <button
-                                type="button"
-                                onClick={() => retryPayment(detailOrder.id, "dbt")}
-                                className="gap-6 px-12 py-6 mt-4 text-white border-0 fw-medium rounded-8 flex-center"
-                                style={{ background: "#2563eb", fontSize: 13, cursor: "pointer", width: "100%" }}
-                              >
-                                <i className="ph-bold ph-credit-card" /> Thanh toán VNPay
-                              </button>
-                            )}
-                            {detailOrder.phuongthuc?.maphuongthuc === "cp" && isPaymentPending(detailOrder) && (
-                              <button
-                                type="button"
-                                onClick={() => retryPayment(detailOrder.id, "cp")}
-                                className="gap-6 px-12 py-6 mt-4 text-white border-0 fw-medium rounded-8 flex-center"
-                                style={{ background: "#7c3aed", fontSize: 13, cursor: "pointer", width: "100%" }}
-                              >
-                                <i className="ph-bold ph-qr-code" /> Thanh toán VietQR
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Chi tiết sản phẩm */}
-                    <div className="p-20 border border-gray-100 rounded-12" style={{ background: "#fff" }}>
-                      <div className="gap-10 pb-16 mb-16 border-bottom border-gray-100 d-flex align-items-center">
-                        <div className="flex-center" style={{ width: 36, height: 36, background: "#fee2e2", borderRadius: 8 }}>
-                          <i className="ph-bold ph-shopping-cart" style={{ fontSize: 18, color: "#dc2626" }}></i>
-                        </div>
-                        <h6 className="mb-0 fw-bold text-gray-900" style={{ fontSize: 15 }}>Chi tiết mua hàng</h6>
-                        <span className="px-8 py-2 text-xs text-white fw-medium rounded-pill" style={{ background: "#64748b" }}>
-                          {(detailOrder.chitietdonhang ?? []).length} sản phẩm
-                        </span>
-                      </div>
-
-                      <div className="gap-12 d-flex flex-column">
-                        {(detailOrder.chitietdonhang ?? []).map((it) => {
-                          const sp = it.bienthe?.sanpham || {};
-                          const imgUrl = sp.hinhanhsanpham?.[0]?.hinhanh ?? sp.hinhanh ?? "/assets/images/thumbs/placeholder.png";
-                          return (
-                            <div key={it.id} className="gap-16 p-12 d-flex align-items-center rounded-10" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                              <div className="overflow-hidden flex-shrink-0 flex-center" style={{ width: 80, height: 80, background: "#fff", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                                <img
-                                  src={imgUrl}
-                                  alt={sp.ten ?? ""}
-                                  style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
-                                />
-                              </div>
-                              <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                                <div className="mb-4 fw-semibold text-gray-900" style={{ fontSize: 14, lineHeight: 1.4 }}>
-                                  {sp.ten ?? it.name ?? "Sản phẩm"}
-                                </div>
-                                {it.bienthe?.loaibienthe?.ten && (
-                                  <span className="px-8 py-2 mb-4 text-xs text-gray-600 d-inline-block rounded-4" style={{ background: "#e2e8f0" }}>
-                                    {it.bienthe.loaibienthe.ten}
-                                  </span>
-                                )}
-                                <div className="text-sm text-gray-500">
-                                  Số lượng: <span className="fw-medium text-gray-700">{it.soluong}</span>
-                                </div>
-                              </div>
-                              <div className="flex-shrink-0 text-end">
-                                <div className="text-xs text-gray-500">Đơn giá</div>
-                                <div className="fw-bold text-main-600" style={{ fontSize: 15 }}>{fmtMoney(it.dongia)}</div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Tổng tiền */}
-                      <div className="pt-20 mt-20 border-top border-gray-200">
-                        <div className="gap-16 mb-10 d-flex flex-between">
-                          <span className="text-gray-600">Tạm tính:</span>
-                          <span className="fw-semibold text-gray-900">{fmtMoney(detailOrder.tamtinh)}</span>
-                        </div>
-                        <div className="gap-16 mb-10 d-flex flex-between">
-                          <span className="text-gray-600">Phí giao hàng:</span>
-                          <span className="fw-semibold text-gray-900">{fmtMoney(detailOrder.phivanchuyen?.phi ?? 0)}</span>
-                        </div>
-                        {detailOrder.magiamgia?.giatri && detailOrder.magiamgia.giatri > 0 && (
-                          <div className="gap-16 mb-10 d-flex flex-between">
-                            <span className="text-gray-600">Giảm giá ({detailOrder.magiamgia.magiamgia}):</span>
-                            <span className="fw-semibold text-success-600">-{fmtMoney(detailOrder.magiamgia.giatri)}</span>
-                          </div>
-                        )}
-                        <div className="gap-16 pt-12 mt-12 border-top border-gray-200 d-flex flex-between align-items-center">
-                          <span className="text-lg fw-bold text-gray-900">Tổng tiền:</span>
-                          <span className="fw-bold" style={{ fontSize: 22, color: "#dc2626" }}>{fmtMoney(detailOrder.thanhtien)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="py-40 text-center">
-                    <i className="mb-16 text-gray-300 ph-bold ph-warning-circle" style={{ fontSize: 48 }}></i>
-                    <div className="text-gray-600">Không có dữ liệu chi tiết.</div>
+                  <div className="mt-5 text-sm text-gray-800">
+                    <span className="fw-medium">Phí vận chuyển:</span>{" "}
+                    <span className="fst-italic">{fmtMoney(detailOrder.phivanchuyen?.phi ?? detailOrder.phigiaohang ?? 0)}</span>
                   </div>
-                )}
+                  <div className="mt-5 text-sm text-gray-800">
+                    <span className="fw-medium">Khu vực giao:</span>{" "}
+                    <span className="fst-italic">{detailOrder.khuvucgiao ?? detailOrder.diachigiaohang?.tinhthanh ?? "-"}</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Footer Actions */}
-              {detailOrder && (
-                <div className="px-24 py-16 border-top border-gray-100 d-flex flex-between align-items-center" style={{ background: "#f8fafc" }}>
-                  <button
-                    onClick={closeDetail}
-                    className="gap-8 px-16 py-10 text-gray-700 bg-white border border-gray-300 fw-medium rounded-10 d-flex align-items-center"
-                    style={{ cursor: "pointer", transition: "all 0.2s" }}
-                    onMouseOver={(e) => { e.currentTarget.style.borderColor = "#1e3a5f"; e.currentTarget.style.color = "#1e3a5f"; }}
-                    onMouseOut={(e) => { e.currentTarget.style.borderColor = "#d1d5db"; e.currentTarget.style.color = "#374151"; }}
-                  >
-                    <i className="ph-bold ph-arrow-left"></i>
-                    Quay lại
-                  </button>
+              {/* Thanh toán (fallbacks: phuongthuc.maphuongthuc / phuongthuc.ten / trangthaithanhtoan) */}
+              <div className="gap-5 p-0 px-6 col-lg-4 d-flex flex-column">
+                <span className="text-lg text-gray-900 fw-semibold">Hình thức thanh toán</span>
+                <div className="px-10 py-10 border border-gray-300 rounded-4 h-100">
+                  <div className="text-sm text-gray-900 fw-semibold">
+                    {formatPaymentMethod(detailOrder.phuongthuc)}
+                  </div>
+                  <div className="mt-5 text-sm text-gray-800">
+                    <span className="fw-medium">Trạng thái:</span>{" "}
+                    <span className={`fst-italic ${(detailOrder.trangthaithanhtoan ?? detailOrder.trangthai ?? "").toLowerCase().includes("chưa") ? "text-warning-600" : "text-success-600"}`}>
+                      {detailOrder.trangthaithanhtoan ?? detailOrder.trangthai ?? "-"}
+                    </span>
+                  </div>
 
-                  <div className="gap-12 d-flex">
-                    {isReviewableStatus(detailOrder.trangthai) ? (
-                      <Link
-                        href={`/danh-gia?order_id=${detailOrder.id}`}
-                        className="gap-8 px-16 py-10 text-white border-0 fw-medium rounded-10 d-flex align-items-center"
-                        style={{ background: "#f59e0b", cursor: "pointer" }}
-                      >
-                        <i className="ph-bold ph-star"></i>
-                        Đánh giá sản phẩm
-                      </Link>
-                    ) : isCancellable(detailOrder.trangthai) && (
-                      <button
-                        type="button"
-                        onClick={() => handleCancelOrder(detailOrder.id)}
-                        className="gap-8 px-16 py-10 text-white border-0 fw-medium rounded-10 d-flex align-items-center"
-                        style={{ background: "#dc2626", cursor: "pointer" }}
-                      >
-                        <i className="ph-bold ph-trash"></i>
-                        Hủy đơn hàng
+                  {/* Thanh toán lại nếu cần */}
+                  {detailOrder.phuongthuc?.maphuongthuc === "dbt" && isPaymentPending(detailOrder) && (
+                    <button
+                      type="button"
+                      onClick={() => retryPayment(detailOrder.id, "dbt")}
+                      className="gap-6 px-12 py-6 mt-4 text-white border-0 fw-medium rounded-8 flex-center"
+                      style={{ background: "#2563eb", fontSize: 13, cursor: "pointer", width: "100%" }}
+                    >
+                      <i className="ph-bold ph-credit-card" /> Thanh toán VNPay
+                    </button>
+                  )}
+                  {detailOrder.phuongthuc?.maphuongthuc === "cp" && isPaymentPending(detailOrder) && (
+                    <button
+                      type="button"
+                      onClick={() => retryPayment(detailOrder.id, "cp")}
+                      className="gap-6 px-12 py-6 mt-4 text-white border-0 fw-medium rounded-8 flex-center"
+                      style={{ background: "#7c3aed", fontSize: 13, cursor: "pointer", width: "100%" }}
+                    >
+                      <i className="ph-bold ph-qr-code" /> Thanh toán VietQR
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Chi tiết mua hàng */}
+            <div className="mt-20 row">
+              <div className="p-0 px-6 col-lg-12">
+                <div className="p-16 border border-gray-300 rounded-4">
+                  <div className="mb-6 d-flex align-items-center justify-content-between">
+                    <div className="gap-8 text-lg text-gray-900 fw-semibold flex-align">
+                      <i className="text-lg ph-bold ph-shopping-cart text-main-600"></i> Chi tiết mua hàng
+                    </div>
+                    <div className="text-sm text-gray-600">{(detailOrder.chitietdonhang ?? []).length} sản phẩm</div>
+                  </div>
+
+                  <div className="px-5 py-6">
+                    {(detailOrder.chitietdonhang ?? []).map((it) => {
+                      // Fallbacks for variant / product name / image / variant label
+                      const variant = it.bienthe ?? undefined;
+                      const sp = (variant as OrderItem["bienthe"])?.sanpham ?? {};
+                      const title = sp.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
+                      const imgRaw =
+                        (sp.hinhanhsanpham?.[0]?.hinhanh as string | undefined) ??
+                        (sp.hinhanh as string | undefined) ??
+                        (it.hinhanh as string | undefined) ??
+                        "/assets/images/thumbs/placeholder.png";
+                      const imgSrc = String(imgRaw).startsWith("http")
+                        ? String(imgRaw)
+                        : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${String(imgRaw)}`;
+                      const variantLabel =
+                        (variant as OrderItem["bienthe"])?.loaibienthe?.ten ??
+                        (variant as OrderItem["bienthe"])?.tenloaibienthe ??
+                        it.tenloaibienthe ??
+                        it.bienthe?.tenloaibienthe ??
+                        "";
+                      const qty = it.soluong ?? it.quantity ?? 0;
+                      const price = it.dongia ?? it.price ?? 0;
+
+                      return (
+                        <div key={it.id} className="gap-12 mb-12 d-flex align-items-center">
+                          <a href="#" className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: 90, maxHeight: 90 }}>
+                            <Image src={imgSrc} alt={title} width={90} height={90} className="object-cover w-100 rounded-8" unoptimized />
+                          </a>
+
+                          <div className="text-start w-100">
+                            <h6 className="mb-0 title text-md fw-semibold">
+                              <a href="#" className="link text-line-2" title={title} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: 350, display: "inline-block" }}>
+                                {title}
+                              </a>
+                            </h6>
+
+                            <div className="gap-16 mb-6 flex-align">
+                              <div className="gap-8 px-6 py-4 text-sm btn bg-gray-50 text-heading rounded-8 flex-center fw-normal">
+                                {variantLabel}
+                              </div>
+                            </div>
+
+                            <div className="mb-6 product-card__price">
+                              <div className="gap-24 flex-align flex-between">
+                                <span className="text-heading text-md fw-medium">Số lượng: {qty}</span>
+                                <span className="text-gray-600 text-md fw-semibold">{fmtMoney(price)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Tổng tiền */}
+                  <div className="pt-16 mt-16 border-gray-300 border-top border-1">
+                    <div className="gap-8 mb-8 flex-between">
+                      <span></span>
+                      <div className="gap-24 flex-align flex-between" style={{ width: "22%" }}>
+                        <span className="text-gray-700 text-md">Tạm tính:</span>
+                        <span className="text-gray-900 text-md fw-semibold">{fmtMoney(detailOrder.tamtinh ?? detailOrder.thanhtien ?? 0)}</span>
+                      </div>
+                    </div>
+
+                    <div className="gap-8 mb-8 flex-between">
+                      <span></span>
+                      <div className="gap-24 flex-align flex-between" style={{ width: "22%" }}>
+                        <span className="text-gray-700 text-md">Phí giao hàng:</span>
+                        <span className="text-md text-info-900 fw-semibold">{fmtMoney(detailOrder.phivanchuyen?.phi ?? detailOrder.phigiaohang ?? 0)}</span>
+                      </div>
+                    </div>
+
+                    {detailOrder.magiamgia?.giatri ? (
+                      <div className="gap-8 mb-8 flex-between">
+                        <span></span>
+                        <div style={{ width: "22%" }} className="gap-24 flex-align flex-between">
+                          <span className="text-gray-700 text-md">Giảm giá:</span>
+                          <span className="text-md text-success-600 fw-semibold">-{fmtMoney(detailOrder.magiamgia.giatri)}</span>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="gap-8 flex-between">
+                      <span></span>
+                      <div className="gap-24 flex-align">
+                        <span className="text-xl text-gray-900 fw-bold">Tổng tiền:</span>
+                        <span className="text-xl text-main-600 fw-bold">{fmtMoney(detailOrder.thanhtien ?? detailOrder.tamtinh ?? 0)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="gap-12 mt-10 flex-align flex-between">
+                  <a onClick={closeDetail} className="gap-8 mt-10 text-main-600 text-md fw-medium flex-align" style={{ cursor: "pointer" }}>
+                    <i className="ph-bold ph-arrow-fat-lines-left text-main-600 text-md"></i> Quay lại đơn hàng của tôi
+                  </a>
+
+                  <div className="gap-12 flex-align">
+                    {isCancellable(detailOrder.trangthai) && (
+                      <button onClick={() => handleCancelOrder(detailOrder.id)} className="gap-8 px-8 py-4 border fw-medium text-main-600 text-md border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
+                        <i className="ph-bold ph-trash"></i> Hủy đơn
                       </button>
                     )}
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
-        )}
-        {/* End modal */}
-
-
-        <section className="mt-10 overflow-hidden trending-productss fix-scale-80">
-          <div style={{ paddingBottom: 120 }}>
+        ) : (
+          /* ELSE: render original orders list section (paste your existing section here) */
+          <section className="mt-10 overflow-hidden trending-productss fix-scale-80">
+          <div className="p-24 border border-gray-100 rounded-8" style={{ paddingBottom: 120 }}>
             {/* <div className="p-24 border border-gray-100 rounded-8"> */}
             <div className="mb-20 section-heading">
               <div className="flex-wrap gap-8 flex-between flex-align">
                 <ul className="pb-2 m-0 mb-3 overflow-auto nav common-tab style-two nav-pills flex-nowrap">
-                  {STATUS_OPTIONS.map((opt, idx) => (
-                    <li key={idx + "-" + opt.key + "-" + opt.label} className="nav-item">
-                      <button
-                        type="button"
-                        onClick={() => { setFilterStatus(opt.key); setPage(1); }}
-                        className={`px-10 py-8 rounded-10 flex-align gap-8 fw-medium text-xs transition-1 me-2 mb-2 ${filterStatus === opt.key ? "bg-main-600 text-white" : "border border-gray-600 text-gray-900 hover-border-main-600 hover-text-main-600"}`}
-                      >
-                        {opt.icon && <i className={`ph-bold ${opt.icon}`} />}
-                        {opt.label} ({orders.filter(o => getFilterKey(o.trangthai) === opt.key).length})
-                      </button>
-                    </li>
-                  ))}
+                  {STATUS_OPTIONS.map((opt) => {
+                    const active = filterStatus === opt.key;
+                    return (
+                      <li key={opt.key} className="nav-item">
+                        <button
+                          type="button"
+                          onClick={() => { setFilterStatus(opt.key); setPage(1); }}
+                          className={`px-10 py-8 rounded-10 flex-align gap-8 fw-medium text-xs transition-1 me-2 mb-2 ${active ? "bg-main-600 text-white" : "border border-gray-600 text-gray-900 hover-border-main-600 hover-text-main-600"}`}
+                        >
+                          {opt.icon && <i className={`ph-bold ${opt.icon}`} />}
+                          {opt.label} ({countsByFilter[opt.key] ?? 0})
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             </div>
@@ -699,11 +648,11 @@ export default function OrdersPage() {
                         <div className="gap-12 flex-align">
                           {(() => {
                             const badge = getStatusBadgeProps(order.trangthai);
-                            return (
-                              <span className={`fw-medium text-xs ${badge.className}`}>
-                                <i className={`ph-bold ${badge.icon}`} /> {displayStatusLabel(order.trangthai)}
-                              </span>
-                            );
+                              return (
+                                <span className={badge.className}>
+                                  <i className={`ph-bold ${badge.icon}`} /> {displayStatusLabel(order.trangthai)}
+                                </span>
+                              );
                           })()}
                         </div>
                       </div>
@@ -785,6 +734,8 @@ export default function OrdersPage() {
             </div>
           </div>
         </section>
+        )}
+
         {totalPages > 1 && (
           <div className="gap-8 mt-24 d-flex justify-content-center">
             <button className="btn btn-sm btn-black" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Trước</button>

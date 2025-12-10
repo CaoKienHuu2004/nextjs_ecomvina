@@ -12,20 +12,6 @@ type WishProduct = {
   is_free: boolean;
   id?: number | string;
   ten?: string;
-<<<<<<< HEAD
-  name?: string;
-  title?: string;
-  mediaurl?: string;
-  anhsanphams?: { media?: string }[];
-  selling_price?: number;
-  original_price?: number;
-  is_free?: boolean;
-  gia?: { current?: number; before_discount?: number };
-  bienthes?: { gia?: number | string; giagiam?: number | string }[];
-  loaibienthe?: string;
-  thuonghieu?: string;
-  thuong_hieu?: string;
-=======
   giagiam_min?: number | string;
   giagiam_max?: number | string;
   gia_min?: number | string;
@@ -34,7 +20,7 @@ type WishProduct = {
   slug?: string;
 };
 
-// Kiểu record trả về từ /api/toi/yeuthichs
+// Kiểu record trả về từ /api/tai-khoan/yeuthichs
 type FavoriteRecord = {
   id?: number;
   id_nguoidung?: number;
@@ -45,7 +31,6 @@ type FavoriteRecord = {
     tensanpham?: string;
     hinhanhsanpham?: { id?: number; url?: string }[];
   } | null;
->>>>>>> 5b15ce02da55ecefb1019828678cbadd7d5e04ac
 };
 
 export default function WishlistPage() {
@@ -66,7 +51,7 @@ export default function WishlistPage() {
   // Tìm favorite record id của product (trả về null nếu không tìm thấy)
   const findFavoriteRecordId = async (productId: number): Promise<number | null> => {
     try {
-      const res = await fetch(`${API}/api/toi/yeuthichs`, {
+      const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
         headers: getAuthHeaders(),
         credentials: "include",
       });
@@ -92,7 +77,7 @@ export default function WishlistPage() {
         console.warn("Không tìm record yêu thích, đã bỏ ở UI nhưng không gọi API");
         return;
       }
-      await fetch(`${API}/api/toi/yeuthichs/${recordId}`, {
+      await fetch(`${API}/api/tai-khoan/yeuthichs/${recordId}`, {
         method: "PATCH", // bạn yêu cầu dùng PATCH
         headers: getAuthHeaders(),
         credentials: "include",
@@ -159,51 +144,6 @@ export default function WishlistPage() {
 
   return (
     <>
-<<<<<<< HEAD
-      <FullHeader showClassicTopBar={true} showTopNav={false} />
-      <AccountShell title="Yêu thích" current="wishlist">
-        {loading ? (
-          <div>Đang tải…</div>
-        ) : items.length === 0 ? (
-          <div>Danh sách trống.</div>
-        ) : (
-          <div className="row g-12">
-            {items.map((p) => {
-              const pid = getPid(p);
-              const img =
-                p.mediaurl ||
-                p?.anhsanphams?.[0]?.media ||
-                "/assets/images/thumbs/product-two-img1.png";
-              const name = p.ten || p.name || p.title || `Sản phẩm #${pid}`;
-
-              // Lấy giá: ưu tiên selling_price → giá biến thể → gia.current
-              const toNumLoose = (x: unknown): number =>
-                typeof x === "string"
-                  ? parseFloat(x)
-                  : typeof x === "number"
-                    ? x
-                    : 0;
-
-              const v0 = p?.bienthes?.[0];
-              const baseGia = v0
-                ? { gia: toNumLoose(v0.gia), giagiam: toNumLoose(v0.giagiam) }
-                : {
-                  gia: toNumLoose(p?.gia?.before_discount),
-                  giagiam: toNumLoose(p?.gia?.current),
-                };
-
-              const sellingFromVariant = v0
-                ? baseGia.giagiam > 0 && baseGia.giagiam < baseGia.gia
-                  ? baseGia.giagiam
-                  : Math.max(baseGia.gia - baseGia.giagiam, 0)
-                : undefined;
-
-              const price =
-                typeof p.selling_price === "number"
-                  ? p.selling_price
-                  : sellingFromVariant ??
-                  (typeof p?.gia?.current === "number" ? p.gia.current! : 0);
-=======
     <FullHeader showClassicTopBar={true} showTopNav={false} />
     <AccountShell title="Yêu thích" current="wishlist">
       {loading ? (
@@ -224,7 +164,6 @@ export default function WishlistPage() {
 
             const isFree = price === 0 || p.is_free === true;
             const discount = 0;
->>>>>>> 5b15ce02da55ecefb1019828678cbadd7d5e04ac
 
               const oldPrice =
                 typeof p.original_price === "number"
@@ -235,60 +174,6 @@ export default function WishlistPage() {
                       ? baseGia.gia
                       : undefined;
 
-<<<<<<< HEAD
-              const isFree = price === 0 || p.is_free === true;
-              const discount =
-                !isFree && typeof oldPrice === "number" && oldPrice > price
-                  ? oldPrice - price
-                  : 0;
-
-              const badge = isFree
-                ? { text: "Miễn phí", color: "primary" as const }
-                : discount > 0
-                  ? {
-                    text: `Giảm ${discount.toLocaleString("vi-VN")} đ`,
-                    color: "warning" as const,
-                  }
-                  : undefined;
-
-              return (
-                <div
-                  key={pid || String(p.id)}
-                  className="col-xxl-3 col-xl-4 col-lg-4 col-sm-6"
-                >
-                  <ProductCardV2
-                    href={`/products/${p.slug || pid}`}
-                    img={img}
-                    title={name}
-                    price={price}
-                    oldPrice={oldPrice}
-                    variantId={pid || undefined}
-                    badge={badge}
-                    loaibienthe={p.loaibienthe || ""}
-                    thuonghieu={p.thuonghieu || p.thuong_hieu || ""}
-                    slug={p.slug || String(pid)}
-                    showHeart
-                    isWished={pid !== 0 && isWished(pid)}
-                    onToggleWish={() => {
-                      const currently = pid !== 0 && isWished(pid);
-                      if (currently)
-                        setItems((prev) => prev.filter((it) => getPid(it) !== pid));
-                      if (pid !== 0) toggle(pid);
-                    }}
-                    showUnwishButton
-                    onUnwish={() => {
-                      if (pid !== 0 && isWished(pid))
-                        setItems((prev) => prev.filter((it) => getPid(it) !== pid));
-                      if (pid !== 0) toggle(pid);
-                    }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </AccountShell>
-=======
             return (
               <div
                 key={pid || String(p.id)}
@@ -322,7 +207,6 @@ export default function WishlistPage() {
         </div>
       )}
     </AccountShell>
->>>>>>> 5b15ce02da55ecefb1019828678cbadd7d5e04ac
     </>
   );
 }
