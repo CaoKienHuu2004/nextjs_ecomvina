@@ -16,6 +16,13 @@ interface Product {
     discount_percent?: number;
 }
 
+// Danh sách slug sản phẩm có ảnh cần style riêng
+const CUSTOM_IMAGE_SLUGS = [
+    'ao-ni-dai-tay-be-gai-rabity',
+    'nuoc-tay-trang-rua-mat-cap-am-can-bang-do-ph-tren-da-cell-fusion-c-low-ph-pharrier-cleansing-water',
+    // Thêm slug khác nếu cần
+];
+
 export default function LatestProductsSection() {
     const { data: homeData, loading: homeLoading } = useHomeData();
     const [products, setProducts] = useState<Product[]>([]);
@@ -98,14 +105,14 @@ export default function LatestProductsSection() {
                         <div className="tab-pane fade show active" id="pills-all" role="tabpanel" aria-labelledby="pills-all-tab" tabIndex={0}>
                             <div className="row g-12">
                                 {products.map((product) => {
-                                    const imageStyle = { color: "transparent", objectFit: "cover" as const, width: "100%", height: "100%" };
+                                    const isCustomImage = CUSTOM_IMAGE_SLUGS.includes(product.slug);
 
                                     return (
                                         <div key={product.id} className="col-xxl-2 col-xl-3 col-lg-4 col-xs-6">
                                             <div className="product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2">
                                                 <a
                                                     href={`/product-details/${product.slug}?category=${encodeURIComponent("Hàng mới chào sân")}`}
-                                                    className="flex-center rounded-8 bg-gray-50 position-relative"
+                                                    className={`flex-center rounded-8 bg-gray-50 position-relative ${isCustomImage ? 'custom-image-container' : ''}`}
                                                     style={{ height: "210px" }}
                                                 >
                                                     <Image
@@ -114,9 +121,14 @@ export default function LatestProductsSection() {
                                                         width={240}
                                                         height={240}
                                                         decoding="async"
-                                                        className="w-100 rounded-top-2"
+                                                        className={`rounded-top-2 ${isCustomImage ? 'custom-product-image' : 'w-100'}`}
                                                         src={product.mediaurl}
-                                                        style={imageStyle}
+                                                        style={{
+                                                            color: "transparent",
+                                                            objectFit: "cover",
+                                                            width: "100%",
+                                                            height: "100%"
+                                                        }}
                                                     />
                                                 </a>
                                                 <div className="product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex px-10 pb-8">

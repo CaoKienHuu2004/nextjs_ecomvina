@@ -1,10 +1,11 @@
 "use client";
 import Link from 'next/link';
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useCart, parseVoucherCondition, isVoucherInDateRange, VoucherConditionType, Gia } from '@/hooks/useCart';
 import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData';
 import Image from 'next/image';
 import FullHeader from '@/components/FullHeader';
+
 // --- HELPER FUNCTIONS ---
 type PriceInput = number | Gia | undefined | null;
 
@@ -315,7 +316,7 @@ function DeleteConfirmModal({
 }
 
 function CartPageContent() {
-  const { items, loading, updateQuantity, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total } = useCart();
+  const { items, loading, updatesoluong, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total, gifts, totalGifts } = useCart();
   const { data: homeData } = useHomeData();
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: number | string; name: string }>({
@@ -493,7 +494,7 @@ function CartPageContent() {
                                 <td className="px-5 py-20">
                                   <QuantityControl
                                     quantity={item.soluong}
-                                    onUpdate={(qty) => updateQuantity(item.id_giohang, qty)}
+                                    onUpdate={(qty) => updatesoluong(item.id_giohang, qty)}
                                   />
                                 </td>
                                 <td className="px-5 py-20">
@@ -509,7 +510,105 @@ function CartPageContent() {
                 </form>
               </div>
 
-              {/* TODO: Quà tặng - chờ backend xác nhận API /api/toi/giohang */}
+              {/* Quà tặng từ API (chỉ hiển thị khi có sản phẩm thường trong giỏ) */}
+              {gifts && gifts.length > 0 && items.length > 0 && (
+                <>
+                  {/* Banner thông báo quà tặng */}
+                  <div className="p-10 mt-20 font-semibold text-center border-2 border-dashed rounded-lg text-yellow-800 bg-yellow-50 border-yellow-500">
+                    🎉 Bạn nhận được thêm {totalGifts} sản phẩm Quà Tặng miễn phí trong đơn hàng này!
+                  </div>
+
+                  {/* Bảng quà tặng */}
+                  <div className="pb-0 mt-20 border border-gray-100 cart-table rounded-8 p-30">
+                    <div className="overflow-x-auto scroll-sm scroll-sm-horizontal">
+                      <table className="table style-three">
+                        <thead>
+                          <tr className="py-10 border-bottom border-gray-500 my-10">
+                            <th className="gap-6 p-0 pb-10 mb-0 h6 text-lg fw-bold flex-align" colSpan={2}>
+                              <i className="ph-bold ph-gift text-main-600 text-lg"></i> Quà tặng nhận được ({totalGifts} sản phẩm)
+                            </th>
+                            <th className="px-60"></th>
+                            <th className="px-60"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {gifts.map((gift, index) => (
+                            <tr key={gift.id_bienthe || index}>
+                              <td className="py-20 px-5">
+                                <div className="gap-12 d-flex align-items-center">
+                                  <Link
+                                    href={gift.slug ? `/san-pham/${gift.slug}` : '#'}
+                                    className="border border-gray-100 rounded-8 flex-center"
+                                    style={{ maxWidth: '100px', maxHeight: '100px', width: '100%', height: '100%' }}
+                                  >
+                                    <img
+                                      src={gift.hinhanh || '/assets/images/thumbs/product-placeholder.png'}
+                                      alt={gift.ten_sanpham || 'Quà tặng'}
+                                      className="w-100 rounded-8"
+                                    />
+                                  </Link>
+                                  <div className="table-product__content text-start">
+                                    <div className="gap-16 flex-align">
+                                      <div className="gap-4 mb-5 flex-align">
+                                        <span className="text-sm text-main-two-600 d-flex"><i className="ph-fill ph-storefront"></i></span>
+                                        <span className="text-xs text-gray-500" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '250px', display: 'inline-block' }}>
+                                          {gift.thuonghieu || 'Thương hiệu'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <h6 className="mb-0 title text-md fw-semibold">
+                                      <Link
+                                        href={gift.slug ? `/san-pham/${gift.slug}` : '#'}
+                                        className="link text-line-2 fw-medium"
+                                        title={gift.ten_sanpham}
+                                        style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '350px', display: 'inline-block' }}
+                                      >
+                                        {gift.ten_sanpham || 'Quà tặng'}
+                                      </Link>
+                                    </h6>
+                                    {gift.ten_loaibienthe && (
+                                      <div className="gap-16 mb-6 flex-align">
+                                        <span className="gap-8 px-6 py-6 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">
+                                          {gift.ten_loaibienthe}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="mb-6 product-card__price">
+                                      <div className="gap-4 text-xs flex-align text-main-two-600">
+                                        {gift.giagoc && gift.giagoc > 0 && (
+                                          <span className="text-sm text-gray-400 fw-semibold text-decoration-line-through me-4">
+                                            {formatPrice(gift.giagoc)}
+                                          </span>
+                                        )}
+                                        <span className="gap-4 text-xs flex-align text-main-two-600">
+                                          <i className="ph-fill ph-seal-percent text-sm"></i> Quà tặng miễn phí
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-20 px-5">
+                                <div className="overflow-hidden d-flex rounded-4">
+                                  <input
+                                    type="text"
+                                    className="px-4 py-8 text-center border quantity__input flex-grow-1 border-start-0 border-end-0 w-32 bg-gray-100"
+                                    value={`x ${gift.soluong}`}
+                                    readOnly
+                                  />
+                                </div>
+                              </td>
+                              <td className="py-20 px-5">
+                                <span className="mb-0 text-lg h6 fw-semibold text-main-600">0 đ</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             <div className="col-xl-3 col-lg-4">
               <div className="px-24 pb-20 border border-gray-100 cart-sidebar rounded-8 py-30">

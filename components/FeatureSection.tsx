@@ -88,7 +88,7 @@ export default function FeatureSection() {
                         >
                           <div className="feature-item__thumb rounded-circle">
                             <Link
-                              href={`/san-pham?danhmuc=${category.slug}`}
+                              href={`/shop?category=${category.slug}`}
                               className="w-100 h-100 p-10 flex-center"
                             >
                               <Image
@@ -103,7 +103,7 @@ export default function FeatureSection() {
                           <div className="feature-item__content mt-16">
                             <h6 className="text-md fw-medium mb-8">
                               <Link
-                                href={`/san-pham?danhmuc=${category.slug}`}
+                                href={`/shop?category=${category.slug}`}
                                 className="text-inherit"
                               >
                                 {category.name}

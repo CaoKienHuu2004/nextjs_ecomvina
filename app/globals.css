@@ -1,3 +1,8 @@
+/* Chỉnh margin-top cho khối giảm giá trong product card shop */
+.shop-product-card .product-card__price .flex-align.gap-4.text-main-two-600 {
+  margin-top: 0.5rem !important;
+}
+
 /* Removed custom 5-column grid for Top Deal block. Restored original Bootstrap grid usage. */
 
 /* TOP DEAL - SIÊU RẺ */
@@ -826,4 +831,127 @@
 .gift-nav-btn {
   width: 36px;
   height: 36px;
+}
+
+/* CSS cho ảnh sản phẩm tỷ lệ dọc trong LatestProductsSection */
+.vertical-image-container {
+  background-color: #f8f9fa !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.vertical-image {
+  width: 2000px !important;
+  height: 2000px !important;
+  max-width: 150% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* CSS riêng cho ảnh sản phẩm cần tùy chỉnh trong "Hàng mới chào sân" */
+/* Bạn có thể tự chỉnh sửa các giá trị bên dưới */
+.custom-image-container {
+  background-color: #f8f9fa !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.custom-product-image {
+  /* Chỉnh sửa kích thước ảnh tại đây */
+  width: 250px !important;
+  height: 250px !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* CSS cho trang Shop - đảm bảo product card có chiều cao chính xác */
+.shop-product-card {
+  height: 341.73px !important;
+  min-height: 341.73px !important;
+  max-height: 341.73px !important;
+}
+
+/* Thu nhỏ khoảng trắng giữa đánh giá và giá trong trang Shop */
+.shop-product-card .product-card__content {
+  justify-content: flex-start !important;
+}
+
+.shop-product-card .product-card__price {
+  margin-top: 35px !important;
+}
+
+/* Giảm margin-top cho sản phẩm CÓ giảm giá (có thẻ .text-main-two-600 bên trong) */
+.shop-product-card .product-card__price:has(.text-main-two-600) {
+  margin-top: 0px !important;
+}
+
+/* CSS riêng cho ảnh sản phẩm "Áo nỉ dài tay bé gái Rabity" trong trang Shop */
+/* Bạn có thể tự chỉnh sửa các giá trị bên dưới */
+.shop .product-card.shop-product-card img[alt="Áo nỉ dài tay bé gái Rabity"] {
+  width: 350px !important;
+  height: 350px !important;
+  object-fit: contain !important;
+  margin: 0 auto !important;
+  display: block !important;
+}
+
+/* ========================================================================
+   GIFT PROGRAMS SECTION
+   ======================================================================== */
+.gift-programs-section .gift-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.gift-programs-section .gift-icon-large {
+  font-size: 64px;
+}
+
+.gift-programs-section .gift-program-card .gift-image-wrapper {
+  height: 160px;
+}
+
+.gift-programs-section .gift-program-card .gift-title {
+  min-height: 44px;
+}
+
+.gift-program-card {
+  transition: all 0.3s ease;
+}
+
+.gift-program-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hover-shadow-lg:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+/* ========================================================================
+   CSS RIÊNG CHO ẢNH SẢN PHẨM CỤ THỂ - TRANG CHỦ "HÀNG MỚI CHÀO SÂN"
+   ======================================================================== */
+
+/* Kẹo Quả Sâm không đường Free Suger Ginseng Berry S candy 200g 1 */
+.product-card img[alt="Kẹo Quả Sâm không đường Free Suger Ginseng Berry S candy 200g 1"] {
+  /* Chỉnh sửa kích thước tại đây */
+  width: 180px !important;
+  height: 240px !important;
+  object-fit: contain !important;
+  margin: 0 auto !important;
 }

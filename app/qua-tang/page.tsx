@@ -45,6 +45,7 @@ interface QuaTangPagination {
     total: number;
 }
 
+// API trả về object: {data: [...], filters: {...}, pagination: {...}}
 interface QuaTangResponse {
     data: QuaTang[];
     filters: QuaTangFilters;
@@ -94,6 +95,7 @@ export default function GiftPromotionPage() {
                     thuonghieu: selectedThuongHieu || undefined,
                     page: currentPage,
                 });
+                // API trả về object: {data, filters, pagination}
                 setGifts(response.data || []);
                 setFilters(response.filters || null);
                 setPagination(response.pagination || null);

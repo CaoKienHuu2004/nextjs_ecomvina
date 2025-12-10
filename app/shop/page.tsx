@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { fetchShopProducts, fetchHomePage, fetchSearchProducts, type ShopCategory, type ShopBrand, type ShopPriceRange, type HomeHotSaleProduct } from "@/lib/api";
@@ -98,7 +98,7 @@ export default function ShopPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 20;
 
-  // State chính - trigger filtering (KHÔNG trigger API call)
+  // State chính - trigger filtering (SẼ trigger API call)
   const [filters, setFilters] = useState({
     danhmuc: categoryParam,
     locgia: "",
@@ -212,6 +212,21 @@ export default function ShopPage() {
   const [apiCategories, setApiCategories] = useState<ShopCategory[]>([]);
   const [apiBrands, setApiBrands] = useState<ShopBrand[]>([]);
   const [apiPriceRanges, setApiPriceRanges] = useState<ShopPriceRange[]>([]);
+
+  // Helper function để lấy min/max price từ locgia value (dùng fallback, không phụ thuộc apiPriceRanges để tránh loop)
+  const getPriceRangeStatic = useCallback((locgia: string): { min?: number; max?: number } => {
+    // Chỉ dùng fallback logic để tránh infinite loop
+    switch (locgia) {
+      case "low100": return { max: 100000 };
+      case "to200": return { min: 100000, max: 200000 };
+      case "to300": return { min: 200000, max: 300000 };
+      case "to500": return { min: 300000, max: 500000 };
+      case "to700": return { min: 500000, max: 700000 };
+      case "to1000": return { min: 700000, max: 1000000 };
+      case "high1000": return { min: 1000000 };
+      default: return {};
+    }
+  }, []);
 
   // useEffect 1: Fetch products từ API sanphams-all
   useEffect(() => {
@@ -383,13 +398,13 @@ export default function ShopPage() {
               products = [];
             }
           } else {
-            // === KHÔNG TÌM KIẾM: Dùng fetchShopProducts với category filter ===
+            // === KHÔNG TÌM KIẾM: Dùng fetchShopProducts với danh mục (giá + thương hiệu lọc client-side) ===
             try {
               console.log('🛒 Shop - Fetching from /api/sanphams-all');
-              console.log('🏷️ Shop - Category param:', categoryParam);
+              console.log('🏷️ Shop - Category:', filters.danhmuc || categoryParam);
 
               const shopData = await fetchShopProducts({
-                danhmuc: categoryParam || undefined, // Truyền category vào API để lọc server-side
+                danhmuc: filters.danhmuc || categoryParam || undefined,
               });
 
               console.log('✅ Shop - API Response:', shopData);
@@ -455,7 +470,8 @@ export default function ShopPage() {
     }
 
     fetchProducts();
-  }, [searchQuery, sourceParam, categoryParam]); // Fetch lại khi search query, source HOẶC category thay đổi
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, sourceParam, categoryParam, filters.danhmuc]); // Chỉ fetch lại khi search/source/category thay đổi, giá và thương hiệu lọc client-side
 
   // Tạo category options từ API
   const dynamicCategoryOptions = useMemo(() => {
@@ -502,53 +518,31 @@ export default function ShopPage() {
     return PRICE_OPTIONS;
   }, [apiPriceRanges]);
 
-  // useEffect 2: Apply filters CLIENT-SIDE (không fetch lại API)
+  // useEffect 2: Lọc client-side cho giá và thương hiệu (vì API có thể chưa hỗ trợ)
   useEffect(() => {
-    let filtered = allProducts;
+    let filtered = [...allProducts];
 
-    // 1. Lọc theo danh mục
-    if (filters.danhmuc && filters.danhmuc !== "") {
-      filtered = filtered.filter(p => p.category === filters.danhmuc);
-    }
-
-    // 2. Lọc theo giá
+    // Lọc theo giá (client-side)
     if (filters.locgia && filters.locgia !== "") {
-      // Tìm price range từ API hoặc dùng logic cũ
-      const priceRange = apiPriceRanges.find(r => r.value === filters.locgia);
-      if (priceRange) {
-        filtered = filtered.filter(p => {
-          const price = p.price;
-          const minOk = price >= priceRange.min;
-          const maxOk = priceRange.max === null || price <= priceRange.max;
-          return minOk && maxOk;
-        });
-      } else {
-        // Fallback logic cũ
-        filtered = filtered.filter(p => {
-          const price = p.price;
-          switch (filters.locgia) {
-            case "low100": return price < 100000;
-            case "to200": return price >= 100000 && price <= 200000;
-            case "to300": return price >= 200000 && price <= 300000;
-            case "to500": return price >= 300000 && price <= 500000;
-            case "to700": return price >= 500000 && price <= 700000;
-            case "to1000": return price >= 700000 && price <= 1000000;
-            case "high1000": return price > 1000000;
-            default: return true;
-          }
-        });
-      }
+      const priceRange = getPriceRangeStatic(filters.locgia);
+      filtered = filtered.filter(p => {
+        const price = p.price;
+        const minOk = priceRange.min === undefined || price >= priceRange.min;
+        const maxOk = priceRange.max === undefined || price <= priceRange.max;
+        return minOk && maxOk;
+      });
     }
 
-    // 3. Lọc theo thương hiệu
+    // Lọc theo thương hiệu (client-side) - so sánh với brandSlug hoặc brand name
     if (filters.thuonghieu && filters.thuonghieu !== "") {
       filtered = filtered.filter(p =>
-        p.brandSlug === filters.thuonghieu
+        p.brandSlug === filters.thuonghieu ||
+        p.brand?.toLowerCase().includes(filters.thuonghieu.toLowerCase())
       );
     }
 
     setFilteredProducts(filtered);
-  }, [allProducts, filters, apiPriceRanges]);
+  }, [allProducts, filters.locgia, filters.thuonghieu, getPriceRangeStatic]);
 
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
@@ -640,8 +634,8 @@ export default function ShopPage() {
                       Danh mục sản phẩm
                     </h6>
                     <ul className="max-h-540 overflow-y-auto scroll-sm">
-                      {dynamicCategoryOptions.map((cat) => (
-                        <li key={cat.value || "all"} className="mb-20">
+                      {dynamicCategoryOptions.map((cat, index) => (
+                        <li key={`cat-${index}-${cat.value || "all"}`} className="mb-20">
                           <div className="form-check common-check common-radio">
                             <input
                               className="form-check-input"
@@ -666,8 +660,8 @@ export default function ShopPage() {
                       Lọc theo giá tiền
                     </h6>
                     <ul className="max-h-540 overflow-y-auto scroll-sm">
-                      {dynamicPriceOptions.map((price) => (
-                        <li key={price.value || "all-price"} className="mb-24">
+                      {dynamicPriceOptions.map((price, index) => (
+                        <li key={`price-${index}-${price.value || "all"}`} className="mb-24">
                           <div className="form-check common-check common-radio">
                             <input
                               className="form-check-input"
@@ -692,8 +686,8 @@ export default function ShopPage() {
                       Lọc theo thương hiệu
                     </h6>
                     <ul className="max-h-540 overflow-y-auto scroll-sm">
-                      {dynamicBrandOptions.map((brand) => (
-                        <li key={brand.value || "all-brand"} className="mb-16">
+                      {dynamicBrandOptions.map((brand, index) => (
+                        <li key={`brand-${index}-${brand.value || "all"}`} className="mb-16">
                           <div className="form-check common-check common-radio">
                             <input
                               className="form-check-input"
@@ -802,7 +796,7 @@ export default function ShopPage() {
                     ) : (
                       currentProducts.map((p) => (
                         <div key={`${p.id}-${p.category}`} className="col-xxl-3 col-xl-3 col-lg-4 col-xs-6">
-                          <div className="product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2">
+                          <div className="product-card shop-product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2">
                             <Link
                               href={p.slug ? `/product-details/${p.slug}` : `/product-details/${p.id}`}
                               className="flex-center rounded-8 bg-gray-50 position-relative"
@@ -837,7 +831,7 @@ export default function ShopPage() {
                               </div>
                               <div className="product-card__price mt-5">
                                 {(p.discount ?? 0) > 0 && (p.originalPrice ?? 0) > 0 && (
-                                  <div className="flex-align gap-4 text-main-two-600">
+                                  <div className="flex-align gap-4 text-main-two-600 discount-hahaha">
                                     <i className="ph-fill ph-seal-percent text-sm"></i> -{p.discount}%
                                     <span className="text-gray-400 text-sm fw-semibold text-decoration-line-through">
                                       {formatCurrency(p.originalPrice)}

@@ -15,7 +15,7 @@ interface TimeLeft {
     seconds: number;
 }
 
-// Interface cho quà tặng từ API /api-qua-tang/{slug}
+// Interface cho quà tặng từ API /api/quatangs-all/{slug}
 interface QuaTangDetail {
     id: number;
     id_bienthe: number;
@@ -75,14 +75,14 @@ interface SanPhamCoQua {
 }
 
 interface QuaTangResponse {
-    quatang: QuaTangDetail;
+    data: QuaTangDetail;
     sanpham_coqua: SanPhamCoQua[];
 }
 
-// Fetch chi tiết quà tặng bằng slug - API: /api-qua-tang/{slug}
+// Fetch chi tiết quà tặng bằng slug - API: /api/quatangs-all/{slug}
 async function fetchQuaTangDetail(slug: string): Promise<QuaTangResponse | null> {
     try {
-        const response = await fetch(`${API_URL}/api-qua-tang/${slug}`, {
+        const response = await fetch(`${API_URL}/api/quatangs-all/${slug}`, {
             method: 'GET',
             headers: {
                 Accept: 'application/json',
@@ -119,23 +119,44 @@ export default function GiftDetailPage() {
     const TARGET_AMOUNT = gift?.dieukiengiatri || 0;
     const hasEnoughProducts = totalItems >= MIN_PRODUCTS;
     const hasEnoughAmount = TARGET_AMOUNT === 0 || subtotal >= TARGET_AMOUNT;
-    const progressPercent = TARGET_AMOUNT > 0 ? Math.min(100, Math.round((subtotal / TARGET_AMOUNT) * 100)) : (hasEnoughProducts ? 100 : 0);
 
-    // Handle add to cart
+    // Tính progressPercent dựa trên giỏ hàng thực tế (real-time)
+    const progressPercent = React.useMemo(() => {
+        // Nếu điều kiện giá trị > 0, tính theo giá trị đơn hàng
+        if (TARGET_AMOUNT > 0) {
+            const percent = Math.min(100, Math.round((subtotal / TARGET_AMOUNT) * 100));
+            return percent;
+        }
+        // Nếu điều kiện số lượng, tính theo số sản phẩm
+        if (MIN_PRODUCTS > 0) {
+            const percent = Math.min(100, Math.round((totalItems / MIN_PRODUCTS) * 100));
+            return percent;
+        }
+        return 0;
+    }, [subtotal, totalItems, TARGET_AMOUNT, MIN_PRODUCTS]);
+
+    // Handle add to cart - gửi kèm id_chuongtrinh để backend áp dụng quà tặng
     const handleAddToCart = async (product: SanPhamCoQua) => {
+        // Lấy id_chuongtrinh từ gift data để gửi kèm khi addToCart
+        const id_chuongtrinh = gift?.id_chuongtrinh;
+
+        console.log('🛒 Adding to cart with id_chuongtrinh:', id_chuongtrinh);
+
         await addToCart({
             id_bienthe: product.id_bienthe_de_them_vao_gio,
             id: product.id,
             ten: product.ten,
             hinhanh: product.hinh_anh,
             gia: product.gia?.current || 0,
-        }, 1);
+            id_chuongtrinh: id_chuongtrinh, // Gửi id chương trình để backend áp dụng quà tặng
+        }, 1, id_chuongtrinh);
+
         setShowCartAlert(true);
         // Auto hide after 3 seconds
         setTimeout(() => setShowCartAlert(false), 3000);
     };
 
-    // Fetch gift data từ API /api-qua-tang/{slug}
+    // Fetch gift data từ API /api/quatangs-all/{slug}
     useEffect(() => {
         const loadGiftData = async () => {
             // Cần có slug
@@ -148,11 +169,11 @@ export default function GiftDetailPage() {
                 setLoading(true);
                 const response = await fetchQuaTangDetail(giftSlug);
                 console.log('🎁 API Response:', response);
-                console.log('🎁 dieukiengiatri:', response?.quatang?.dieukiengiatri);
-                console.log('🎁 dieukiensoluong:', response?.quatang?.dieukiensoluong);
+                console.log('🎁 dieukiengiatri:', response?.data?.dieukiengiatri);
+                console.log('🎁 dieukiensoluong:', response?.data?.dieukiensoluong);
 
-                if (response?.quatang) {
-                    setGift(response.quatang);
+                if (response?.data) {
+                    setGift(response.data);
                     setRelatedProducts(response.sanpham_coqua || []);
                 }
             } catch (error) {
@@ -406,7 +427,9 @@ export default function GiftDetailPage() {
                                                 <span className="text-gray-900 text-sm fw-medium">
                                                     {progressPercent >= 100
                                                         ? '🎉 Đã đủ điều kiện nhận quà!'
-                                                        : `Còn ${formatPrice(TARGET_AMOUNT - subtotal)} đ nữa để nhận quà`
+                                                        : TARGET_AMOUNT > 0
+                                                            ? `Còn ${formatPrice(Math.max(0, TARGET_AMOUNT - subtotal))} đ nữa để nhận quà`
+                                                            : `Cần thêm ${Math.max(0, MIN_PRODUCTS - totalItems)} sản phẩm nữa để nhận quà`
                                                     }
                                                 </span>
                                             </div>

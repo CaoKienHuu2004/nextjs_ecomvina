@@ -6,7 +6,7 @@ import Image from "next/image";
 export default function Footer() {
   return (
     <>
-      <footer className="footer py-40 overflow-hidden" style={{ marginTop: -112 }}>
+      <footer className="footer py-40 overflow-hidden" style={{ marginTop: -50 }}>
         <div className="container container-lg">
           <div className="row gy-4">
             {/* Brand & contact */}

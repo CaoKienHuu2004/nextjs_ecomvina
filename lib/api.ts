@@ -253,7 +253,6 @@ export interface HomePageResponse {
     top_categories: HomeTopCategoryWithProducts[];
     top_brands: TopBrand[];
     best_products: HomeHotSaleProduct[];
-    new_coupon: Coupon[];
     new_launch: HomeHotSaleProduct[];
     most_watched: HomeHotSaleProduct[];
     posts_to_explore?: BlogPost[];

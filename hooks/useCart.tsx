@@ -147,6 +147,7 @@ export type CartItem = {
   id_giohang: number | string;
   id_bienthe: number | string;
   soluong: number;
+  id_chuongtrinh?: number | string;  // ID chương trình khuyến mãi
   product?: ProductDisplayInfo;
 };
 
@@ -164,20 +165,46 @@ export interface GiftItem {
 }
 
 interface ServerCartItemRaw {
-  id_giohang?: number | string;
-  id_nguoidung?: number | string;
-  trangthai?: string;
+  id?: number | string;              // ID của item trong giỏ hàng (từ API mới)
+  id_giohang?: number | string;      // ID giỏ hàng (từ API cũ)
+  id_nguoidung?: number | string;    // ID người dùng
+  id_bienthe?: number | string;      // ID biến thể sản phẩm
+  soluong?: number;                  // Số lượng
+  thanhtien?: number;                // Thành tiền
+  trangthai?: string;                // Trạng thái
+  id_chuongtrinh?: number | string;  // ID chương trình khuyến mãi
+
+  // Cấu trúc bienthe từ API mới
   bienthe?: {
+    id?: number;
     soluong?: number;
     giagoc?: number;
+    giaban?: number;
     thanhtien?: number;
     tamtinh?: number;
+    ten?: string;      // Tên biến thể (ví dụ: "Đỏ", "Size M")
+    hinhanh?: string;  // Hình ảnh biến thể
+    // Cấu trúc nested từ API mới
+    sanpham?: {
+      id?: number;
+      ten?: string;          // Tên sản phẩm
+      tensanpham?: string;   // Tên sản phẩm (alias)
+      slug?: string;
+      gia?: number;
+      thuonghieu?: { ten?: string } | string;
+      loaisanpham?: { ten?: string } | string;
+      hinhanhsanpham?: Array<{ url?: string; hinhanh?: string }>;
+    };
+    loaibienthe?: {
+      ten?: string;      // Tên loại biến thể (ví dụ: "Màu sắc")
+    };
+    // Cấu trúc detail từ API cũ
     detail?: {
       thuonghieu?: string;
       tensanpham?: string;
       loaisanpham?: string;
       loaibienthe?: string;
-      ten_loaibienthe?: string;  // Thêm field này cho API có thể trả về
+      ten_loaibienthe?: string;
       giamgia?: string | number;
       giagoc?: number;
       giaban?: number;
@@ -225,6 +252,7 @@ export type AddToCartInput = {
   loaibienthe?: string;
   thuonghieu?: string;
   slug?: string;
+  id_chuongtrinh?: number | string; // ID chương trình khuyến mãi (nếu có)
   [key: string]: unknown;
 };
 
@@ -255,7 +283,7 @@ export function useCart() {
   }, []);
 
   const getAuthHeaders = useCallback((): Record<string, string> => {
-      const headers: Record<string, string> = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "application/json",
     };
@@ -269,25 +297,60 @@ export function useCart() {
   const mapServerDataToCartItem = useCallback((serverItem: unknown): CartItem => {
     const sItem = serverItem as ServerCartItemRaw;
 
-    const id_giohang = sItem.id_giohang ?? `temp_${Date.now()}_${Math.random()}`;
-    const soluong = Number(sItem.bienthe?.soluong ?? 1);
-    const detail = sItem.bienthe?.detail;
+    const id_giohang = sItem.id_giohang ?? sItem.id ?? `temp_${Date.now()}_${Math.random()}`;
+    const soluong = Number(sItem.soluong ?? sItem.bienthe?.soluong ?? 1);
+    const bienthe = sItem.bienthe;
+    const detail = bienthe?.detail;
+    const sanpham = bienthe?.sanpham;
 
-    // DEBUG: Log detail để xem cấu trúc
+    // DEBUG: Log để xem cấu trúc
+    console.log('📦 Cart item bienthe:', bienthe);
+    console.log('📦 Cart item sanpham:', sanpham);
     console.log('📦 Cart item detail:', detail);
 
     let productInfo: ProductDisplayInfo | undefined = undefined;
 
-    if (detail) {
+    // Ưu tiên lấy từ sanpham (cấu trúc API mới), fallback về detail (cấu trúc cũ)
+    if (sanpham) {
+      const currentPrice = Number(bienthe?.giaban ?? bienthe?.giagoc ?? sanpham.gia ?? 0);
+      const originPrice = Number(bienthe?.giagoc ?? sanpham.gia ?? 0);
+      const discountPercent = originPrice > currentPrice && originPrice > 0
+        ? Math.round(((originPrice - currentPrice) / originPrice) * 100)
+        : 0;
+
+      // Lấy loaibienthe từ nhiều nguồn có thể
+      const loaibienthe = bienthe?.loaibienthe?.ten || bienthe?.ten || '';
+      console.log('🏷️ loaibienthe:', loaibienthe);
+
+      // Lấy hình ảnh từ sanpham.hinhanhsanpham hoặc bienthe.hinhanh
+      const mediaurl = sanpham.hinhanhsanpham?.[0]?.hinhanh || bienthe?.hinhanh || "/assets/images/thumbs/placeholder.png";
+
+      productInfo = {
+        id: id_giohang,
+        ten: sanpham.ten ?? "Sản phẩm",
+        mediaurl: mediaurl,
+        category: sanpham.loaisanpham?.ten,
+        gia: {
+          current: currentPrice,
+          before_discount: originPrice,
+          discount_percent: discountPercent
+        },
+        ratingAverage: 5,
+        ratingCount: 0,
+        thuonghieu: sanpham.thuonghieu?.ten,
+        loaibienthe: loaibienthe,
+        slug: sanpham.slug
+      };
+    } else if (detail) {
+      // Fallback cho API cũ
       const currentPrice = Number(detail.giaban ?? detail.giagoc ?? 0);
       const originPrice = Number(detail.giagoc ?? 0);
       const discountPercent = originPrice > currentPrice && originPrice > 0
         ? Math.round(((originPrice - currentPrice) / originPrice) * 100)
         : (typeof detail.giamgia === 'number' ? detail.giamgia : Number(detail.giamgia) || 0);
 
-      // Lấy loaibienthe từ nhiều nguồn có thể
       const loaibienthe = detail.loaibienthe || detail.ten_loaibienthe || detail.loaisanpham || '';
-      console.log('🏷️ loaibienthe:', loaibienthe, '| detail.loaibienthe:', detail.loaibienthe);
+      console.log('🏷️ loaibienthe (legacy):', loaibienthe);
 
       productInfo = {
         id: id_giohang,
@@ -309,11 +372,68 @@ export function useCart() {
 
     return {
       id_giohang,
-      id_bienthe: id_giohang,
+      id_bienthe: sItem.id_bienthe ?? id_giohang,
       soluong,
+      id_chuongtrinh: sItem.id_chuongtrinh,
       product: productInfo
     };
   }, []);
+
+  const extractCartPayload = useCallback((payload: unknown): unknown[] => {
+    if (Array.isArray(payload)) return payload;
+    if (payload && typeof payload === "object") {
+      const obj = payload as Record<string, unknown>;
+      if (Array.isArray(obj.data)) return obj.data as unknown[];
+      if (Array.isArray(obj.items)) return obj.items as unknown[];
+      if (Array.isArray(obj.cart)) return obj.cart as unknown[];
+    }
+    return [];
+  }, []);
+
+  const buildCartStateFromRaw = useCallback((rawData: unknown[]): { items: CartItem[]; gifts: GiftItem[] } => {
+    const regularItems = rawData.filter((item) => {
+      const sItem = item as ServerCartItemRaw;
+      return sItem?.bienthe !== null && sItem?.bienthe !== undefined;
+    });
+
+    const cartItems = regularItems.map(mapServerDataToCartItem);
+
+    const giftItems: GiftItem[] = [];
+    rawData.forEach((item) => {
+      const sItem = item as ServerCartItemRaw;
+      if (sItem?.bienthe_quatang) {
+        const qt = sItem.bienthe_quatang;
+        if (qt.detail) {
+          giftItems.push({
+            id_bienthe: qt.id_bienthe || (sItem.id_giohang as number) || 0,
+            soluong: qt.soluong || 1,
+            thanhtien: qt.thanhtien || 0,
+            ten_sanpham: qt.detail.tensanpham,
+            ten_loaibienthe: qt.detail.loaisanpham,
+            thuonghieu: qt.detail.thuonghieu,
+            hinhanh: qt.detail.hinhanh,
+            slug: qt.detail.slug,
+            giagoc: qt.detail.giagoc || qt.giagoc
+          });
+        } else if (qt.bienthe) {
+          const bienthe = qt.bienthe;
+          giftItems.push({
+            id_bienthe: qt.id_bienthe || bienthe?.id || 0,
+            soluong: qt.soluong || 1,
+            thanhtien: qt.thanhtien || 0,
+            ten_sanpham: bienthe?.sanpham?.ten,
+            ten_loaibienthe: bienthe?.loaibienthe?.ten,
+            thuonghieu: bienthe?.sanpham?.thuonghieu?.ten,
+            hinhanh: bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh,
+            slug: bienthe?.sanpham?.slug,
+            giagoc: bienthe?.giagoc
+          });
+        }
+      }
+    });
+
+    return { items: cartItems, gifts: giftItems };
+  }, [mapServerDataToCartItem]);
 
   // --- FETCH CART ---
   const loadServerCart = useCallback(async (): Promise<{ items: CartItem[], gifts: GiftItem[] }> => {
@@ -335,81 +455,40 @@ export function useCart() {
       const j: unknown = await res.json();
 
       // DEBUG: Log raw response để xem cấu trúc
-      // console.log('🛒 Raw cart API response:', JSON.stringify(j, null, 2));
+      console.log('🛒 Raw cart API response:', JSON.stringify(j, null, 2));
 
-      let rawData: unknown[] = [];
-      if (Array.isArray(j)) {
-        rawData = j;
-      } else if (j && typeof j === 'object' && 'data' in j && Array.isArray((j as { data: unknown[] }).data)) {
-        rawData = (j as { data: unknown[] }).data;
-      }
+      const rawData = extractCartPayload(j);
 
       // DEBUG: Log từng item để tìm quà tặng
-      // console.log('🎁 Checking for gifts in cart items:', rawData.length, 'items');
+      console.log('🛒 Raw cart data from API:', rawData.length, 'items');
+      console.log('🛒 Full API response:', JSON.stringify(rawData, null, 2));
       rawData.forEach((item, index) => {
         const sItem = item as ServerCartItemRaw;
-        // console.log(`  Item ${index}:`, {
-        //   id_giohang: sItem.id_giohang,
-        //   has_bienthe: !!sItem.bienthe,
-        //   has_bienthe_quatang: !!sItem.bienthe_quatang,
-        //   bienthe_quatang: sItem.bienthe_quatang
-        // });
+        console.log(`  📦 Item ${index}:`, {
+          id_giohang: sItem.id_giohang,
+          has_bienthe: !!sItem.bienthe,
+          has_bienthe_quatang: !!sItem.bienthe_quatang,
+          bienthe_quatang: sItem.bienthe_quatang
+        });
       });
-
-      // Lọc: Chỉ lấy items có bienthe (sản phẩm thường), loại bỏ items chỉ có bienthe_quatang (quà tặng)
-      const regularItems = rawData.filter((item) => {
-        const sItem = item as ServerCartItemRaw;
-        return sItem.bienthe !== null && sItem.bienthe !== undefined;
-      });
-      // console.log('🛒 Regular cart items (with bienthe):', regularItems.length);
-
-      const cartItems = regularItems.map(mapServerDataToCartItem);
-
-      // Extract gifts from cart items - items có bienthe_quatang
-      const giftItems: GiftItem[] = [];
       rawData.forEach((item) => {
         const sItem = item as ServerCartItemRaw;
-        if (sItem.bienthe_quatang) {
-          const qt = sItem.bienthe_quatang;
-          // Ưu tiên đọc từ detail (API mới), fallback sang bienthe (cấu trúc cũ)
-          if (qt.detail) {
-            // Cấu trúc API mới: bienthe_quatang.detail
-            giftItems.push({
-              id_bienthe: qt.id_bienthe || sItem.id_giohang as number || 0,
-              soluong: qt.soluong || 1,
-              thanhtien: qt.thanhtien || 0,
-              ten_sanpham: qt.detail.tensanpham,
-              ten_loaibienthe: qt.detail.loaisanpham,
-              thuonghieu: qt.detail.thuonghieu,
-              hinhanh: qt.detail.hinhanh,
-              slug: qt.detail.slug,
-              giagoc: qt.detail.giagoc || qt.giagoc
-            });
-          } else if (qt.bienthe) {
-            // Cấu trúc cũ: bienthe_quatang.bienthe
-            const bienthe = qt.bienthe;
-            giftItems.push({
-              id_bienthe: qt.id_bienthe || bienthe?.id || 0,
-              soluong: qt.soluong || 1,
-              thanhtien: qt.thanhtien || 0,
-              ten_sanpham: bienthe?.sanpham?.ten,
-              ten_loaibienthe: bienthe?.loaibienthe?.ten,
-              thuonghieu: bienthe?.sanpham?.thuonghieu?.ten,
-              hinhanh: bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh,
-              slug: bienthe?.sanpham?.slug,
-              giagoc: bienthe?.giagoc
-            });
-          }
-        }
+        console.log('🎁 Checking item for gift:', {
+          id_giohang: sItem.id_giohang,
+          has_bienthe_quatang: !!sItem.bienthe_quatang,
+          bienthe_quatang: sItem.bienthe_quatang
+        });
       });
-      // console.log('🎁 Gift items extracted:', giftItems.length, giftItems);
+
+      const { items: cartItems, gifts: giftItems } = buildCartStateFromRaw(rawData);
+      console.log('🎁 Gift items extracted:', giftItems.length, giftItems);
 
       return { items: cartItems, gifts: giftItems };
     } catch (e) {
       console.error("Lỗi load server cart:", e);
       return { items: [], gifts: [] };
     }
-  }, [API, getAuthHeaders, mapServerDataToCartItem]);
+  }, [API, getAuthHeaders, extractCartPayload, buildCartStateFromRaw]);
 
   // --- LOCAL STORAGE HELPERS ---
   const loadLocalCart = useCallback((): CartItem[] => {
@@ -506,51 +585,110 @@ export function useCart() {
   }, [fetchCart]);
 
   // --- ACTIONS ---
-  const addToCart = useCallback(async (product: AddToCartInput, soluong = 1) => {
+  const addToCart = useCallback(async (product: AddToCartInput, soluong = 1, id_chuongtrinh?: number | string) => {
     const id_bienthe = product.id_bienthe ?? product.id;
     if (!id_bienthe) {
       console.error("❌ addToCart: Không có id_bienthe");
       return;
     }
 
+    // Lấy id_chuongtrinh từ tham số hoặc từ product
+    const programId = id_chuongtrinh ?? product.id_chuongtrinh;
+
     // Kiểm tra token thực sự có trong cookie, không chỉ dựa vào isLoggedIn state
     const hasToken = hasValidToken();
-    console.log("🛒 addToCart called:", { id_bienthe, soluong, isLoggedIn, hasToken });
+    console.log("🛒 addToCart called:", { id_bienthe, soluong, id_chuongtrinh: programId, isLoggedIn, hasToken });
 
     setLoading(true);
     try {
       if (hasToken) {
-        const requestBody = {
+        // ĐÃ ĐĂNG NHẬP → Dùng /api/tai-khoan/giohang (lưu vào database, có đầy đủ thông tin)
+        const requestBody: { id_bienthe: string; soluong: number; id_chuongtrinh?: number } = {
           id_bienthe: String(id_bienthe),
           soluong: Number(soluong)
         };
 
-        console.log("📤 Sending to API:", requestBody);
-        console.log("🌐 API URL:", `${API}/api/tai-khoan/giohang`);
+        // Thêm id_chuongtrinh nếu có (cho chương trình khuyến mãi/quà tặng)
+        if (programId) {
+          requestBody.id_chuongtrinh = Number(programId);
+        }
 
-        const res = await fetch(`${API}/api/tai-khoan/giohang`, {
+        const cartUrl = `${API}/api/tai-khoan/giohang`;
+        console.log("🌐 Cart API URL (logged in):", cartUrl);
+        console.log("📤 Cart API payload:", requestBody);
+
+        const res = await fetch(cartUrl, {
           method: "POST",
           headers: getAuthHeaders(),
           credentials: "include",
           body: JSON.stringify(requestBody),
         });
 
-        console.log("📥 API Response status:", res.status);
+        console.log("📥 Cart API status:", res.status);
         const responseData = await res.json().catch(() => null);
-        console.log("📥 API Response data:", responseData);
+        console.log("📥 Cart API data:", responseData);
 
         if (res.ok) {
-          const { items: serverItems, gifts: serverGifts } = await loadServerCart();
-          setItems(serverItems);
-          setGifts(serverGifts);
-          const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-          window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
-          console.log("✅ Cart updated successfully");
+          // API trả về toàn bộ giỏ hàng sau khi cập nhật
+          const rawData = extractCartPayload(responseData);
+          if (rawData.length > 0) {
+            const { items: serverItems, gifts: serverGifts } = buildCartStateFromRaw(rawData);
+            setItems(serverItems);
+            setGifts(serverGifts);
+            const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+            window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+            console.log("✅ Cart updated successfully, items:", serverItems.length, "gifts:", serverGifts.length);
+          } else {
+            // Nếu response không phải array, reload cart
+            const { items: serverItems, gifts: serverGifts } = await loadServerCart();
+            setItems(serverItems);
+            setGifts(serverGifts);
+            const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+            window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+            console.log("✅ Cart reloaded after add");
+          }
         } else {
-          console.error("❌ API Error:", res.status, responseData);
+          console.error("❌ Cart API Error:", res.status, responseData);
         }
       } else {
-        console.log("💾 User not logged in, saving to localStorage");
+        // CHƯA ĐĂNG NHẬP → Dùng /web/giohang (session) hoặc localStorage
+        console.log("💾 User not logged in, trying session cart API...");
+
+        const sessionRequestBody: { id_bienthe: string; soluong: number; id_chuongtrinh?: number } = {
+          id_bienthe: String(id_bienthe),
+          soluong: Number(soluong)
+        };
+
+        if (programId) {
+          sessionRequestBody.id_chuongtrinh = Number(programId);
+        }
+
+        try {
+          const sessionCartUrl = `${API}/web/giohang`;
+          console.log("🌐 Session Cart API URL:", sessionCartUrl);
+          console.log("📤 Session Cart API payload:", sessionRequestBody);
+
+          const sessionRes = await fetch(sessionCartUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            credentials: "include",
+            body: JSON.stringify(sessionRequestBody),
+          });
+
+          console.log("📥 Session Cart API status:", sessionRes.status);
+          const sessionData = await sessionRes.json().catch(() => null);
+          console.log("📥 Session Cart API data:", sessionData);
+
+          if (sessionRes.ok && sessionData?.status === true) {
+            // Session cart API thành công - nhưng response không có detail
+            // Nên vẫn lưu vào localStorage để hiển thị
+            console.log("✅ Session cart updated on server");
+          }
+        } catch (error) {
+          console.warn("⚠️ Session cart API failed, using localStorage only:", error);
+        }
+
+        // Luôn lưu vào localStorage để hiển thị (vì session API không trả về detail)
         const localCart = loadLocalCart();
         const existingIndex = localCart.findIndex(i => i.id_bienthe == id_bienthe);
 
@@ -567,6 +705,7 @@ export function useCart() {
           id_giohang: `local_${Date.now()}`,
           id_bienthe: id_bienthe,
           soluong: soluong,
+          id_chuongtrinh: programId,
           product: {
             id: id_bienthe,
             ten: product.ten ?? "Sản phẩm",
@@ -582,27 +721,20 @@ export function useCart() {
 
         if (existingIndex >= 0) {
           localCart[existingIndex].soluong += soluong;
-          // Cập nhật thông tin sản phẩm nếu có thêm data
-          if (displayItem.product) {
-            localCart[existingIndex].product = {
-              ...localCart[existingIndex].product,
-              ...displayItem.product
-            };
-          }
-          console.log("📝 Updated existing item soluong");
         } else {
           localCart.push(displayItem);
-          console.log("📝 Added new item to local cart");
         }
 
         saveLocalCart(localCart);
         setItems(localCart);
         const count = localCart.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
         window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
-        console.log("✅ Local cart saved:", localCart.length, "items, total count:", count);
+        console.log("✅ Cart saved to localStorage");
       }
-    } finally { setLoading(false); }
-  }, [hasValidToken, API, getAuthHeaders, loadServerCart, loadLocalCart, saveLocalCart, isLoggedIn]);
+    } finally {
+      setLoading(false);
+    }
+  }, [isLoggedIn, hasValidToken, getAuthHeaders, API, extractCartPayload, buildCartStateFromRaw, loadServerCart, loadLocalCart, saveLocalCart]);
 
   const updatesoluong = useCallback(async (id_giohang: number | string, soluong: number) => {
     if (soluong < 1) return;
