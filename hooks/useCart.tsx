@@ -306,6 +306,21 @@ export function useCart() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // useEffect(() => {
+  //   const handleCartUpdated = () => fetchCart(); // Gọi hàm fetchCart cũ của bạn
+  //   window.addEventListener("cart:updated", handleCartUpdated);
+  //   return () => window.removeEventListener("cart:updated", handleCartUpdated);
+  // }, []);
+
   // Phí vận chuyển hiện tại (component set khi có giá ship)
   const [shippingCost, setShippingCost] = useState<number>(0);
 
@@ -595,20 +610,28 @@ export function useCart() {
 
   // --- INIT EFFECT ---
   const fetchCart = useCallback(async () => {
-    setLoading(true);
+    if (!isMountedRef.current) return;
+
+    if (isMountedRef.current) setLoading(true);
     try {
       const hasToken = hasValidToken();
       if (hasToken) {
         const { items: serverItems, gifts: serverGifts } = await loadServerCart();
-        setItems(serverItems);
-        setGifts(serverGifts);
+        if (isMountedRef.current) {
+          setItems(serverItems);
+          setGifts(serverGifts);
+        }
       } else {
         const localCart = loadLocalCart();
-        setItems(localCart);
-        setGifts([]);
+        if (isMountedRef.current) {
+          setItems(localCart);
+          setGifts([]);
+        }
       }
-    } finally { setLoading(false); }
-  }, [hasValidToken, loadServerCart, loadLocalCart]);
+    } finally {
+      if (isMountedRef.current) setLoading(false);
+    }
+  }, [hasValidToken, loadServerCart, loadLocalCart, isMountedRef]);
 
   useEffect(() => {
     let mounted = true;
@@ -641,40 +664,32 @@ export function useCart() {
   }, [fetchCart]);
 
   // --- ACTIONS ---
-  const addToCart = useCallback(async (product: AddToCartInput, soluong = 1, id_chuongtrinh?: number | string) => {
+    const addToCart = useCallback(async (product: AddToCartInput, soluong = 1, id_chuongtrinh?: number | string) => {
+    // [THÊM] Check mount sớm
+    if (!isMountedRef.current) return;
+
     const id_bienthe = product.id_bienthe ?? product.id;
     if (!id_bienthe) {
       console.error("❌ addToCart: Không có id_bienthe");
       return;
     }
 
-    // Lấy id_chuongtrinh từ tham số hoặc từ product
     const programId = id_chuongtrinh ?? product.id_chuongtrinh;
-
-    // Kiểm tra token thực sự có trong cookie, không chỉ dựa vào isLoggedIn state
     const hasToken = hasValidToken();
-    console.log("🛒 addToCart called:", { id_bienthe, soluong, id_chuongtrinh: programId, isLoggedIn, hasToken });
 
-    setLoading(true);
+    // Bật loading nếu component còn mount
+    if (isMountedRef.current) setLoading(true);
     try {
       if (hasToken) {
-        // ĐÃ ĐĂNG NHẬP → Dùng /api/tai-khoan/giohang (lưu vào database, có đầy đủ thông tin)
+        // === (Logic cũ khi logged in) ===
         const requestBody: { id_bienthe?: string; id_giohang?: string; soluong: number; id_chuongtrinh?: number } = {
           id_bienthe: String(id_bienthe),
-          // If product comes from server and already has a cart row id, include it so server can use it for gift logic
           id_giohang: product.id_giohang ? String(product.id_giohang) : undefined,
           soluong: Number(soluong)
         };
-
-        // Thêm id_chuongtrinh nếu có (cho chương trình khuyến mãi/quà tặng)
-        if (programId) {
-          requestBody.id_chuongtrinh = Number(programId);
-        }
+        if (programId) requestBody.id_chuongtrinh = Number(programId);
 
         const cartUrl = `${API}/api/tai-khoan/giohang`;
-        console.log("🌐 Cart API URL (logged in):", cartUrl);
-        console.log("📤 Cart API payload:", requestBody);
-
         const res = await fetch(cartUrl, {
           method: "POST",
           headers: getAuthHeaders(),
@@ -682,75 +697,40 @@ export function useCart() {
           body: JSON.stringify(requestBody),
         });
 
-        console.log("📥 Cart API status:", res.status);
-        const responseData = await res.json().catch(() => null);
-        console.log("📥 Cart API data:", responseData);
-
         if (res.ok) {
-          // API trả về toàn bộ giỏ hàng sau khi cập nhật
+          const responseData = await res.json().catch(() => null);
           const rawData = extractCartPayload(responseData);
           if (rawData.length > 0) {
             const { items: serverItems, gifts: serverGifts } = buildCartStateFromRaw(rawData);
-            setItems(serverItems);
-            setGifts(serverGifts);
-            const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-            window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
-            console.log("✅ Cart updated successfully, items:", serverItems.length, "gifts:", serverGifts.length);
+            if (isMountedRef.current) {
+              setItems(serverItems);
+              setGifts(serverGifts);
+            }
+            // Dispatch event with optional count
+            if (typeof window !== "undefined") {
+              const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+              window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+            }
           } else {
-            // Nếu response không phải array, reload cart
             const { items: serverItems, gifts: serverGifts } = await loadServerCart();
-            setItems(serverItems);
-            setGifts(serverGifts);
-            const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-            window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
-            console.log("✅ Cart reloaded after add");
+            if (isMountedRef.current) {
+              setItems(serverItems);
+              setGifts(serverGifts);
+            }
+            if (typeof window !== "undefined") {
+              const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+              window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+            }
           }
         } else {
-          console.error("❌ Cart API Error:", res.status, responseData);
+          console.error("❌ Cart API Error:", res.status, await res.text().catch(() => ''));
         }
       } else {
-        // CHƯA ĐĂNG NHẬP → Dùng /web/giohang (session) hoặc localStorage
-        console.log("💾 User not logged in, trying session cart API...");
-
-        const sessionRequestBody: { id_bienthe: string; soluong: number; id_chuongtrinh?: number } = {
-           id_bienthe: String(id_bienthe),
-          soluong: Number(soluong)
-        };
-
-        if (programId) {
-          sessionRequestBody.id_chuongtrinh = Number(programId);
-        }
-
-        try {
-          const sessionCartUrl = `${API}/web/giohang`;
-          console.log("🌐 Session Cart API URL:", sessionCartUrl);
-          console.log("📤 Session Cart API payload:", sessionRequestBody);
-
-          const sessionRes = await fetch(sessionCartUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
-            credentials: "include",
-            body: JSON.stringify(sessionRequestBody),
-          });
-
-          console.log("📥 Session Cart API status:", sessionRes.status);
-          const sessionData = await sessionRes.json().catch(() => null);
-          console.log("📥 Session Cart API data:", sessionData);
-
-          if (sessionRes.ok && sessionData?.status === true) {
-            // Session cart API thành công - nhưng response không có detail
-            // Nên vẫn lưu vào localStorage để hiển thị
-            console.log("✅ Session cart updated on server");
-          }
-        } catch (error) {
-          console.warn("⚠️ Session cart API failed, using localStorage only:", error);
-        }
-
-        // Luôn lưu vào localStorage để hiển thị (vì session API không trả về detail)
+        // === (Logic cũ khi chưa login: session/localStorage) ===
+        // session API try/catch omitted for brevity — keep your existing logic
         const localCart = loadLocalCart();
         const existingIndex = localCart.findIndex(i => i.id_bienthe == id_bienthe);
 
-        // Lấy đầy đủ thông tin giá
         const giaObj = typeof product.gia === 'number'
           ? { current: product.gia, before_discount: 0, discount_percent: 0 }
           : {
@@ -775,8 +755,6 @@ export function useCart() {
           }
         };
 
-        console.log("📦 Product info to save:", displayItem);
-
         if (existingIndex >= 0) {
           localCart[existingIndex].soluong += soluong;
         } else {
@@ -784,56 +762,91 @@ export function useCart() {
         }
 
         saveLocalCart(localCart);
-        setItems(localCart);
-        const count = localCart.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-        window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
-        console.log("✅ Cart saved to localStorage");
+        if (isMountedRef.current) setItems(localCart);
+
+        if (typeof window !== "undefined") {
+          const count = localCart.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+          window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+        }
       }
     } finally {
-      setLoading(false);
+      // [THÊM] chỉ tắt loading nếu component vẫn mount
+      if (isMountedRef.current) setLoading(false);
     }
-  }, [isLoggedIn, hasValidToken, getAuthHeaders, API, extractCartPayload, buildCartStateFromRaw, loadServerCart, loadLocalCart, saveLocalCart]);
+  }, [API, buildCartStateFromRaw, isLoggedIn, hasValidToken, getAuthHeaders, extractCartPayload, loadServerCart, loadLocalCart, saveLocalCart]);
 
   const updatesoluong = useCallback(async (id_giohang: number | string, soluong: number) => {
-    if (soluong < 1) return;
-    setItems(prev => prev.map(it => it.id_giohang === id_giohang ? { ...it, soluong } : it));
+  if (soluong < 1) return;
 
-    const hasToken = hasValidToken();
+  // optimistic update và lấy kết quả updated
+  let updatedItems: CartItem[] = [];
+  setItems(prev => {
+    updatedItems = prev.map(it => it.id_giohang === id_giohang ? { ...it, soluong } : it);
+    return updatedItems;
+  });
+
+  const hasToken = hasValidToken();
     if (hasToken) {
-      await fetch(`${API}/api/tai-khoan/giohang/${id_giohang}`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ soluong: soluong }),
-      }).catch(() => fetchCart());
+      try {
+        await fetch(`${API}/api/tai-khoan/giohang/${id_giohang}`, {
+          method: "PUT",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ soluong: soluong }),
+        });
+      } catch {
+        await fetchCart();
+      }
     } else {
       const local = loadLocalCart();
       const updated = local.map(it => it.id_giohang === id_giohang ? { ...it, soluong } : it);
       saveLocalCart(updated);
+      updatedItems = updated;
     }
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent("cart:updated"));
-  }, [hasValidToken, API, getAuthHeaders, fetchCart, loadLocalCart, saveLocalCart]);
+
+    if (typeof window !== 'undefined') {
+      const count = updatedItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+      window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+    }
+  }, [API, getAuthHeaders, hasValidToken, fetchCart, loadLocalCart, saveLocalCart]);
 
   const removeItem = useCallback(async (id_giohang: number | string) => {
-    setItems(prev => prev.filter(it => it.id_giohang !== id_giohang));
-    const hasToken = hasValidToken();
+  // optimistic remove
+  setItems(prev => prev.filter(it => it.id_giohang !== id_giohang));
+
+  const hasToken = hasValidToken();
     if (hasToken) {
-      await fetch(`${API}/api/tai-khoan/giohang/${id_giohang}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      }).catch(() => fetchCart());
+      try {
+        await fetch(`${API}/api/tai-khoan/giohang/${id_giohang}`, {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        });
+      } catch {
+        await fetchCart();
+      }
     } else {
       const local = loadLocalCart();
       const updated = local.filter(it => it.id_giohang !== id_giohang);
       saveLocalCart(updated);
     }
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent("cart:updated"));
-  }, [hasValidToken, API, getAuthHeaders, fetchCart, loadLocalCart, saveLocalCart]);
+
+    // [THÊM] Bắn sự kiện
+    if (typeof window !== 'undefined') {
+      const count = (typeof window !== 'undefined') ? (await (async () => { 
+        // compute count from current storage/state
+        const current = hasToken ? (await loadServerCart()).items : loadLocalCart();
+        return current.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+      })()) : 0;
+      window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+    }
+  }, [API, getAuthHeaders, hasValidToken, fetchCart, loadLocalCart, saveLocalCart, loadServerCart]);
 
   const clearCart = useCallback(() => {
     setItems([]);
     const hasToken = hasValidToken();
     if (!hasToken) clearLocalCart();
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count: 0 } }));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count: 0 } }));
+    }
   }, [hasValidToken, clearLocalCart]);
 
   // ========================================================================

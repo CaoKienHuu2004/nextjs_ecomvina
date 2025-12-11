@@ -4,16 +4,28 @@ import React from "react";
 import { useSearchParams } from "next/navigation";
 import ProductCardV2 from "@/components/ProductCardV2";
 
-/** Kiểu dữ liệu tối thiểu cho item trả về từ API (đủ dùng để render) */
+/** * Kiểu dữ liệu khớp với JSON API trả về 
+ * Dựa trên: { id, ten, slug, hinh_anh, gia: { current, before_discount }, id_chuongtrinh... }
+ */
 type ProductListItem = {
   id: number | string;
   slug?: string;
   ten?: string;
-  mediaurl?: string;
-  selling_price?: number;
-  original_price?: number;
+  hinh_anh?: string; // API trả về key này
+  
+  // Các trường giá từ JSON
+  gia?: { 
+    current?: number; 
+    before_discount?: number;
+    discount_percent?: number;
+  };
+  
+  // Các trường hỗ trợ hiển thị/logic
+  selling_price?: number; // Fallback cũ
+  original_price?: number; // Fallback cũ
   is_free?: boolean;
-  gia?: { current?: number; before_discount?: number };
+  id_chuongtrinh?: number; // Quan trọng cho logic quà tặng/khuyến mãi
+  
   loaibienthe?: string;
   thuonghieu?: string;
 };
@@ -21,7 +33,6 @@ type ProductListItem = {
 export default function ProductsPage() {
   const sp = useSearchParams();
   const source = (sp.get("source") || "hot_sales").toLowerCase();
-  const perPage = Number(sp.get("per_page") || 20);
   const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
 
   const [loading, setLoading] = React.useState(true);
@@ -29,68 +40,78 @@ export default function ProductsPage() {
 
   React.useEffect(() => {
     let alive = true;
-    const selection = source === "hot_sales" ? "hot_sales" : source;
-    const url = `${API}/api/sanphams-selection?selection=${encodeURIComponent(
-      selection
-    )}&per_page=${perPage}`;
+    
+    // Xây dựng URL API
+    // const url = `${API}/api/sanphams-all?per_page=${perPage}`;
+    const url = `${API}/api/sanphams-all`;
+    // Nếu cần filter theo source:
+    // const url = `${API}/api/sanphams-all?selection=${encodeURIComponent(source)}&per_page=${perPage}`;
 
     setLoading(true);
     fetch(url, { headers: { Accept: "application/json" } })
       .then((r) => r.json())
       .then((res: { status?: boolean; data?: unknown }) => {
         if (!alive) return;
+        
+        // Kiểm tra kỹ cấu trúc trả về
         if (res?.status && Array.isArray(res.data)) {
           setItems(res.data as ProductListItem[]);
+        } else if (Array.isArray(res)) {
+           // Trường hợp API trả về mảng trực tiếp không bọc trong data
+           setItems(res as ProductListItem[]);
         } else {
           setItems([]);
         }
       })
-      .catch(() => alive && setItems([]))
+      .catch((err) => {
+        console.error("Lỗi tải sản phẩm:", err);
+        if (alive) setItems([]);
+      })
       .finally(() => alive && setLoading(false));
 
     return () => {
       alive = false;
     };
-  }, [API, source, perPage]);
+  }, [API, source]);
 
-  const heading =
-    source === "hot_sales" ? "Top deal • Siêu rẻ" : "Danh sách sản phẩm";
+  const heading = source === "hot_sales" ? "Top deal • Siêu rẻ" : "Danh sách sản phẩm";
 
-  /** Chuẩn hoá 1 item → props của ProductCardV2 (tránh undefined/type lỗi) */
+  /** * Mapper: Chuyển dữ liệu API thô -> Props chuẩn cho ProductCardV2 
+   */
   const toCardProps = (p: ProductListItem) => {
+    // 1. Xử lý Link
     const href = `/products/${String(p.slug ?? p.id ?? "")}`;
-    const img =
-      (typeof p.mediaurl === "string" && p.mediaurl.trim()) ||
-      "/assets/images/thumbs/product-two-img1.png";
+    
+    // 2. Xử lý Ảnh (Ưu tiên hinh_anh từ API)
+    const img = (typeof p.hinh_anh === "string" && p.hinh_anh.trim()) 
+      ? p.hinh_anh 
+      : "/assets/images/thumbs/product-two-img1.png";
+
+    // 3. Xử lý Tiêu đề
     const title = p.ten ?? "Sản phẩm";
-    const price =
-      typeof p.selling_price === "number"
-        ? p.selling_price
-        : typeof p.gia?.current === "number"
-          ? p.gia.current!
-          : 0;
-    const oldPrice =
-      typeof p.original_price === "number"
-        ? p.original_price
-        : typeof p.gia?.before_discount === "number"
-          ? p.gia.before_discount!
-          : undefined;
 
+    // 4. Xử lý Giá (Ưu tiên lấy từ object `gia` theo cấu trúc JSON mới)
+    const price = typeof p.gia?.current === "number" 
+      ? p.gia.current 
+      : (p.selling_price ?? 0);
+
+    const oldPrice = typeof p.gia?.before_discount === "number"
+      ? p.gia.before_discount
+      : p.original_price;
+
+    // 5. Logic Variant & Chương trình
     const idNum = Number(p.id);
-    const variantId = Number.isFinite(idNum) ? idNum : undefined;
+    const variantId = Number.isFinite(idNum) ? idNum : undefined; // Dùng ID sản phẩm làm fallback cho variantId
 
-    const isFree =
-      Boolean(p.is_free) ||
-      price === 0 ||
-      (typeof p.gia?.current === "number" && p.gia.current === 0);
-
+    // 6. Logic Badge Miễn phí
+    const isFree = Boolean(p.is_free) || price === 0;
     const badge = isFree
       ? ({ text: "Miễn phí", color: "primary" } as const)
       : undefined;
 
     return {
       href,
-      img,
+      img, // Đã map từ hinh_anh -> img (mediaurl)
       title,
       price,
       oldPrice,
@@ -99,6 +120,7 @@ export default function ProductsPage() {
       loaibienthe: p.loaibienthe || "",
       thuonghieu: p.thuonghieu || "",
       slug: String(p.slug || ""),
+      id_chuongtrinh: p.id_chuongtrinh, // Truyền thêm ID chương trình nếu ProductCardV2 hỗ trợ
     };
   };
 
@@ -111,9 +133,13 @@ export default function ProductsPage() {
         </div>
 
         {loading ? (
-          <div className="p-16 border rounded-12">Đang tải…</div>
+          <div className="p-16 text-center border rounded-12 text-gray-500">
+             Đang tải dữ liệu...
+          </div>
         ) : items.length === 0 ? (
-          <div className="p-16 border rounded-12">Không có sản phẩm.</div>
+          <div className="p-16 text-center border rounded-12 text-gray-500">
+             Không có sản phẩm nào.
+          </div>
         ) : (
           <div className="row g-12">
             {items.map((p) => {
@@ -134,6 +160,8 @@ export default function ProductsPage() {
                     loaibienthe={card.loaibienthe}
                     thuonghieu={card.thuonghieu}
                     slug={card.slug}
+                    // Nếu ProductCardV2 của bạn hỗ trợ id_chuongtrinh để add to cart
+                    id_chuongtrinh={card.id_chuongtrinh} 
                   />
                 </div>
               );

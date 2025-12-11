@@ -28,9 +28,11 @@ type Props = {
   onUnwish?: () => void;
   badge?: { text: string; color: BadgeColor }; // vd: { text: "Miễn phí", color: "primary" }
   variantId?: number; // id biến thể chuẩn để AddToCart chính xác
+  id_chuongtrinh?: number; // ID chương trình quà tặng
   loaibienthe?: string; // Loại biến thể (ví dụ: "Đỏ - Size M")
   thuonghieu?: string;  // Thương hiệu
   slug?: string;        // Slug sản phẩm
+  uiStyle?: "default" | "shop";
 };
 
 const colorMap: Record<BadgeColor, string> = {
@@ -85,8 +87,24 @@ export default function ProductCardV2(props: Props) {
     onUnwish,
     loaibienthe,
     thuonghieu,
+    id_chuongtrinh,
     slug,
+    uiStyle = "default",
   } = props;
+
+  // UI variants
+  const isShopStyle = uiStyle === "shop";
+
+  const containerClass = isShopStyle
+    ? "product-card h-100 border border-gray-100 hover-border-main-600 rounded-6 position-relative transition-2"
+    : "p-16 bg-white border border-gray-100 product-card h-100 hover-border-main-600 rounded-16 position-relative transition-2";
+
+  const contentClass = isShopStyle
+    ? "product-card__content w-100 h-100 align-items-stretch flex-column justify-content-between d-flex mt-10 px-10 pb-8"
+    : "mt-16 product-card__content";
+
+  const priceValueClass = isShopStyle ? "text-heading text-lg fw-semibold" : "text-heading text-md fw-semibold";
+  const oldPriceClass = isShopStyle ? "text-gray-400 text-sm fw-semibold text-decoration-line-through" : "text-gray-400 text-md fw-semibold text-decoration-line-through";
 
   const dest = href || "/product-details";
   const priceText = fmtVND(price) || "";
@@ -107,7 +125,7 @@ export default function ProductCardV2(props: Props) {
 
     try {
       let id = variantId;
-      if (!id) {
+      if (!id) return; {
         const url = new URL(dest, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
         const last = url.pathname.split('/').pop();
         const parsed = last ? parseInt(last, 10) : NaN;
@@ -127,10 +145,11 @@ export default function ProductCardV2(props: Props) {
         gia: typeof price === "number" ? { current: price, before_discount: typeof oldPrice === "number" ? oldPrice : 0 } : undefined,
         loaibienthe: loaibienthe || "",
         thuonghieu: thuonghieu || "",
+        id_chuongtrinh: id_chuongtrinh || "",
         slug: slug || href?.split('/').pop() || "",
       };
 
-      await addToCart(productInput, 1);
+      await addToCart(productInput, 1,props.id_chuongtrinh);
       const el = thumbRef.current;
       if (el) flyToCart(el);
     } catch (err) {
@@ -140,8 +159,8 @@ export default function ProductCardV2(props: Props) {
 
   return (
     <div
-      className="p-16 bg-white border border-gray-100 product-card h-100 hover-border-main-600 rounded-16 position-relative transition-2"
-      style={{ position: "relative" }} // mốc định vị cho badge + tim
+      className={containerClass}
+      style={{ position: "relative" }}
     >
       {/* === BADGE (ví dụ: Miễn phí) — góc trái trên === */}
       {badge ? (
@@ -197,12 +216,53 @@ export default function ProductCardV2(props: Props) {
       </Link>
 
       {/* === CONTENT === */}
-      <div className="mt-16 product-card__content">
+      <div className={contentClass}>
         <h6 className="mt-12 mb-8 text-lg title fw-semibold">
           <Link href={dest} className="link text-line-2">
             {title}
           </Link>
         </h6>
+
+        {/* rating block unchanged */}
+
+        <div className="product-card__price mt-5">
+          {oldText ? (
+            <span className={oldPriceClass}>
+              {" "}{oldText}
+            </span>
+          ) : null}
+          <span className={priceValueClass}>
+            {priceText}
+          </span>
+        </div>
+
+        {/* {!isShopStyle && (
+          <div className="gap-8 d-flex mt-12">
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="gap-8 px-24 product-card__cart btn bg-gray-50 text-heading hover-bg-main-600 hover-text-white py-11 rounded-8 flex-center fw-medium flex-grow-1"
+              style={{
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+                position: 'relative',
+                zIndex: 100
+              }}
+            >
+              Thêm vào giỏ hàng <i className="ph ph-shopping-cart" />
+            </button>
+            {showUnwishButton && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUnwish?.(); }}
+                className="gap-8 px-16 product-card__cart btn bg-gray-50 text-heading hover-bg-main-600 hover-text-white py-11 rounded-8 flex-center fw-medium"
+                title="Bỏ yêu thích"
+              >
+                <i className="ph ph-heart-break" />
+              </button>
+            )}
+          </div>
+        )} */}
 
         <div className="gap-6 mt-16 mb-20 flex-align">
           <span className="text-xs text-gray-500 fw-medium">{ratingText}</span>

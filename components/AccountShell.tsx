@@ -3,7 +3,8 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth"; // 1. Import hook useAuth
+import { useAuth } from "@/hooks/useAuth"; 
+import { useWishlist } from "@/hooks/useWishlist";
 
 export type AccountShellProps = {
   title?: string;
@@ -21,6 +22,7 @@ export default function AccountShell({
   // 2. Lấy thông tin user và hàm logout từ AuthContext toàn cục
   // Dữ liệu này đã được đồng bộ từ Server (layout.tsx) nên sẽ có ngay lập tức
   const { user, logout } = useAuth();
+  const { count: wishlistCount } = useWishlist();
 
   // 3. Helper xử lý ảnh Avatar (giống logic FullHeader)
   const getAvatarUrl = (path?: string) => {
@@ -107,7 +109,11 @@ export default function AccountShell({
                             <span className="gap-12 fw-medium text-md d-flex align-items-center">
                               <i className={t.icon} /> <span>{t.label}</span>
                             </span>
-                            {t.key === "wishlist" && <span className="px-6 py-4 badge bg-success-600 ms-auto">6</span>}
+                            {t.key === "wishlist" && wishlistCount > 0 && (
+                              <span className="px-6 py-4 badge bg-success-600 ms-auto" aria-label={`Yêu thích: ${wishlistCount}`}>
+                                {wishlistCount}
+                              </span>
+                            )}
                             {t.key === "notifications" && notifications.unread > 0 && <span className="px-6 py-4 badge bg-main-600 ms-auto">!</span>}
                           </Link>
                         </li>
