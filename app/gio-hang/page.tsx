@@ -347,15 +347,15 @@ function CartPageContent() {
 
   // Nếu hook useCart trả về vouchers thì ưu tiên dùng nó (map về shape HomeCoupon)
   const coupons: HomeCoupon[] = (availableVouchers && availableVouchers.length > 0)
-    ? (availableVouchers as ApiCoupon[]).map((v) => ({
-        id: v.id,
-        magiamgia: v.magiamgia ?? v.code,
-        dieukien: v.dieukien,
-        mota: v.mota,
-        giatri: v.giatri,
-        ngaybatdau: v.ngaybatdau,
-        ngayketthuc: v.ngayketthuc,
-        trangthai: (v as any).trangthai ?? 'Hoạt động',
+    ? (availableVouchers as any[]).map((v) => ({
+        id: (v?.id ?? 0) as number,
+        magiamgia: v?.magiamgia ?? v?.code,
+        dieukien: v?.dieukien,
+        mota: v?.mota,
+        giatri: Number(v?.giatri ?? v?.giatri ?? 0),
+        ngaybatdau: v?.ngaybatdau,
+        ngayketthuc: v?.ngayketthuc,
+        trangthai: v?.trangthai ?? 'Hoạt động',
       }))
     : couponsFromHome;
 
@@ -669,7 +669,7 @@ function CartPageContent() {
                 <span className="flex-align gap-8 text-xs fw-medium text-gray-900">
                   <button
                     type="button"
-                    onClick={() => removeVoucher && removeVoucher()}
+                    onClick={() =>  removeVoucher()}
                     className="btn border-danger-600 text-danger-600 hover-bg-danger-600 hover-text-white hover-border-danger-600 p-6 rounded-4 text-xs"
                   >
                     Hủy

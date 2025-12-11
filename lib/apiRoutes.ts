@@ -16,7 +16,7 @@ export const API_ROUTES = {
   TOI_DON_HANGS: "/api/tai-khoan/donhangs",
   TOI_GIO_HANG: "/api/toi/giohang",
   TOI_GIO_HANG_ITEM: (id: string | number) => `/api/toi/giohang/${id}`,
-  TOI_THONG_BAOS: "/api/toi/thongbaos",
+  TOI_THONG_BAOS: "/api/tai-khoan/thongbaos",
   TOI_DIA_CHIS: "/api/tai-khoan/diachis",
   TOI_DIA_CHI_ITEM: (id: string | number) => `/api/tai-khoan/diachis/${id}`,
   TOI_DANH_GIAS: "/api/toi/danhgias",

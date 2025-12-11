@@ -4,6 +4,7 @@ import { useAuth } from "./useAuth";
 import Cookies from "js-cookie";
 
 const CART_STORAGE_KEY = "marketpro_cart";
+const VOUCHER_STORAGE_KEY = "marketpro_applied_voucher";
 
 // ========================================================================
 // 1. TYPE Definitions
@@ -330,6 +331,22 @@ export function useCart() {
   // Voucher State
   const [appliedVoucher, setAppliedVoucher] = useState<Coupon | null>(null);
   const [availableVouchers, setAvailableVouchers] = useState<Coupon[]>([]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(VOUCHER_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Coupon;
+        // nhẹ nhàng validate shape tối thiểu
+        if (parsed && typeof parsed === "object" && (parsed.id || parsed.code || parsed.magiamgia)) {
+          setAppliedVoucher(parsed);
+        }
+      }
+    } catch (err) {
+      console.debug("Không thể parse applied voucher từ localStorage:", err);
+    }
+  }, []);
 
   const hasSyncedRef = useRef(false);
 
@@ -862,10 +879,18 @@ export function useCart() {
 
   const applyVoucher = useCallback((voucher: Coupon) => {
     if (voucher.min_order_value && subtotal < voucher.min_order_value) {
-      alert(`Đơn hàng chưa đạt giá trị tối thiểu ${voucher.min_order_value.toLocaleString("vi-VN")}đ`);
+      // có thể giữ logic hiện có
+      // alert(...) hoặc return false tùy bạn. Giữ nguyên như cũ nếu muốn.
       return;
     }
     setAppliedVoucher(voucher);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(VOUCHER_STORAGE_KEY, JSON.stringify(voucher));
+      }
+    } catch (err) {
+      console.debug("Lưu voucher vào localStorage thất bại", err);
+    }
   }, [subtotal]);
 
 // Áp voucher theo id (gọi API /api/ma-giam-gia/:id)
@@ -874,20 +899,24 @@ export function useCart() {
     setLoading(true);
     try {
       const res = await fetch(`${API}/api/ma-giam-gia/${id}`, { headers: getAuthHeaders() });
+      const json: unknown = await res.json().catch(() => null);
+
       if (!res.ok) {
         alert("Không thể lấy chi tiết mã giảm giá");
         return;
       }
-      const json: unknown = await res.json().catch(() => null);
+
       const raw = extractObjectData<ServerVoucherRaw>(json);
       if (!raw) {
         alert("Mã giảm giá không hợp lệ");
         return;
       }
+
       if (raw.trangthai !== "Hoạt động" || !isVoucherInDateRange(raw.ngaybatdau, raw.ngayketthuc)) {
         alert("Mã giảm giá chưa kích hoạt hoặc đã hết hạn");
         return;
       }
+
       const parsed = parseVoucherCondition(raw.dieukien, raw.mota);
       const coupon: Coupon = {
         id: raw.id,
@@ -901,6 +930,7 @@ export function useCart() {
         ngaybatdau: raw.ngaybatdau,
         ngayketthuc: raw.ngayketthuc
       };
+
       applyVoucher(coupon);
     } catch (e) {
       console.error(e);
@@ -1007,7 +1037,16 @@ export function useCart() {
     }
   }, [API, getAuthHeaders, fetchVouchers, applyVoucher]);
 
-  const removeVoucher = useCallback(() => setAppliedVoucher(null), []);
+  const removeVoucher = useCallback(() => {
+    setAppliedVoucher(null);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(VOUCHER_STORAGE_KEY);
+      }
+    } catch (err) {
+      console.debug("Xoá voucher từ localStorage thất bại", err);
+    }
+  }, []);
 
   // Tính tiền giảm tuỳ loại voucher
   const discountAmount = useMemo(() => {
@@ -1033,6 +1072,7 @@ export function useCart() {
   const total = Math.max(0, subtotal - discountAmount);
   const totalItems = items.reduce((sum, it) => sum + (Number(it.soluong) || 0), 0);
   const totalGifts = gifts.reduce((sum, g) => sum + (g.soluong || 0), 0);
+
 
   return {
     items, loading, addToCart, updatesoluong, removeItem, clearCart, refreshCart: fetchCart,

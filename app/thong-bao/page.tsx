@@ -60,7 +60,7 @@ export default function ThongBaoPage(): JSX.Element {
       const headers: Record<string, string> = {};
       if (token) headers.Authorization = `Bearer ${token}`;
 
-      const res = await fetch(`${API || ""}/api/toi/thongbaos`, {
+      const res = await fetch(`${API || ""}/api/tai-khoan/thongbaos`, {
         method: "GET",
         headers,
         credentials: "include",
@@ -116,7 +116,7 @@ export default function ThongBaoPage(): JSX.Element {
 
   const visible = list.filter((n) => (n.loaithongbao || "Hệ thống") === activeTab);
 
-  // markAllAsRead: call PATCH per API: /api/toi/thongbaos/{id}/daxem
+  // markAllAsRead: call PATCH per API: /api/tai-khoan/thongbaos/{id}/daxem
   const markAllAsRead = async () => {
     try {
       const token = Cookies.get("access_token");
@@ -129,7 +129,7 @@ export default function ThongBaoPage(): JSX.Element {
       // Mark all in parallel (change to sequential if server rate-limits)
       await Promise.all(
         targets.map((item: any) =>
-          fetch(`${API || ""}/api/toi/thongbaos/${item.id}/daxem`, {
+          fetch(`${API || ""}/api/tai-khoan/thongbaos/${item.id}/daxem`, {
             method: "PATCH",
             headers,
             credentials: "include",

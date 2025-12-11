@@ -47,6 +47,7 @@ export default function ThanhToanPage() {
   const [paymentMethod, setPaymentMethod] = useState("cod"); // 1: COD, 3: QR
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const { addToCart, appliedVoucher } = useCart();
   
 
   // 1. Load địa chỉ mặc định khi user load xong
@@ -92,6 +93,7 @@ export default function ThanhToanPage() {
             // "ma_magiamgia": NEWSTORE50K
             // }
             ma_magiamgia: null,nguoinhan: selectedAddress?.ten_nguoinhan ?? user?.hoten ?? "",
+            ma_magiamgia_id: appliedVoucher?.id ?? null,
             diachinhan: selectedAddress?.diachi ?? "",
             sodienthoai: selectedAddress?.sodienthoai ?? "",
             khuvucgiao: selectedAddress?.tinhthanh ?? "",

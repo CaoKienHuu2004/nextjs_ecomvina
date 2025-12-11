@@ -1,4 +1,3 @@
-
 export const getTrangThaiDonHang = (trang_thai: string | undefined | null): string => {
   if (!trang_thai) return 'Chưa rõ';
   const s = trang_thai.toString().trim().toLowerCase();
@@ -42,6 +41,8 @@ export const getPhuongThucThanhToan = (id_phuongthuc: number | undefined | null)
   }
 };
 
+// Bạn cần import và sử dụng các hàm này trong hoan-tat-thanh-toan/page.tsx và orders/page.tsx
+// Ví dụ: {getTrangThaiDonHang(order.trangthai)}
 // Trả về key trạng thái dùng cho filter / badge (optional)
 export const getStatusKey = (status?: string): string => {
   const s = (status || "").toString().toLowerCase();
