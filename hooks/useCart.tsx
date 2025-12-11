@@ -40,6 +40,43 @@ interface ServerVoucherRaw {
   [key: string]: unknown;
 }
 
+// --- Add safe JSON extractors (avoid `any`) ---
+function extractObjectData<T = Record<string, unknown>>(json: unknown): T | null {
+  if (json === null || json === undefined) return null;
+  if (Array.isArray(json)) return null; // object extractor không trả mảng
+  if (typeof json !== "object") return null;
+
+  const obj = json as Record<string, unknown>;
+  if ("data" in obj) {
+    const d = obj.data;
+    if (d && typeof d === "object" && !Array.isArray(d)) return d as T;
+    return null;
+  }
+
+  // json là object chứa trực tiếp payload
+  return json as T;
+}
+
+function extractListData<T = unknown>(json: unknown): T[] {
+  if (json === null || json === undefined) return [];
+  if (Array.isArray(json)) return json as T[];
+
+  if (typeof json === "object") {
+    const obj = json as Record<string, unknown>;
+    // ưu tiên các trường phổ biến trả mảng
+    if (Array.isArray(obj.data)) return obj.data as T[];
+    if (Array.isArray(obj.items)) return obj.items as T[];
+    if (Array.isArray(obj.cart)) return obj.cart as T[];
+
+    // Nếu data là object đơn lẻ, wrap thành mảng để xử lý đồng nhất
+    if (obj.data && typeof obj.data === "object" && !Array.isArray(obj.data)) {
+      return [obj.data as T];
+    }
+  }
+
+  return [];
+}
+
 // Loại điều kiện voucher
 export type VoucherConditionType =
   | 'tatca'           // Tất cả đơn hàng
@@ -264,6 +301,9 @@ export function useCart() {
   const { isLoggedIn } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Phí vận chuyển hiện tại (component set khi có giá ship)
+  const [shippingCost, setShippingCost] = useState<number>(0);
 
   // Gift State - Quà tặng trong giỏ hàng
   const [gifts, setGifts] = useState<GiftItem[]>([]);
@@ -803,6 +843,47 @@ export function useCart() {
     setAppliedVoucher(voucher);
   }, [subtotal]);
 
+// Áp voucher theo id (gọi API /api/ma-giam-gia/:id)
+  const applyVoucherById = useCallback(async (id: number | string) => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/ma-giam-gia/${id}`, { headers: getAuthHeaders() });
+      if (!res.ok) {
+        alert("Không thể lấy chi tiết mã giảm giá");
+        return;
+      }
+      const json: unknown = await res.json().catch(() => null);
+      const raw = extractObjectData<ServerVoucherRaw>(json);
+      if (!raw) {
+        alert("Mã giảm giá không hợp lệ");
+        return;
+      }
+      if (raw.trangthai !== "Hoạt động" || !isVoucherInDateRange(raw.ngaybatdau, raw.ngayketthuc)) {
+        alert("Mã giảm giá chưa kích hoạt hoặc đã hết hạn");
+        return;
+      }
+      const parsed = parseVoucherCondition(raw.dieukien, raw.mota);
+      const coupon: Coupon = {
+        id: raw.id,
+        code: String(raw.magiamgia ?? raw.code ?? "UNKNOWN"),
+        giatri: Number(raw.giatri ?? raw.amount ?? 0),
+        mota: raw.mota ?? raw.description ?? "Mã giảm giá",
+        min_order_value: parsed.minOrderValue,
+        dieukien: raw.dieukien,
+        condition_type: parsed.type,
+        ngaybatdau: raw.ngaybatdau,
+        ngayketthuc: raw.ngayketthuc
+      };
+      applyVoucher(coupon);
+    } catch (e) {
+      console.error(e);
+      alert("Lỗi khi kiểm tra mã giảm giá.");
+    } finally {
+      setLoading(false);
+    }
+  }, [API, getAuthHeaders, applyVoucher]);
+
   // Lấy danh sách voucher
   const fetchVouchers = useCallback(async () => {
     try {
@@ -818,13 +899,8 @@ export function useCart() {
       }
 
       if (res.ok) {
-        const json: unknown = await res.json();
-        let list: unknown[] = [];
-        if (json && typeof json === 'object' && 'data' in json && Array.isArray((json as { data: unknown[] }).data)) {
-          list = (json as { data: unknown[] }).data;
-        } else if (Array.isArray(json)) {
-          list = json;
-        }
+        const json: unknown = await res.json().catch(() => null);
+        const list = extractListData(json);
 
         // SỬA: Filter trước, Map sau để tránh any
         // Thêm check ngày hết hạn
@@ -867,14 +943,8 @@ export function useCart() {
       await fetchVouchers();
 
       const res = await fetch(`${API}/api/ma-giam-gia`, { headers: getAuthHeaders() });
-      const json = await res.json();
-
-      let list: unknown[] = [];
-      if (json && typeof json === 'object' && 'data' in json) {
-        list = (json as { data: unknown[] }).data;
-      } else if (Array.isArray(json)) {
-        list = json;
-      }
+      const json: unknown = await res.json().catch(() => null);
+      const list = extractListData(json);
 
       // SỬA: Ép kiểu an toàn + check ngày hết hạn
       const foundRaw = (list as ServerVoucherRaw[]).find((raw) => {
@@ -911,7 +981,27 @@ export function useCart() {
 
   const removeVoucher = useCallback(() => setAppliedVoucher(null), []);
 
-  const discountAmount = appliedVoucher ? appliedVoucher.giatri : 0;
+  // Tính tiền giảm tuỳ loại voucher
+  const discountAmount = useMemo(() => {
+    if (!appliedVoucher) return 0;
+    const amt = Number(appliedVoucher.giatri || 0);
+    const type = appliedVoucher.condition_type || 'unknown';
+
+    switch (type) {
+      case 'freeship':
+        // freeship: giảm bằng phí vận chuyển hiện tại (component phải set shippingCost)
+        return Math.min(shippingCost || 0, subtotal); // không vượt quá subtotal
+      case 'don_toi_thieu':
+      case 'tatca':
+      case 'khachhang_moi':
+      case 'khachhang_than_thiet':
+        // Đây là voucher tiền mặt; giới hạn không vượt quá subtotal
+        return Math.min(amt, subtotal);
+      default:
+        return Math.min(amt, subtotal);
+    }
+  }, [appliedVoucher, shippingCost, subtotal]);
+
   const total = Math.max(0, subtotal - discountAmount);
   const totalItems = items.reduce((sum, it) => sum + (Number(it.soluong) || 0), 0);
   const totalGifts = gifts.reduce((sum, g) => sum + (g.soluong || 0), 0);
@@ -924,6 +1014,9 @@ export function useCart() {
     totalGifts,
     appliedVoucher,
     applyVoucher,
+    applyVoucherById,
+    shippingCost,
+    setShippingCost,
     applyVoucherByCode,
     removeVoucher,
     discountAmount,
