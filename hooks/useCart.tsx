@@ -312,24 +312,30 @@ export function useCart() {
 
     // Ưu tiên lấy từ sanpham (cấu trúc API mới), fallback về detail (cấu trúc cũ)
     if (sanpham) {
-      const currentPrice = Number(bienthe?.giaban ?? bienthe?.giagoc ?? sanpham.gia ?? 0);
-      const originPrice = Number(bienthe?.giagoc ?? sanpham.gia ?? 0);
+      // sanpham có thể là object hoặc một string; narrow trước khi truy cập thuộc tính
+      const sp = typeof sanpham === "object" && sanpham !== null ? (sanpham as {
+        ten?: string;
+        gia?: number;
+        loaisanpham?: { ten?: string };
+        hinhanhsanpham?: Array<{ hinhanh?: string }>;
+        thuonghieu?: { ten?: string } | string;
+        slug?: string;
+      }) : undefined;
+
+      const currentPrice = Number(bienthe?.giaban ?? bienthe?.giagoc ?? sp?.gia ?? 0);
+      const originPrice = Number(bienthe?.giagoc ?? sp?.gia ?? 0);
       const discountPercent = originPrice > currentPrice && originPrice > 0
         ? Math.round(((originPrice - currentPrice) / originPrice) * 100)
         : 0;
-
-      // Lấy loaibienthe từ nhiều nguồn có thể
       const loaibienthe = bienthe?.loaibienthe?.ten || bienthe?.ten || '';
-      console.log('🏷️ loaibienthe:', loaibienthe);
 
-      // Lấy hình ảnh từ sanpham.hinhanhsanpham hoặc bienthe.hinhanh
-      const mediaurl = sanpham.hinhanhsanpham?.[0]?.hinhanh || bienthe?.hinhanh || "/assets/images/thumbs/placeholder.png";
+      const mediaurl = sp?.hinhanhsanpham?.[0]?.hinhanh || bienthe?.hinhanh || "/assets/images/thumbs/placeholder.png";
 
       productInfo = {
         id: id_giohang,
-        ten: sanpham.ten ?? "Sản phẩm",
-        mediaurl: mediaurl,
-        category: sanpham.loaisanpham?.ten,
+        ten: sp?.ten ?? "Sản phẩm",
+        mediaurl,
+        category: sp?.loaisanpham?.ten,
         gia: {
           current: currentPrice,
           before_discount: originPrice,
@@ -337,9 +343,9 @@ export function useCart() {
         },
         ratingAverage: 5,
         ratingCount: 0,
-        thuonghieu: sanpham.thuonghieu?.ten,
-        loaibienthe: loaibienthe,
-        slug: sanpham.slug
+        thuonghieu: typeof sp?.thuonghieu === "object" ? (sp?.thuonghieu as { ten?: string }).ten : (sp?.thuonghieu as string | undefined),
+        loaibienthe,
+        slug: sp?.slug
       };
     } else if (detail) {
       // Fallback cho API cũ
