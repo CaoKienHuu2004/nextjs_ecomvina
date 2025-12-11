@@ -227,7 +227,7 @@ export default function GiftDetailPage() {
     if (loading) {
         return (
             <>
-                <FullHeader showCategoriesBar={false} />
+                <FullHeader showClassicTopBar={true} showTopNav={false} />
                 <div className="page">
                     <section className="product-details pt-40 pb-80">
                         <div className="container container-lg">
@@ -247,7 +247,7 @@ export default function GiftDetailPage() {
     if (!gift) {
         return (
             <>
-                <FullHeader showCategoriesBar={false} />
+                <FullHeader showClassicTopBar={true} showTopNav={false} />
                 <div className="page">
                     <section className="product-details pt-40 pb-80">
                         <div className="container container-lg">
@@ -267,7 +267,7 @@ export default function GiftDetailPage() {
 
     return (
         <>
-            <FullHeader showCategoriesBar={false} />
+            <FullHeader showClassicTopBar={true} showTopNav={false} />
             <div className="page">
                 <section className="product-details pt-40 fix-scale-40">
                     <div className="container container-lg">

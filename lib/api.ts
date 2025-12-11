@@ -1,3 +1,5 @@
+import { VoucherConditionType } from "@/hooks/useCart";
+
 // lib/api.ts
 const BASE_URL = process.env.SERVER_API || process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
 
@@ -205,17 +207,20 @@ export interface TopBrand {
 }
 
 // ===== Coupons =====
-export interface Coupon {
+export type Coupon = {
   id: number;
-  code: string; // Alias for magiamgia for compatibility
-  magiamgia: number;
-  dieukien: string;
-  mota: string;
+  // Giữ cả 2 tên: `magiamgia` (dùng bởi UI hiện tại) và `code` (internal)
+  magiamgia?: string | number;
+  code: string;
   giatri: number;
-  ngaybatdau: string;
-  ngayketthuc: string;
-  trangthai: string;
-}
+  mota?: string;
+  min_order_value?: number;
+  dieukien?: string;
+  condition_type?: VoucherConditionType;
+  trangthai?: string;
+  ngaybatdau?: string;
+  ngayketthuc?: string;
+};
 
 // ===== Blog Posts =====
 export interface BlogPost {
@@ -255,6 +260,7 @@ export interface HomePageResponse {
     best_products: HomeHotSaleProduct[];
     new_launch: HomeHotSaleProduct[];
     most_watched: HomeHotSaleProduct[];
+    new_coupon?: Coupon[];            
     posts_to_explore?: BlogPost[];
   };
 }

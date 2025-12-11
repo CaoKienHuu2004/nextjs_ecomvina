@@ -5,6 +5,7 @@ import { useCart, parseVoucherCondition, isVoucherInDateRange, VoucherConditionT
 import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData';
 import Image from 'next/image';
 import FullHeader from '@/components/FullHeader';
+import { type Coupon as ApiCoupon } from '@/lib/api';
 
 // --- HELPER FUNCTIONS ---
 type PriceInput = number | Gia | undefined | null;
@@ -31,13 +32,13 @@ const formatPrice = (price: number) => {
 };
 
 const getPrice = (gia: PriceInput): number => {
-  if (typeof gia === "number") return gia;
-  return Number(gia?.current ?? 0);
+  if (typeof gia === 'number') return gia;
+  return Number((gia as any)?.current ?? 0);
 };
 
 const getOriginPrice = (gia: PriceInput): number => {
-  if (typeof gia === "object" && gia !== null) {
-    return Number(gia.before_discount ?? 0);
+  if (typeof gia === 'object' && gia !== null) {
+    return Number((gia as any).before_discount ?? 0);
   }
   return 0;
 };
@@ -46,6 +47,7 @@ const getOriginPrice = (gia: PriceInput): number => {
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return '';
   const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
@@ -76,31 +78,34 @@ function QuantityControl({
   onUpdate: (qty: number) => void;
 }) {
   const [localQty, setLocalQty] = useState(quantity);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<any | null>(null);
 
   // Sync local state khi prop thay đổi từ bên ngoài
   useEffect(() => {
     setLocalQty(quantity);
   }, [quantity]);
 
-  const handleQuantityChange = useCallback((newQty: number) => {
-    // Không cho giảm xuống dưới 1
-    if (newQty < 1) {
-      return;
-    }
+  const handleQuantityChange = useCallback(
+    (newQty: number) => {
+      // Không cho giảm xuống dưới 1
+      if (newQty < 1) {
+        return;
+      }
 
-    // Cập nhật UI ngay lập tức
-    setLocalQty(newQty);
+      // Cập nhật UI ngay lập tức
+      setLocalQty(newQty);
 
-    // Debounce API call
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
+      // Debounce API call
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
 
-    debounceRef.current = setTimeout(() => {
-      onUpdate(newQty);
-    }, 300);
-  }, [onUpdate]);
+      debounceRef.current = setTimeout(() => {
+        onUpdate(newQty);
+      }, 300);
+    },
+    [onUpdate]
+  );
 
   // Cleanup timeout khi unmount
   useEffect(() => {
@@ -127,10 +132,10 @@ function QuantityControl({
         type="number"
         className="w-32 px-4 text-center border border-gray-100 quantity__input flex-grow-1 border-start-0 border-end-0"
         value={localQty}
-        min="1"
+        min={1}
         aria-label="Số lượng sản phẩm"
         title="Số lượng"
-        onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+        onChange={(e) => handleQuantityChange(parseInt(e.target.value || '1', 10) || 1)}
       />
       <button
         type="button"
@@ -328,7 +333,7 @@ function DeleteConfirmModal({
 }
 
 function CartPageContent() {
-  const { items, loading, updatesoluong, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total, gifts, totalGifts } = useCart();
+  const { items, loading, updatesoluong, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total, gifts, totalGifts, availableVouchers } = useCart();
   const { data: homeData } = useHomeData();
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: number | string; name: string }>({
@@ -337,34 +342,23 @@ function CartPageContent() {
     name: '',
   });
 
-  // Cast an toàn: homeData?.data?.new_coupon có thể undefined
-  const coupons: HomeCoupon[] = ((homeData?.data as { new_coupon?: HomeCoupon[] } | undefined)?.new_coupon) ?? [];
-  // ...existing code...
+  // fallback home coupons (an toàn)
+  const couponsFromHome: HomeCoupon[] = ((homeData?.data as { new_coupon?: HomeCoupon[] } | undefined)?.new_coupon) ?? [];
 
-  // Thay các chỗ dùng homeData?.data?.new_coupon?.filter(...) bằng coupons?.filter(...)
-  // và annotate tham số callback:
-  {coupons?.filter((voucher: HomeCoupon) => {
-    if (voucher.trangthai !== 'Hoạt động') return false;
-    if (appliedVoucher && voucher.id === appliedVoucher.id) return false;
-    if (!isVoucherInDateRange(voucher.ngaybatdau, voucher.ngayketthuc)) return false;
+  // Nếu hook useCart trả về vouchers thì ưu tiên dùng nó (map về shape HomeCoupon)
+  const coupons: HomeCoupon[] = (availableVouchers && availableVouchers.length > 0)
+    ? (availableVouchers as ApiCoupon[]).map((v) => ({
+        id: v.id,
+        magiamgia: v.magiamgia ?? v.code,
+        dieukien: v.dieukien,
+        mota: v.mota,
+        giatri: v.giatri,
+        ngaybatdau: v.ngaybatdau,
+        ngayketthuc: v.ngayketthuc,
+        trangthai: (v as any).trangthai ?? 'Hoạt động',
+      }))
+    : couponsFromHome;
 
-    const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
-
-    switch (type) {
-      case 'tatca':
-        return true;
-      case 'don_toi_thieu':
-      case 'freeship':
-        return subtotal >= minOrderValue;
-      case 'khachhang_moi':
-      case 'khachhang_than_thiet':
-        return items.length > 0;
-      default:
-        return true;
-    }
-  }).map((voucher: HomeCoupon) => {
-    const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
-  })}
 
   // Tính giảm giá từ giá gốc sản phẩm
   const productDiscount = items.reduce((sum, item) => {
@@ -574,7 +568,7 @@ function CartPageContent() {
                         </thead>
                         <tbody>
                           {gifts.map((gift, index) => (
-                            <tr key={gift.id_bienthe || index}>
+                            <tr key={String(gift.id_bienthe ?? index)}>
                               <td className="px-5 py-20">
                                 <div className="gap-12 d-flex align-items-center">
                                   <Link
@@ -653,94 +647,47 @@ function CartPageContent() {
             </div>
             <div className="col-xl-3 col-lg-4">
               <div className="mt-16">
-              {coupons
-                .filter((voucher: HomeCoupon) => {
-                  if (!voucher) return false;
-                  if (voucher.trangthai !== 'Hoạt động') return false;
-                  if (appliedVoucher && voucher.id === appliedVoucher.id) return false;
-                  if (!isVoucherInDateRange(voucher.ngaybatdau, voucher.ngayketthuc)) return false;
+                <div className="cart-sidebar border border-gray-100 rounded-8 px-24 py-30 pb-20">
+                  <h6 className="text-lg mb-20 flex-align gap-8">
+                    <i className="ph-bold ph-ticket text-main-600 text-xl"></i>Áp dụng Voucher
+                  </h6>
 
-                  const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
+            {/* Applied voucher (shows when a voucher has been applied, allows cancel) */}
+            {appliedVoucher && (
+              <div className="flex-align flex-between gap-8 mt-10 border-dashed border-gray-200 py-10 px-12 rounded-4">
+                <span className="flex-align gap-8 text-sm fw-medium text-gray-900 pe-10">
+                  <i className="ph-bold ph-ticket text-main-two-600 text-2xl"></i>
+                  <div className="text-sm d-flex flex-column">
+                    <span className="text-sm text-gray-900 w-100">
+                      {appliedVoucher.giatri ? `Giảm ${formatPrice(Number(appliedVoucher.giatri))}` : ''}
+                    </span>
+                    <span className="text-xs text-gray-500 w-100">
+                      {String(appliedVoucher.code ?? appliedVoucher.magiamgia ?? '')}
+                    </span>
+                  </div>
+                </span>
+                <span className="flex-align gap-8 text-xs fw-medium text-gray-900">
+                  <button
+                    type="button"
+                    onClick={() => removeVoucher && removeVoucher()}
+                    className="btn border-danger-600 text-danger-600 hover-bg-danger-600 hover-text-white hover-border-danger-600 p-6 rounded-4 text-xs"
+                  >
+                    Hủy
+                  </button>
+                </span>
+              </div>
+            )}
 
-                  switch (type) {
-                    case 'tatca':
-                      return true;
-                    case 'don_toi_thieu':
-                    case 'freeship':
-                      return subtotal >= minOrderValue;
-                    case 'khachhang_moi':
-                    case 'khachhang_than_thiet':
-                      return items.length > 0;
-                    default:
-                      return true;
-                  }
-                })
-                .map((voucher: HomeCoupon) => {
-                  const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
-                  const conditionLabel = getConditionLabel(type, minOrderValue);
-                  const isEligible =
-                    type === 'tatca' ||
-                    type === 'khachhang_moi' ||
-                    type === 'khachhang_than_thiet' ||
-                    subtotal >= minOrderValue;
+            {/* Vouchers list (existing logic preserved) */}
+            {coupons
+              .filter((voucher: HomeCoupon) => {
+                if (!voucher) return false;
+                if (voucher.trangthai !== 'Hoạt động') return false;
+                if (appliedVoucher && voucher.id === appliedVoucher.id) return false;
+                if (!isVoucherInDateRange(voucher.ngaybatdau, voucher.ngayketthuc)) return false;
 
-                  return (
-                    <div key={voucher.id} className={`gap-8 px-12 py-10 mt-10 border-dashed flex-align flex-between rounded-4 ${isEligible ? 'border-gray-200' : 'border-warning-300 bg-warning-50'}`}>
-                      <span className="gap-8 text-sm text-gray-900 flex-align fw-medium" style={{ flex: '1', minWidth: 0 }}>
-                        <i className="text-2xl ph-bold ph-ticket text-main-600" style={{ flexShrink: 0 }}></i>
-                        <div className="text-sm d-flex flex-column" style={{ flex: '1', minWidth: 0 }}>
-                          <span className="text-sm text-gray-900" style={{ wordBreak: 'break-word' }}>
-                            {voucher.mota}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            Mã: {voucher.magiamgia}
-                          </span>
-                          {conditionLabel && (
-                            <span className={`text-xs ${isEligible ? 'text-success-600' : 'text-warning-600'}`}>
-                              {conditionLabel}
-                              {!isEligible && minOrderValue > 0 && ` (còn thiếu ${formatPrice(minOrderValue - subtotal)})`}
-                            </span>
-                          )}
-                          {voucher.ngayketthuc && (
-                            <span className="text-xs text-gray-400">
-                              HSD: {formatDate(voucher.ngayketthuc)}
-                            </span>
-                          )}
-                        </div>
-                      </span>
-                      <button
-                        onClick={() => {
-                          if (!isEligible) {
-                            alert(`Đơn hàng chưa đạt giá trị tối thiểu ${minOrderValue.toLocaleString('vi-VN')}đ`);
-                            return;
-                          }
-                          applyVoucher({
-                            id: voucher.id,
-                            code: String(voucher.magiamgia),
-                            giatri: Number(voucher.giatri ?? 0),
-                            mota: voucher.mota,
-                            min_order_value: minOrderValue,
-                            dieukien: voucher.dieukien,
-                            condition_type: type,
-                            ngaybatdau: voucher.ngaybatdau,
-                            ngayketthuc: voucher.ngayketthuc
-                          });
-                        }}
-                        disabled={!isEligible}
-                        className={`text-xs btn rounded-4 ${isEligible ? 'text-white bg-main-600 hover-bg-main-100 hover-text-main-600' : 'text-gray-500 bg-gray-200 cursor-not-allowed'}`}
-                      >
-                        {isEligible ? 'Chọn' : 'Chưa đủ ĐK'}
-                      </button>
-                    </div>
-                  );
-                })}
+                const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
 
-              {coupons.filter((v) => {
-                if (!v) return false;
-                if (v.trangthai !== 'Hoạt động') return false;
-                if (appliedVoucher && v.id === appliedVoucher.id) return false;
-                if (!isVoucherInDateRange(v.ngaybatdau, v.ngayketthuc)) return false;
-                const { type, minOrderValue } = parseVoucherCondition(v.dieukien, v.mota);
                 switch (type) {
                   case 'tatca':
                     return true;
@@ -753,15 +700,80 @@ function CartPageContent() {
                   default:
                     return true;
                 }
-              }).length === 0 && !appliedVoucher && (
-                <div className="gap-8 px-12 py-10 mt-10 flex-align flex-center rounded-4">
-                  <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
-                    <div className="text-sm d-flex flex-column">
-                      <span className="text-sm text-gray-900 w-100">Chưa có voucher nào phù hợp !</span>
-                    </div>
-                  </span>
-                </div>
-              )}
+              })
+              .map((voucher: HomeCoupon) => {
+                const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
+                const isEligible =
+                  type === 'tatca' ||
+                  type === 'khachhang_moi' ||
+                  type === 'khachhang_than_thiet' ||
+                  subtotal >= minOrderValue;
+
+                return (
+                  <div key={voucher.id} className={`gap-8 px-12 py-10 mt-10 border-dashed flex-align flex-between rounded-4 ${isEligible ? 'border-gray-200' : 'border-warning-300 bg-warning-50'}`}>
+                    <span className="gap-8 text-sm text-gray-900 flex-align fw-medium" style={{ flex: '1', minWidth: 0 }}>
+                      <i className="text-2xl ph-bold ph-ticket text-main-600" style={{ flexShrink: 0 }}></i>
+                      <div className="text-sm d-flex flex-column" style={{ flex: '1', minWidth: 0 }}>
+                        <span className="text-sm text-gray-900 w-100">{voucher.giatri ? `Giảm ${formatPrice(Number(voucher.giatri))}` : ''}</span>
+                        <span className="text-xs text-gray-500 w-100">{String(voucher.magiamgia ?? '')}</span>
+                      </div>
+                    </span>
+
+                    <button
+                      onClick={() => {
+                        if (!isEligible) {
+                          alert(`Đơn hàng chưa đạt giá trị tối thiểu ${minOrderValue.toLocaleString('vi-VN')}đ`);
+                          return;
+                        }
+                        applyVoucher({
+                          id: voucher.id,
+                          code: String(voucher.magiamgia),
+                          giatri: Number(voucher.giatri ?? 0),
+                          mota: voucher.mota,
+                          min_order_value: minOrderValue,
+                          dieukien: voucher.dieukien,
+                          condition_type: type,
+                          ngaybatdau: voucher.ngaybatdau,
+                          ngayketthuc: voucher.ngayketthuc
+                        });
+                      }}
+                      disabled={!isEligible}
+                      className={`text-xs btn rounded-4 ${isEligible ? 'text-white bg-main-600 hover-bg-main-100 hover-text-main-600' : 'text-gray-500 bg-gray-200 cursor-not-allowed'}`}
+                    >
+                      {isEligible ? 'Chọn' : 'Chưa đủ ĐK'}
+                    </button>
+                  </div>
+                );
+              })}
+
+            {/* Fallback "no vouchers" block (matches your sample) */}
+            {coupons.filter((v) => {
+              if (!v) return false;
+              if (v.trangthai !== 'Hoạt động') return false;
+              if (appliedVoucher && v.id === appliedVoucher.id) return false;
+              if (!isVoucherInDateRange(v.ngaybatdau, v.ngayketthuc)) return false;
+              const { type, minOrderValue } = parseVoucherCondition(v.dieukien, v.mota);
+              switch (type) {
+                case 'tatca':
+                  return true;
+                case 'don_toi_thieu':
+                case 'freeship':
+                  return subtotal >= minOrderValue;
+                case 'khachhang_moi':
+                case 'khachhang_than_thiet':
+                  return items.length > 0;
+                default:
+                  return true;
+              }
+            }).length === 0 && !appliedVoucher && (
+              <div className="flex-align flex-center gap-8 mt-10 py-10 px-12 rounded-4">
+                <span className="flex-align gap-8 text-sm fw-medium text-gray-900 pe-10">
+                  <div className="text-sm d-flex flex-column">
+                    <span className="text-sm text-gray-900 w-100">Chưa có voucher nào phù hợp !</span>
+                  </div>
+                </span>
+              </div>
+            )}
             </div>
               <div className="px-20 py-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
                 <div className="mb-20">
@@ -811,6 +823,7 @@ function CartPageContent() {
               </span>
             </div>
           </div>
+        </div>
         </div>
       </section>
 

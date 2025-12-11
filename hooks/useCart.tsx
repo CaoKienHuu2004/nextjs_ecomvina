@@ -12,6 +12,7 @@ const CART_STORAGE_KEY = "marketpro_cart";
 export type Coupon = {
   id: number;
   code: string;
+  magiamgia?: string | number;
   giatri: number;
   mota?: string;
   min_order_value?: number;
@@ -190,7 +191,10 @@ export type CartItem = {
 
 // Interface cho quà tặng trong giỏ hàng
 export interface GiftItem {
-  id_bienthe: number;
+  // Server may now reference gifts by `id_giohang` (cart row id).
+  // Keep the name `id_bienthe` for compatibility but allow it to be either
+  // the original variant id or the cart-row id when the server reports a gift.
+  id_bienthe: number | string;
   soluong: number;
   thanhtien: number;
   ten_sanpham?: string;
@@ -449,9 +453,13 @@ export function useCart() {
       const sItem = item as ServerCartItemRaw;
       if (sItem?.bienthe_quatang) {
         const qt = sItem.bienthe_quatang;
+        // When server marks an entry as a gift it may omit an internal variant id
+        // and instead the gift should be referenced by the cart row id (`id_giohang`).
+        const resolvedId = qt.id_bienthe ?? sItem.id_giohang ?? qt.bienthe?.id ?? 0;
+
         if (qt.detail) {
           giftItems.push({
-            id_bienthe: qt.id_bienthe || (sItem.id_giohang as number) || 0,
+            id_bienthe: resolvedId,
             soluong: qt.soluong || 1,
             thanhtien: qt.thanhtien || 0,
             ten_sanpham: qt.detail.tensanpham,
@@ -459,12 +467,12 @@ export function useCart() {
             thuonghieu: qt.detail.thuonghieu,
             hinhanh: qt.detail.hinhanh,
             slug: qt.detail.slug,
-            giagoc: qt.detail.giagoc || qt.giagoc
+            giagoc: qt.detail.giagoc ?? qt.giagoc
           });
         } else if (qt.bienthe) {
           const bienthe = qt.bienthe;
           giftItems.push({
-            id_bienthe: qt.id_bienthe || bienthe?.id || 0,
+            id_bienthe: resolvedId,
             soluong: qt.soluong || 1,
             thanhtien: qt.thanhtien || 0,
             ten_sanpham: bienthe?.sanpham?.ten,
@@ -570,6 +578,8 @@ export function useCart() {
           credentials: "include",
           body: JSON.stringify({
             id_bienthe: String(item.id_bienthe),
+            // include id_giohang if we stored a local cart-row id (local_...) or server row id
+            id_giohang: (item.id_giohang !== undefined) ? String(item.id_giohang) : undefined,
             soluong: Number(item.soluong || 1),
           }),
         }).catch(() => { });
@@ -649,8 +659,10 @@ export function useCart() {
     try {
       if (hasToken) {
         // ĐÃ ĐĂNG NHẬP → Dùng /api/tai-khoan/giohang (lưu vào database, có đầy đủ thông tin)
-        const requestBody: { id_bienthe: string; soluong: number; id_chuongtrinh?: number } = {
+        const requestBody: { id_bienthe?: string; id_giohang?: string; soluong: number; id_chuongtrinh?: number } = {
           id_bienthe: String(id_bienthe),
+          // If product comes from server and already has a cart row id, include it so server can use it for gift logic
+          id_giohang: product.id_giohang ? String(product.id_giohang) : undefined,
           soluong: Number(soluong)
         };
 
@@ -701,7 +713,7 @@ export function useCart() {
         console.log("💾 User not logged in, trying session cart API...");
 
         const sessionRequestBody: { id_bienthe: string; soluong: number; id_chuongtrinh?: number } = {
-          id_bienthe: String(id_bienthe),
+           id_bienthe: String(id_bienthe),
           soluong: Number(soluong)
         };
 
@@ -866,6 +878,7 @@ export function useCart() {
       const parsed = parseVoucherCondition(raw.dieukien, raw.mota);
       const coupon: Coupon = {
         id: raw.id,
+        magiamgia: raw.magiamgia ?? raw.code ?? undefined,
         code: String(raw.magiamgia ?? raw.code ?? "UNKNOWN"),
         giatri: Number(raw.giatri ?? raw.amount ?? 0),
         mota: raw.mota ?? raw.description ?? "Mã giảm giá",
@@ -916,6 +929,7 @@ export function useCart() {
             const parsed = parseVoucherCondition(raw.dieukien, raw.mota);
             return {
               id: raw.id,
+              magiamgia: raw.magiamgia ?? raw.code ?? null,
               code: String(raw.magiamgia ?? raw.code ?? "UNKNOWN"),
               giatri: Number(raw.giatri ?? raw.amount ?? 0),
               mota: raw.mota ?? raw.description ?? "Mã giảm giá",
@@ -958,9 +972,10 @@ export function useCart() {
         const parsed = parseVoucherCondition(foundRaw.dieukien, foundRaw.mota);
         const coupon: Coupon = {
           id: foundRaw.id,
-          code: String(foundRaw.magiamgia),
-          giatri: Number(foundRaw.giatri),
-          mota: foundRaw.mota,
+          magiamgia: foundRaw.magiamgia ?? foundRaw.code ?? undefined,
+          code: String(foundRaw.magiamgia ?? foundRaw.code ?? "UNKNOWN"),
+          giatri: Number(foundRaw.giatri ?? foundRaw.amount ?? 0),
+          mota: foundRaw.mota ?? foundRaw.description ?? "Mã giảm giá",
           min_order_value: parsed.minOrderValue,
           dieukien: foundRaw.dieukien,
           condition_type: parsed.type,
