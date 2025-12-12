@@ -193,6 +193,40 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Override template main colors to slightly darker orange */
+  --main-h: 33;
+  --main-s: 100%;
+  --main-l: 47%;
+  /* Keep secondary similar for consistency */
+  --main-two-h: 33;
+  --main-two-s: 100%;
+  --main-two-l: 47%;
+}
+
+.header-login-btn {
+  background: #fff5f0;
+  border: none;
+  color: #ff8c37 !important;
+  transition: all 0.3s ease;
+}
+
+.header-login-btn:hover {
+  background: linear-gradient(180deg, #ff8c37 0%, #ff6b1a 100%);
+  color: #fff !important;
+  box-shadow: 0 10px 30px rgba(255, 140, 55, 0.35);
+}
+
+/*màu của herder dark orange*/
+.bg-main-600,
+.header-top.bg-main-600 {
+  background-color: #F07800 !important;
+}
+
+/*màu của badge giỏ hàng - xanh ngọc #009999*/
+.bg-main-two-600,
+.badge.bg-main-two-600,
+span.badge.bg-main-two-600 {
+  background-color: #009999 !important;
 }
 
 .featured-products__viewport {

@@ -54,6 +54,8 @@ export default function FullHeader({
   const [userOpen, setUserOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [wishlistOpen, setWishlistOpen] = useState(false);
 
   // wishlist count
   const { count: wishlistCount } = useWishlist();
@@ -234,6 +236,8 @@ export default function FullHeader({
   const cartIconRef = useRef<HTMLElement | null>(null);
   const catRefCategoryBar = useRef<HTMLDivElement | null>(null);
   const catRefTopBar = useRef<HTMLLIElement | null>(null);
+  const cartRef = useRef<HTMLDivElement>(null);
+  const wishlistRef = useRef<HTMLDivElement>(null);
 
   useClickAway(langRef, () => setLangOpen(false));
   useClickAway(currRef, () => setCurrOpen(false));
@@ -241,13 +245,17 @@ export default function FullHeader({
   useClickAway(catRef, () => setCatOpen(false));
   useClickAway(catRefCategoryBar, () => setCatOpen(false));
   useClickAway(catRefTopBar, () => setCatOpen(false));
+  useClickAway(cartRef, () => setCartOpen(false));
+  useClickAway(wishlistRef, () => setWishlistOpen(false));
 
   // đóng các dropdown khác khi mở 1 cái
-  function openOnly(which: "lang" | "curr" | "user" | "cat") {
+  function openOnly(which: "lang" | "curr" | "user" | "cat" | "cart" | "wishlist") {
     setLangOpen(which === "lang");
     setCurrOpen(which === "curr");
     setUserOpen(which === "user");
     setCatOpen(which === "cat");
+    setCartOpen(which === "cart");
+    setWishlistOpen(which === "wishlist");
   }
 
   // ===== Cart anchor for fly-to-cart =====
@@ -261,7 +269,15 @@ export default function FullHeader({
   }, [cartIconRef]);
 
   // ===== Cart count helpers =====
-  const { totalItems } = useCart();
+  const { totalItems, items: cart, total: totalPrice, removeItem: removeFromCart } = useCart();
+
+  // Format currency helper
+  const formatCurrency = (price: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(price || 0);
+  };
 
 
   return (
@@ -281,8 +297,8 @@ export default function FullHeader({
                   <Image
                     src="/assets/images/logo/logo_nguyenban.png"
                     alt="Logo"
-                    width={140}
-                    height={40}
+                    width={160}
+                    height={50}
                   />
                 </Link>
               </div>
@@ -356,7 +372,8 @@ export default function FullHeader({
                     onClick={() =>
                       userOpen ? setUserOpen(false) : openOnly("user")
                     }
-                    className="gap-10 px-20 py-10 text-center text-white d-flex justify-content-center flex-align align-content-around fw-medium btn btn-main rounded-pill line-height-1 btn-reset"
+                    className="gap-10 px-20 py-10 text-center text-white d-flex justify-content-center flex-align align-content-around fw-medium rounded-pill line-height-1 btn-reset header-login-btn"
+                    style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
                   >
                     <span className="line-height-1" aria-hidden style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {isLoggedIn ? (
@@ -657,46 +674,43 @@ export default function FullHeader({
         // CLASSIC HEADER (giữ cấu trúc cũ, nhưng không jQuery)
         <>
           {showClassicTopBar && (
-            <div className="py-10 header-top bg-main-600 d-none d-lg-block">
-              <div className="container px-0 container-lg">
-                <div className="flex-wrap gap-8 flex-between">
-                  <ul className="flex-wrap gap-16 header-top__right flex-align">
-                    {/* <li className="flex-align">
-                      <Link href="#" className="text-sm text-center text-white-6 hover-text-white">
-                        <i className="ph-bold ph-storefront text-white-6"></i> Truy cập bán hàng
+            <div className="header-top bg-main-600 flex-between py-10 d-none d-lg-block">
+              <div className="container container-lg">
+                <div className="flex-between flex-wrap gap-8">
+                  <ul className="header-top__right flex-align flex-wrap gap-16">
+                    {!isLoggedIn && (
+                      <li className="flex-align">
+                        <Link href="/dang-ky" className="text-white text-sm hover-text-white">
+                          <i className="ph-bold ph-user text-white"></i> Đăng ký thành viên
+                        </Link>
+                      </li>
+                    )}
+                    <li className="flex-align">
+                      <Link href="/gioi-thieu" className="text-white text-sm hover-text-white pe-1">
+                        <i className="ph-bold ph-info text-white"></i> Giới thiệu về Siêu Thị Vina
                       </Link>
                     </li>
                     <li className="flex-align">
-                      <Link href="#" className="text-sm text-white-6 hover-text-white">
-                        <i className="ph-bold ph-handshake text-white-6"></i> Đăng ký đối tác
-                      </Link>
-                    </li> */}
-                    <li className="flex-align">
-                      <Link href="/gioi-thieu" className="text-sm text-white-6 hover-text-white pe-1">
-                        <i className="ph-bold ph-info text-white-6"></i> Giới thiệu về Siêu Thị Vina
-                      </Link>
-                    </li>
-                    <li className="flex-align">
-                      <Link href="/lien-he" className="text-sm text-white-6 hover-text-white">
-                        <i className="ph-bold ph-chat-dots text-white-6"></i> Liên hệ hỗ trợ
+                      <Link href="/lien-he" className="text-white text-sm hover-text-white">
+                        <i className="ph-bold ph-chat-dots"></i> Liên hệ hỗ trợ
                       </Link>
                     </li>
                   </ul>
 
-                  <ul className="flex-wrap gap-16 header-top__right flex-align">
+                  <ul className="header-top__right flex-align flex-wrap gap-16">
                     {/* Danh mục */}
                     <li
-                      className="flex-shrink-0 d-block on-hover-item text-white-6"
+                      className="d-block on-hover-item text-white flex-shrink-0"
                       ref={categoryButtonRef}
                       onMouseEnter={handleMouseEnter}
                       onMouseLeave={handleMouseLeave}
                     >
                       <button
-                        className="gap-4 text-sm category__button flex-align text-white-6 rounded-top js-open-menu"
+                        className="category__button flex-align gap-4 text-sm text-white rounded-top"
                         type="button"
                         aria-expanded={showCategoryMenu}
                       >
-                        <span className="text-sm icon d-md-flex d-none">
+                        <span className="icon text-sm d-md-flex d-none">
                           <i className="ph ph-squares-four"></i>
                         </span>
                         <span className="d-sm-flex d-none">Danh mục</span>
@@ -704,14 +718,14 @@ export default function FullHeader({
                     </li>
 
                     <li className="flex-align">
-                      <Link href="/tra-cuu-don-hang" className="text-sm text-white-6 hover-text-white">
+                      <Link href="/tra-cuu-don-hang" className="text-white text-sm hover-text-white">
                         <i className="ph-bold ph-notepad"></i> Tra cứu đơn hàng
                       </Link>
                     </li>
                     <li className="flex-align">
-                      <Link href="/gio-hang" className="text-sm text-white-6 hover-text-white" data-cart-icon>
+                      <Link href="/gio-hang" className="text-white text-sm hover-text-white" data-cart-icon>
                         <i className="ph-bold ph-shopping-cart"></i> Giỏ hàng
-                        <span className="badge bg-success-600 rounded-circle ms-6">{totalItems}</span>
+                        <span className="badge bg-main-two-600 rounded-4 px-6 py-4 ms-6">{totalItems}</span>
                       </Link>
                     </li>
                   </ul>
@@ -722,170 +736,164 @@ export default function FullHeader({
 
           )}
 
-          <header className="header border-bottom border-neutral-40 pt-14 pb-14" style={{ overflow: "visible", position: "relative", zIndex: 200 }}>
-            <div className="container px-0 container-lg">
-              <nav className="gap-8 header-inner flex-between">
+          <header className="header border-bottom border-neutral-40 pt-16 pb-10 pz99">
+            <div className="container container-lg">
+              <nav className="header-inner flex-between gap-16">
+                {/* Logo Start */}
                 <div className="logo">
-                  <Link href="/" className="link" aria-label="Home">
+                  <Link href="/" className="link">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src="/assets/images/logo/logo_nguyenban.png"
-                      alt="Logo" width={100} height={20}
+                      src="/assets/images/logo/logo_nguyenbannnnn.webp"
+                      alt="Logo"
+                      width={140}
+                      height={40}
                     />
                   </Link>
                 </div>
+                {/* Logo End */}
+
+                {/* Menu Start */}
                 <div className="header-menu w-50 d-lg-block d-none">
-                  <div className="relative mx-20">
+                  <div className="mx-20">
                     <SearchBoxWithSuggestions />
+
+                    <div className="flex-align mt-10 gap-12 title">
+                      <Link href="/tim-kiem?query=Sâm Ngọc Linh" className="text-sm link text-gray-600 hover-text-main-600 fst-italic">
+                        Sâm Ngọc Linh
+                      </Link>
+                      <Link href="/tim-kiem?query=Sách hán ngữ 3" className="text-sm link text-gray-600 hover-text-main-600 fst-italic">
+                        Sách hán ngữ 3
+                      </Link>
+                      <Link href="/tim-kiem?query=Móc khóa genshin" className="text-sm link text-gray-600 hover-text-main-600 fst-italic">
+                        Móc khóa genshin
+                      </Link>
+                      <Link href="/tim-kiem?query=Đồ chơi minecraft" className="text-sm link text-gray-600 hover-text-main-600 fst-italic">
+                        Đồ chơi minecraft
+                      </Link>
+                      <Link href="/tim-kiem?query=Điện nội thất" className="text-sm link text-gray-600 hover-text-main-600 fst-italic">
+                        Điện nội thất
+                      </Link>
+                    </div>
                   </div>
                 </div>
-                <div
-                  className="d-lg-block d-none position-relative"
-                  style={{ marginLeft: "0px" }}// sát khung tìm kiếm hơn, giống hình
-                >
+                {/* Menu End */}
+
+                {/* Middle Header Right start */}
+                <div className="header-right flex-align">
                   {isLoggedIn ? (
-                    <div
-                      ref={userRef}
-                      className="flex-wrap on-hover-item nav-menu__item has-submenu header-top__right style-two style-three flex-align position-relative"
-                    >
-                      <button
-                        type="button"
-                        aria-haspopup="menu"
-                        aria-expanded={userOpen}
-                        onClick={() =>
-                          userOpen ? setUserOpen(false) : openOnly("user")
-                        }
-                        style={{
-                          background: userOpen ? "#E53935" : "#FCE9E8",
-                          color: userOpen ? "#fff" : "#E53935",
-                          transition: "background 0.2s, color 0.2s",
-                          fontSize: "0.98rem", // chữ vừa phải
-                          padding: "7px 18px", // nút nhỏ lại
-                          minWidth: 0,
-                        }}
-                        className="gap-6 d-flex justify-content-center flex-align rounded-pill btn-reset fw-medium"
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background = "#E53935";
-                          e.currentTarget.style.color = "#fff";
-                        }}
-                        onMouseLeave={e => {
-                          if (!userOpen) {
-                            e.currentTarget.style.background = "#FCE9E8";
-                            e.currentTarget.style.color = "#E53935";
-                          }
-                        }}
-                      >
-                        <span
-                          className="line-height-1"
-                          aria-hidden
-                          style={{
-                            fontSize: "0.70rem", // icon nhỏ hơn chữ
-                            flex: "0 0 30%",     // icon chỉ chiếm ~1/3 nút
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
+                    <ul className="header-top__right style-two style-three flex-align flex-wrap d-lg-block d-none">
+                      <li className="d-sm-flex d-none">
+                        <div
+                          ref={userRef}
+                          className="on-hover-item nav-menu__item has-submenu position-relative"
                         >
-                          {getAvatarSrc(user) ? (
-                            <Image src={getAvatarSrc(user) as string} alt={getDisplayName(user)} width={28} height={28} className="rounded-circle" />
-                          ) : (
-                            <i className="ph-bold ph-user" style={{ fontSize: 18 }} />
+                          <button
+                            type="button"
+                            aria-haspopup="menu"
+                            aria-expanded={userOpen}
+                            onClick={() =>
+                              userOpen ? setUserOpen(false) : openOnly("user")
+                            }
+                            className="d-flex align-items-center gap-10 fw-medium text-main-600 py-14 px-24 bg-main-50 rounded-pill hover-bg-main-600 hover-text-white"
+                          >
+                            <span className="text d-md-flex d-none">
+                              {user?.full_name || "User"}
+                            </span>
+                            <span className="arrow-icon">
+                              <i className="ph ph-caret-down" />
+                            </span>
+                          </button>
+                          {userOpen && (
+                            <ul
+                              role="menu"
+                              className="bg-white rounded-md shadow common-dropdown nav-submenu scroll-sm position-absolute"
+                              style={{ zIndex: 9999 }} // thêm zIndex để dropdown không bị che khuất
+                            >
+                              <li className="common-dropdown__item nav-submenu__item" role="none">
+                                <Link
+                                  href="/yeu-thich"
+                                  role="menuitem"
+                                  className="common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100"
+                                  data-cart-icon
+                                >
+                                  <i className="ph-bold ph-heart text-main-600"></i>
+                                  Yêu thích
+                                  <span className="badge bg-success-600 rounded-circle ms-8">
+                                    {wishlistCount}
+                                  </span>
+                                </Link>
+                              </li>
+                              <li className="common-dropdown__item nav-submenu__item" role="none">
+                                <Link
+                                  href="/tai-khoan"
+                                  role="menuitem"
+                                  className="common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100"
+                                >
+                                  <i className="ph-bold ph-user text-main-600"></i>
+                                  Tài khoản
+                                </Link>
+                              </li>
+                              <li className="common-dropdown__item nav-submenu__item" role="none">
+                                <Link
+                                  href="/don-hang"
+                                  role="menuitem"
+                                  className="common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100"
+                                >
+                                  <i className="ph-bold ph-notepad text-main-600"></i>
+                                  Đơn hàng của tôi
+                                </Link>
+                              </li>
+                              <li className="common-dropdown__item nav-submenu__item" role="none">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    logout();
+                                    setUserOpen(false);
+                                  }}
+                                  className="btn-reset common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100 w-100 text-start"
+                                >
+                                  <i className="ph-bold ph-sign-out text-main-600"></i>
+                                  Đăng xuất
+                                </button>
+                              </li>
+                            </ul>
                           )}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "0.98rem", // chữ vừa phải
-                            flex: "1 1 86%",
-                            marginLeft: 6,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {getDisplayName(user)}
-                        </span>
-                      </button>
-                      {userOpen && (
-                        <ul
-                          role="menu"
-                          className="bg-white rounded-md shadow common-dropdown nav-submenu scroll-sm position-absolute"
-                          style={{ zIndex: 9999 }} // thêm zIndex để dropdown không bị che khuất
-                        >
-                          <li className="common-dropdown__item nav-submenu__item" role="none">
-                            <Link
-                              href="/yeu-thich"
-                              role="menuitem"
-                              className="common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100"
-                              data-cart-icon
-                            >
-                              <i className="ph-bold ph-heart text-main-600"></i>
-                              Yêu thích
-                              <span className="badge bg-success-600 rounded-circle ms-8">
-                                {wishlistCount}
-                              </span>
-                            </Link>
-                          </li>
-                          <li className="common-dropdown__item nav-submenu__item" role="none">
-                            <Link
-                              href="/tai-khoan"
-                              role="menuitem"
-                              className="common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100"
-                            >
-                              <i className="ph-bold ph-user text-main-600"></i>
-                              Tài khoản
-                            </Link>
-                          </li>
-                          <li className="common-dropdown__item nav-submenu__item" role="none">
-                            <Link
-                              href="/don-hang"
-                              role="menuitem"
-                              className="common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100"
-                            >
-                              <i className="ph-bold ph-notepad text-main-600"></i>
-                              Đơn hàng của tôi
-                            </Link>
-                          </li>
-                          <li className="common-dropdown__item nav-submenu__item" role="none">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                logout();
-                                setUserOpen(false);
-                              }}
-                              className="btn-reset common-dropdown__link nav-submenu__link text-heading-two hover-bg-neutral-100 w-100 text-start"
-                            >
-                              <i className="ph-bold ph-sign-out text-main-600"></i>
-                              Đăng xuất
-                            </button>
-                          </li>
-                        </ul>
-                      )}
-                    </div>
+                        </div>
+                      </li>
+                    </ul>
                   ) : (
-                    <Link
-                      href="/dang-nhap"
-                      style={{
-                        background: "#FCE9E8",
-                        color: "#E53935",
-                        transition: "background 0.2s, color 0.2s",
-                        fontSize: "0.98rem", // chữ vừa phải
-                        padding: "7px 18px", // nút nhỏ lại
-                        minWidth: 0,
-                      }}
-                      className="gap-6 d-flex justify-content-center flex-align rounded-pill fw-medium"
-                      onMouseEnter={e => {
-                        (e.currentTarget as HTMLElement).style.background = "#E53935";
-                        (e.currentTarget as HTMLElement).style.color = "#fff";
-                      }}
-                      onMouseLeave={e => {
-                        (e.currentTarget as HTMLElement).style.background = "#FCE9E8";
-                        (e.currentTarget as HTMLElement).style.color = "#E53935";
-                      }}
-                    >
-                      <i className="ph-bold ph-user" style={{ fontSize: "0.85rem" }} />
-                      <span style={{ fontSize: "0.98rem", marginLeft: 6 }}>Đăng nhập</span>
-                    </Link>
+                    <ul className="header-top__right style-two style-three flex-align flex-wrap d-lg-block d-none">
+                      <li className="d-sm-flex d-none">
+                        <Link
+                          href="/dang-nhap"
+                          className="d-flex align-content-around gap-10 fw-medium text-white py-14 px-24 rounded-pill line-height-1 header-login-btn"
+                        >
+                          <span className="d-sm-flex d-none line-height-1">
+                            <i className="ph-bold ph-user" />
+                          </span>
+                          Đăng nhập
+                        </Link>
+                      </li>
+                    </ul>
                   )}
+
+                  {/* Dropdown Select End */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileOpen(!mobileOpen)}
+                    className="toggle-mobileMenu d-lg-none ms-3n text-gray-800 text-4xl d-flex"
+                  >
+                    <i className="ph ph-list" />
+                  </button>
                 </div>
+                {/* Middle Header Right End */}
               </nav>
+            </div>
+          </header>
+
+          {mobileOpen && (
+            <div className="container container-lg">
               {mobileOpen && (
                 <div className="mt-12 d-lg-none">
                   <div className="p-16 bg-white border rounded-8">
@@ -921,7 +929,7 @@ export default function FullHeader({
                 </div>
               )}
             </div>
-          </header>
+          )}
         </>
       )}
     </>

@@ -20,7 +20,7 @@ interface SearchBoxWithSuggestionsProps {
 
 const DEBOUNCE_DELAY = 300;
 
-export default function SearchBoxWithSuggestions({ placeholder = "Sâm Ngọc Linh...." }: SearchBoxWithSuggestionsProps) {
+export default function SearchBoxWithSuggestions({ placeholder = "chẤt viỆt group...." }: SearchBoxWithSuggestionsProps) {
     const router = useRouter();
     const [inputValue, setInputValue] = useState("");
     const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
