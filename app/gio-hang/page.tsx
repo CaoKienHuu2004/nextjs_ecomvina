@@ -389,7 +389,10 @@ function DeleteConfirmModal({
 function CartPageContent() {
   const { items, loading, updatesoluong, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total, gifts, totalGifts, availableVouchers } = useCart();
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   const { data: homeData } = useHomeData();
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
@@ -1012,6 +1015,9 @@ function CartPageContent() {
                       </span>
                     </div>
                   )}
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
                 </div>
                 <div className="px-20 py-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
