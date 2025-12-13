@@ -300,7 +300,11 @@ export default function FullHeader({
                     width={160}
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                     height={60}
+=======
+                    height={50}
+>>>>>>> Stashed changes
 =======
                     height={50}
 >>>>>>> Stashed changes
@@ -721,8 +725,11 @@ export default function FullHeader({
                         <span className="icon text-sm d-md-flex d-none">
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                           <i className="ph ph-squares-four text-warning-700"></i>
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
                           <i className="ph ph-squares-four"></i>
@@ -753,10 +760,14 @@ export default function FullHeader({
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
           <header
             className="header border-bottom border-neutral-40 pt-16 pb-10 pz99"
             style={{ background: "rgba(250, 250, 250, 0.9)" }}
           >
+=======
+          <header className="header border-bottom border-neutral-40 pt-16 pb-10 pz99">
+>>>>>>> Stashed changes
 =======
           <header className="header border-bottom border-neutral-40 pt-16 pb-10 pz99">
 >>>>>>> Stashed changes
@@ -774,8 +785,13 @@ export default function FullHeader({
                       alt="Logo"
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                       width={160}
                       height={50}
+=======
+                      width={140}
+                      height={40}
+>>>>>>> Stashed changes
 =======
                       width={140}
                       height={40}
@@ -833,6 +849,7 @@ export default function FullHeader({
                             }
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                             className="d-flex align-items-center gap-10 fw-medium text-warning-700 py-14 px-24 bg-warning-soft rounded-pill hover-bg-warning-700 hover-text-white"
                           >
                             {user?.avatar ? (
@@ -852,11 +869,16 @@ export default function FullHeader({
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
                             className="d-flex align-items-center gap-10 fw-medium text-main-600 py-14 px-24 bg-main-50 rounded-pill hover-bg-main-600 hover-text-white"
                           >
                             <span className="text d-md-flex d-none">
                               {user?.full_name || "User"}
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -930,7 +952,11 @@ export default function FullHeader({
                           href="/dang-nhap"
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                           className="d-flex align-content-around gap-10 fw-medium text-warning-700 py-14 px-24 bg-warning-soft rounded-pill line-height-1 hover-bg-warning-700 hover-text-white"
+=======
+                          className="d-flex align-content-around gap-10 fw-medium text-white py-14 px-24 rounded-pill line-height-1 header-login-btn"
+>>>>>>> Stashed changes
 =======
                           className="d-flex align-content-around gap-10 fw-medium text-white py-14 px-24 rounded-pill line-height-1 header-login-btn"
 >>>>>>> Stashed changes
