@@ -17,7 +17,7 @@ export default function Page() {
   }, []);
   return (
     <>
-      <FullHeader showTopNav={true} showCategoriesBar={true} />
+      <FullHeader showClassicTopBar={true} showTopNav={false} />
       {/* ========================= Breadcrumb Start =============================== */}
       <div className="breadcrumb mb-0 py-26 bg-main-two-50">
         <div className="container container-lg">
@@ -332,9 +332,9 @@ export default function Page() {
           </div>
         </div>
       </section>
-  {/* ============================== Vendor Two Details End =============================== */}
-  {/* Benefits strip (reused from Cart page) */}
-  <BenefitsStrip />
+      {/* ============================== Vendor Two Details End =============================== */}
+      {/* Benefits strip (reused from Cart page) */}
+      <BenefitsStrip />
     </>
   );
 }

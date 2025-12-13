@@ -237,36 +237,6 @@ const FeaturedProductsStaticSection = () => {
                     </div>
                 </div>
             </section>
-
-            {/* Coupon Banner */}
-            <div className="py-20">
-                <div className="container container-lg px-0">
-                    <div className="border border-main-500 bg-main-50 border-dashed rounded-8 py-20 d-flex align-items-center justify-content-evenly flex-wrap gap-16">
-                        <p className="h6 text-main-600 fw-normal mb-0">
-                            Áp dụng mã giảm giá ưu đãi cho
-                            <a href="#" className="fw-bold text-decoration-underline text-main-600 hover-text-decoration-none hover-text-primary-600 ms-1">
-                                thành viên mới
-                            </a>
-                        </p>
-                        <div className="position-relative">
-                            <button
-                                className="copy-coupon-btn px-32 py-10 text-white text-uppercase bg-main-600 rounded-pill border-0 hover-bg-main-800"
-                                onClick={() => {
-                                    navigator.clipboard.writeText('SIEUTHIVINA2025');
-                                    alert('Đã sao chép mã: SIEUTHIVINA2025');
-                                }}
-                            >
-                                SIEUTHIVINA2025
-                                <i className="ph ph-file-text text-lg line-height-1 ms-2"></i>
-                            </button>
-                        </div>
-                        <p className="text-md text-main-600 fw-normal mb-0">
-                            Áp dụng giảm giá đến
-                            <span className="fw-bold text-main-600 ms-1">20%</span> tổng giá trị mỗi đơn hàng
-                        </p>
-                    </div>
-                </div>
-            </div>
         </>
     );
 };

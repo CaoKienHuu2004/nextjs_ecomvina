@@ -203,6 +203,16 @@
   --main-two-l: 47%;
 }
 
+/* Utility màu cam chính #f39016 cho text-main-600 & border-main-600
+   Tăng specificity với :root để thắng rule trong main.css (load sau) */
+:root .text-main-600 {
+  color: #f39016 !important;
+}
+
+:root .border-main-600 {
+  border-color: #f39016 !important;
+}
+
 .header-login-btn {
   background: #fff5f0;
   border: none;
@@ -645,39 +655,46 @@ span.badge.bg-main-two-600 {
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.75) 100%);
 }
 
-/* Top Categories */
-.top-categories-section .nav-tabs {
+/* Top Categories - Custom Tabs Styles */
+/* Replaces common-tab style-two to avoid conflicts with template !important rules */
+.custom-categories-tabs {
+  margin-block-end: 20px;
+  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
   border-bottom: none;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
 
-.top-categories-section .nav-tabs::-webkit-scrollbar {
-  display: none;
+.custom-categories-tabs .nav-item {
+  border-bottom: 0;
 }
 
-.top-categories-section .nav-link {
-  border: 1px solid #e5e7eb;
-  border-radius: 24px;
-  padding: 8px 20px;
+.custom-categories-tabs .nav-link {
+  border: 1px solid #009999 !important;
+  border-radius: 999px !important;
+  /* pill shape */
+  padding: 8px 24px;
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
-  background: #fff;
-  margin-right: 8px;
+  color: #111111 !important;
+  background: #fff !important;
+  margin-right: 12px;
   white-space: nowrap;
   transition: all 0.3s ease;
 }
 
-.top-categories-section .nav-link:hover {
-  border-color: #e74c3c;
-  color: #e74c3c;
+.custom-categories-tabs .nav-link:hover {
+  border-color: #009999 !important;
+  color: #009999 !important;
+  background-color: #fff !important;
 }
 
-.top-categories-section .nav-link.active {
-  background: #e74c3c;
-  border-color: #e74c3c;
-  color: #fff;
+.custom-categories-tabs .nav-link.active {
+  background-color: #009999 !important;
+  border-color: #009999 !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+  /* ensure active state also pill-rounded */
 }
 
 .category-card {
@@ -988,4 +1005,30 @@ span.badge.bg-main-two-600 {
   height: 240px !important;
   object-fit: contain !important;
   margin: 0 auto !important;
+}
+
+/* Nút "Xem thêm sản phẩm" kiểu viền cam như mẫu */
+a.btn-more-orange,
+button.btn-more-orange,
+.btn-more-orange {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 12px 32px !important;
+  border-radius: 8px !important;
+  border: 1px solid #f39016 !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  background-color: #ffffff !important;
+  color: #f39016 !important;
+  text-decoration: none !important;
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease !important;
+}
+
+a.btn-more-orange:hover,
+button.btn-more-orange:hover,
+.btn-more-orange:hover {
+  background-color: #f39016 !important;
+  border-color: #f39016 !important;
+  color: #ffffff !important;
 }

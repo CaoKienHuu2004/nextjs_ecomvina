@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import FullHeader from '@/components/FullHeader';
-import FullFooter from '@/components/FullFooter';
 
 interface Product {
     id: number;
@@ -87,7 +86,6 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
             <>
                 <FullHeader showClassicTopBar={true} showTopNav={false} />
                 <div className="py-40 text-center">Đang tải...</div>
-                <FullFooter />
             </>
         );
     }
@@ -97,7 +95,6 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
             <>
                 <FullHeader showClassicTopBar={true} showTopNav={false} />
                 <div className="py-40 text-center">Không tìm thấy sản phẩm</div>
-                <FullFooter />
             </>
         );
     }
@@ -455,7 +452,6 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                 </section>
             )}
 
-            <FullFooter />
         </>
     );
 }

@@ -15,7 +15,7 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState(0);
 
-    const { data: homeData, loading: homeLoading } = useHomeData();
+    const { data: homeData } = useHomeData();
 
     useEffect(() => {
         if (!homeData) return;
@@ -63,13 +63,13 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
             <div className="section-heading mb-24">
                 <div className="flex-between flex-align flex-wrap gap-8">
                     <h6 className="mb-0 wow fadeInLeft" style={{ visibility: "visible", animationName: "fadeInLeft" }}>
-                        <i className="ph-bold ph-squares-four text-main-600"></i> Danh mục hàng đầu
+                        <i className="ph-bold ph-squares-four text-warning-700"></i> Danh mục hàng đầu
                     </h6>
-                    <ul className="nav common-tab style-two nav-pills wow fadeInRight m-0" id="pills-tab" role="tablist" style={{ visibility: "visible", animationName: "fadeInRight" }}>
+                    <ul className="nav custom-categories-tabs nav-pills wow fadeInRight m-0" id="pills-tab" role="tablist" style={{ visibility: "visible", animationName: "fadeInRight" }}>
                         {categories.map((cat, idx) => (
                             <li key={cat.id} className="nav-item" role="presentation">
                                 <button
-                                    className={`nav-link fw-medium text-sm hover-border-main-600${activeTab === idx ? " active" : ""}`}
+                                    className={`nav-link fw-medium text-sm border${activeTab === idx ? " active" : ""}`}
                                     id={`tab-${cat.id}`}
                                     type="button"
                                     role="tab"
@@ -164,7 +164,7 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
                         <div className="mx-auto w-100 text-center" style={{ marginTop: 40 }}>
                             <a
                                 href={`/shop?category=${cat.slug}`}
-                                className="btn border-main-600 text-main-600 hover-bg-main-600 hover-border-main-600 hover-text-white rounded-8 px-32 py-12"
+                                className="btn-more-orange"
                                 style={{ marginBottom: 0 }}
                             >
                                 Xem thêm sản phẩm

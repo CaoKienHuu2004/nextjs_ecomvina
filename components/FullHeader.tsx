@@ -298,7 +298,7 @@ export default function FullHeader({
                     src="/assets/images/logo/logo_nguyenban.png"
                     alt="Logo"
                     width={160}
-                    height={50}
+                    height={60}
                   />
                 </Link>
               </div>
@@ -535,7 +535,7 @@ export default function FullHeader({
                       className="gap-8 px-20 py-16 text-white category__button flex-align fw-medium bg-main-two-600 h-100 md-rounded-top"
                     >
                       <span className="text-2xl d-md-flex d-none">
-                        <i className="ph ph-squares-four" />
+                        <i className="ph ph-squares-four text-warning-700" />
                       </span>
                       <span className="d-lg-flex d-none">All</span> Categories
                       <span className="text-md d-flex ms-auto">
@@ -711,7 +711,7 @@ export default function FullHeader({
                         aria-expanded={showCategoryMenu}
                       >
                         <span className="icon text-sm d-md-flex d-none">
-                          <i className="ph ph-squares-four"></i>
+                          <i className="ph ph-squares-four text-warning-700"></i>
                         </span>
                         <span className="d-sm-flex d-none">Danh mục</span>
                       </button>
@@ -736,7 +736,10 @@ export default function FullHeader({
 
           )}
 
-          <header className="header border-bottom border-neutral-40 pt-16 pb-10 pz99">
+          <header
+            className="header border-bottom border-neutral-40 pt-16 pb-10 pz99"
+            style={{ background: "rgba(250, 250, 250, 0.9)" }}
+          >
             <div className="container container-lg">
               <nav className="header-inner flex-between gap-16">
                 {/* Logo Start */}
@@ -746,8 +749,8 @@ export default function FullHeader({
                     <img
                       src="/assets/images/logo/logo_nguyenbannnnn.webp"
                       alt="Logo"
-                      width={140}
-                      height={40}
+                      width={160}
+                      height={50}
                     />
                   </Link>
                 </div>
@@ -867,7 +870,7 @@ export default function FullHeader({
                       <li className="d-sm-flex d-none">
                         <Link
                           href="/dang-nhap"
-                          className="d-flex align-content-around gap-10 fw-medium text-white py-14 px-24 rounded-pill line-height-1 header-login-btn"
+                          className="d-flex align-content-around gap-10 fw-medium text-warning-700 py-14 px-24 bg-warning-soft rounded-pill line-height-1 hover-bg-warning-700 hover-text-white"
                         >
                           <span className="d-sm-flex d-none line-height-1">
                             <i className="ph-bold ph-user" />

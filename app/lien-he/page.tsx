@@ -12,7 +12,7 @@ const endpoint_routes_api_fectch_datapost_gui_lien_he_ =
 
 const sodienthoai_call_lienhe_cua_web = "8860911975996";
 const sodienthoai_lienhe_cua_web = "+886 0911 975 996";
-const email_lienhe_cua_web = "hotro@sieuthivina.com";
+const email_lienhe_cua_web = "hotro@amban.vn";
 const diachi_lienhe_cua_web = "801/2A Phạm Thế Hiển, Phường 4, Quận 8, TP.HCM.";
 // config
 
@@ -117,12 +117,12 @@ export default function Page() {
         </div>
       </div>
 
-{/* value nhập form */}
-{/* le van a */}
-{/* testformlienhe@example.com */}
-{/* 0991654321 */}
-{/* Yêu cầu hướng đẫn mua hàng  */}
-{/* Tôi cần webiste hướng đẫn mua hàng. vì tôi ko có rành công nghê, mong anh chi giúp đở  */}
+      {/* value nhập form */}
+      {/* le van a */}
+      {/* testformlienhe@example.com */}
+      {/* 0991654321 */}
+      {/* Yêu cầu hướng đẫn mua hàng  */}
+      {/* Tôi cần webiste hướng đẫn mua hàng. vì tôi ko có rành công nghê, mong anh chi giúp đở  */}
       {/* Contact Section */}
       <section className="contact py-80">
         <div className="container container-lg">
@@ -134,11 +134,10 @@ export default function Page() {
 
                   {responseMessage && (
                     <div
-                      className={`mb-4 p-3 rounded ${
-                        responseMessage.type === "success"
+                      className={`mb-4 p-3 rounded ${responseMessage.type === "success"
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
-                      }`}
+                        }`}
                     >
                       {responseMessage.text}
                     </div>
@@ -243,7 +242,7 @@ export default function Page() {
                       type="text"
                       name="website"
                       className="hidden"
-                        style={{ display: "none" }}
+                      style={{ display: "none" }}
                       aria-hidden="true"
                       autoComplete="off"
                       value={formData.website}

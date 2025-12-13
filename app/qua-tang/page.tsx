@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import FullHeader from '@/components/FullHeader';
-import FullFooter from '@/components/FullFooter';
 
 const API_URL = process.env.NEXT_PUBLIC_SERVER_API || 'http://148.230.100.215';
 
@@ -128,7 +127,7 @@ export default function GiftPromotionPage() {
 
     return (
         <>
-            <FullHeader showTopNav={true} showCategoriesBar={false} />
+            <FullHeader showClassicTopBar={true} showTopNav={false} />
 
             {/* Custom CSS */}
             <style>{`
@@ -419,7 +418,6 @@ export default function GiftPromotionPage() {
                 </div>
             </section>
 
-            <FullFooter />
         </>
     );
 }

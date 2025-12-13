@@ -92,36 +92,48 @@ export default function GiftEventsSection() {
         <div className="">
           <div className="section-heading mb-24">
             <div className="flex-between flex-align flex-wrap gap-8 w-100">
-              <h6 className="mb-0 wow fadeInLeft flex-align gap-8" style={{ visibility: "visible", animationName: "fadeInLeft" }}>
-                <i className="ph-bold ph-gift text-main-600"></i> Quà tặng
+              <h6
+                className="mb-0 wow fadeInLeft flex-align gap-8"
+                style={{ visibility: "visible", animationName: "fadeInLeft" }}
+              >
+                <i className="ph-bold ph-gift text-warning-700"></i> Chương trình ưu đãi quà tặng
               </h6>
-              <div className="border-bottom border-2 border-main-600 mb-0 mt-4" style={{ width: "77%" }}></div>
-              <div className="flex-align gap-16 wow fadeInRight" style={{ visibility: "visible", animationName: "fadeInRight" }}>
-                <Link href="/qua-tang" className="text-sm fw-semibold text-main-600 hover-text-main-600 hover-text-decoration-underline">
+              <div
+                className="border-bottom border-2 border-warning-700 mb-3 mt-4"
+                style={{ width: "55%" }}
+              ></div>
+              <div
+                className="flex-align gap-16 wow fadeInRight"
+                style={{ visibility: "visible", animationName: "fadeInRight" }}
+              >
+                <Link
+                  href="/qua-tang"
+                  className="text-sm fw-semibold text-warning-700 hover-text-warning-700 hover-text-decoration-underline"
+                >
                   Xem tất cả
                 </Link>
-                {showNavigation && (
-                  <div className="flex-align gap-8">
-                    <button
-                      type="button"
-                      title="Quà trước"
-                      aria-label="Xem quà trước"
-                      onClick={handlePrev}
-                      className="slick-prev flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1 gift-nav-btn"
-                    >
-                      <i className="ph ph-caret-left"></i>
-                    </button>
-                    <button
-                      type="button"
-                      title="Quà tiếp"
-                      aria-label="Xem quà tiếp theo"
-                      onClick={handleNext}
-                      className="slick-next flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1 gift-nav-btn"
-                    >
-                      <i className="ph ph-caret-right"></i>
-                    </button>
-                  </div>
-                )}
+                <div className="flex-align gap-8">
+                  <button
+                    type="button"
+                    id="gift-event-prev"
+                    title="Quà trước"
+                    aria-label="Xem quà trước"
+                    onClick={handlePrev}
+                    className="slick-prev flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1 gift-nav-btn"
+                  >
+                    <i className="ph ph-caret-left"></i>
+                  </button>
+                  <button
+                    type="button"
+                    id="gift-event-next"
+                    title="Quà tiếp"
+                    aria-label="Xem quà tiếp theo"
+                    onClick={handleNext}
+                    className="slick-next flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1 gift-nav-btn"
+                  >
+                    <i className="ph ph-caret-right"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

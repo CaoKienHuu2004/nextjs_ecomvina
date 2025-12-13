@@ -3,7 +3,7 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import GlobalChrome from "@/components/GlobalChrome";
-import GlobalFooter from "@/components/GlobalFooter";
+import FullFooter from "@/components/FullFooter";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -18,12 +18,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  console.log('AppShell: Rendering with GlobalChrome and GlobalFooter');
+  console.log('AppShell: Rendering with GlobalChrome and FullFooter');
   return (
     <>
       <GlobalChrome />
       {children}
-      <GlobalFooter />
+      <FullFooter />
     </>
   );
 }

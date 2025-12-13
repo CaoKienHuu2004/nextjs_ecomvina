@@ -3,7 +3,6 @@
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import FullHeader from '@/components/FullHeader';
-import FullFooter from '@/components/FullFooter';
 import { BlogPost, fetchBlogPosts } from '@/lib/api';
 
 const categories = [
@@ -64,7 +63,6 @@ export default function BlogDetailSlugPage({ params }: { params: Promise<{ slug:
                         <span className="visually-hidden">Đang tải...</span>
                     </div>
                 </div>
-                <FullFooter />
             </>
         );
     }
@@ -78,7 +76,6 @@ export default function BlogDetailSlugPage({ params }: { params: Promise<{ slug:
                     <p className="text-gray-600 mb-4">Bài viết bạn đang tìm không tồn tại hoặc đã bị xóa.</p>
                     <Link href="/" className="btn btn-main-600">Về trang chủ</Link>
                 </div>
-                <FullFooter />
             </>
         );
     }
@@ -299,7 +296,6 @@ export default function BlogDetailSlugPage({ params }: { params: Promise<{ slug:
                 </section>
             </div>
 
-            <FullFooter />
         </>
     );
 }

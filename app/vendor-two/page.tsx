@@ -28,7 +28,7 @@ export default function Page() {
 
   return (
     <React.Fragment>
-      <FullHeader showTopNav={true} showCategoriesBar={true} />
+      <FullHeader showClassicTopBar={true} showTopNav={false} />
 
       <div className="breadcrumb mb-0 py-26 bg-main-two-50">
         <div className="container container-lg">
