@@ -203,6 +203,7 @@
   --main-two-l: 47%;
 }
 
+<<<<<<< Updated upstream
 /* Utility màu cam chính #f39016 cho text-main-600 & border-main-600
    Tăng specificity với :root để thắng rule trong main.css (load sau) */
 :root .text-main-600 {
@@ -213,6 +214,8 @@
   border-color: #f39016 !important;
 }
 
+=======
+>>>>>>> Stashed changes
 .header-login-btn {
   background: #fff5f0;
   border: none;
