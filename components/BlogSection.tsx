@@ -24,7 +24,7 @@ export default function BlogSection() {
     };
 
     return (
-        <section className="blog pt-0 pb-120" style={{ marginTop: "-80px" }}>
+        <section className="blog pt-0 pb-50" style={{ marginTop: "-80px" }}>
             <div className="container container-lg px-0">
                 <div className="section-heading mb-24">
                     <div className="flex-between flex-wrap gap-2">

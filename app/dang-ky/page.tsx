@@ -2,8 +2,8 @@
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import FullHeader from "@/components/FullHeader";
+import FullFooter from "@/components/FullFooter";
 
 // Định nghĩa kiểu cho state của form
 type FormState = {
@@ -151,7 +151,7 @@ export default function Page() {
     return (
         <>
             {/* FullHeader - giống trang chủ */}
-            <FullHeader showTopNav={true} showCategoriesBar={false} />
+            <FullHeader showClassicTopBar={true} showTopNav={false} />
 
             {/* Main Content */}
             <div className="page">
@@ -330,188 +330,7 @@ export default function Page() {
             </div>
 
             {/* Footer */}
-            <footer className="footer pt-30 overflow-hidden border-top fix-scale-20">
-                <div className="container container-lg">
-                    <div className="footer-item-two-wrapper d-flex align-items-start flex-wrap">
-                        {/* Footer Column 1 */}
-                        <div className="footer-item max-w-275" data-aos="fade-up" data-aos-duration="200">
-                            <div className="footer-item__logo">
-                                <Link href="/">
-                                    <Image
-                                        src="/assets/images/logo/logo_nguyenban.png"
-                                        alt="Siêu Thị Vina"
-                                        width={180}
-                                        height={60}
-                                        style={{ objectFit: "contain" }}
-                                    />
-                                </Link>
-                            </div>
-                            <p className="mb-24">
-                                Trang thương mại điện tử Siêu Thị Vina cung cấp các sản phẩm đa dạng đến với khách hàng
-                            </p>
-                            <div className="flex-align gap-16 mb-16">
-                                <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
-                                    <i className="ph-fill ph-phone-call"></i>
-                                </span>
-                                <a href="tel:+886911975996" className="text-md text-gray-900 hover-text-main-600">
-                                    +886 0911 975 996
-                                </a>
-                            </div>
-                            <div className="flex-align gap-16 mb-16">
-                                <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
-                                    <i className="ph-fill ph-envelope"></i>
-                                </span>
-                                <a href="mailto:hotro@sieuthivina.com" className="text-md text-gray-900 hover-text-main-600">
-                                    hotro@sieuthivina.com
-                                </a>
-                            </div>
-                            <div className="flex-align gap-16 mb-16">
-                                <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
-                                    <i className="ph-fill ph-map-pin"></i>
-                                </span>
-                                <span className="text-md text-gray-900">801/2A Phạm Thế Hiển, Phường 4, Quận 8, TP.HCM</span>
-                            </div>
-                        </div>
-
-                        {/* Footer Column 2 - Về chúng tôi */}
-                        <div className="footer-item" data-aos="fade-up" data-aos-duration="400">
-                            <h6 className="footer-item__title">Về chúng tôi</h6>
-                            <ul className="footer-menu">
-                                <li className="mb-16">
-                                    <Link href="/gioi-thieu" className="text-gray-600 hover-text-main-600">
-                                        Giới thiệu về Siêu thị Vina
-                                    </Link>
-                                </li>
-                                <li className="mb-16">
-                                    <Link href="/lien-he" className="text-gray-600 hover-text-main-600">
-                                        Liên hệ hỗ trợ
-                                    </Link>
-                                </li>
-                                <li className="mb-16">
-                                    <Link href="/dieu-khoan" className="text-gray-600 hover-text-main-600">
-                                        Điều khoản sử dụng
-                                    </Link>
-                                </li>
-                                <li className="mb-16">
-                                    <Link href="/chinh-sach-mua-hang" className="text-gray-600 hover-text-main-600">
-                                        Chính sách mua hàng
-                                    </Link>
-                                </li>
-                                <li className="mb-16">
-                                    <Link href="/chinh-sach-nguoi-dung" className="text-gray-600 hover-text-main-600">
-                                        Chính sách người dùng
-                                    </Link>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* Footer Column 3 - Tài khoản */}
-                        <div className="footer-item" data-aos="fade-up" data-aos-duration="600">
-                            <h6 className="footer-item__title">Tài khoản</h6>
-                            <ul className="footer-menu">
-                                <li className="mb-16">
-                                    <Link href="/thong-tin-ca-nhan" className="text-gray-600 hover-text-main-600">
-                                        Truy cập tài khoản
-                                    </Link>
-                                </li>
-                                <li className="mb-16">
-                                    <Link href="/lich-su-don-hang" className="text-gray-600 hover-text-main-600">
-                                        Lịch sử đơn hàng
-                                    </Link>
-                                </li>
-                                <li className="mb-16">
-                                    <Link href="/yeu-thich" className="text-gray-600 hover-text-main-600">
-                                        Danh sách yêu thích
-                                    </Link>
-                                </li>
-                                <li className="mb-16">
-                                    <Link href="/gio-hang" className="text-gray-600 hover-text-main-600">
-                                        Giỏ hàng của bạn
-                                    </Link>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* Footer Column 4 - Thông tin khác */}
-                        <div className="footer-item" data-aos="fade-up" data-aos-duration="1000">
-                            <h6 className="footer-item__title">Thông tin khác</h6>
-                            <ul className="footer-menu">
-                                <li className="mb-16">
-                                    <Link href="/san-pham" className="text-gray-600 hover-text-main-600">
-                                        Danh sách sản phẩm
-                                    </Link>
-                                </li>
-                                <li className="mb-16">
-                                    <Link href="/cua-hang" className="text-gray-600 hover-text-main-600">
-                                        Các cửa hàng
-                                    </Link>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* Footer Column 5 - Kết nối */}
-                        <div className="footer-item" data-aos="fade-up" data-aos-duration="1200">
-                            <h6>Kết nối & theo dõi</h6>
-                            <p className="mb-16">
-                                Truy cập các nền tảng mạng xã hội <br /> của chúng tôi.
-                            </p>
-                            <ul className="flex-align gap-16">
-                                <li>
-                                    <a
-                                        href="https://www.facebook.com/sieuthivina"
-                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
-                                    >
-                                        <i className="ph-fill ph-facebook-logo"></i>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a
-                                        href="https://www.twitter.com"
-                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
-                                    >
-                                        <i className="ph-fill ph-twitter-logo"></i>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a
-                                        href="https://www.instagram.com"
-                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
-                                    >
-                                        <i className="ph-fill ph-instagram-logo"></i>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a
-                                        href="https://www.linkedin.com"
-                                        className="w-44 h-44 flex-center bg-main-two-50 text-main-two-600 text-xl rounded-8 hover-bg-main-two-600 hover-text-white"
-                                    >
-                                        <i className="ph-fill ph-linkedin-logo"></i>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </footer>
-
-            {/* Bottom Footer */}
-            <div className="bottom-footer bg-color-three py-8">
-                <div className="container container-lg">
-                    <div className="bottom-footer__inner flex-between flex-wrap gap-16 py-16">
-                        <p className="bottom-footer__text wow fadeInLeftBig">Bản quyền thuộc về Sieuthivina.com</p>
-                        <div className="flex-align gap-8 flex-wrap wow fadeInRightBig">
-                            <span className="text-heading text-sm">Hỗ trợ thanh toán</span>
-                            <Image
-                                src="/assets/images/thumbs/payment-method.png"
-                                alt="Payment methods"
-                                width={220}
-                                height={28}
-                                style={{ width: "auto", height: "auto" }}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <FullFooter />
         </>
     );
 }

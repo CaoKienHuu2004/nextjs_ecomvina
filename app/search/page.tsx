@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import FullHeader from "@/components/FullHeader";
-import FullFooter from "@/components/FullFooter";
 import Link from "next/link";
 import { fetchSearchProducts, trackKeywordAccess } from "@/lib/api";
 import Image from "next/image";
@@ -137,7 +136,6 @@ export default function SearchPage() {
                         </div>
                     </div>
                 </section>
-                <FullFooter />
             </>
         );
     }
@@ -344,7 +342,6 @@ export default function SearchPage() {
                 </div>
             </section>
 
-            <FullFooter />
         </>
     );
 }

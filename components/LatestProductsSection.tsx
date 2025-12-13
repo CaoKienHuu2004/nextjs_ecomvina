@@ -173,10 +173,10 @@ export default function LatestProductsSection() {
                                 })}
                             </div>
                         </div>
-                        <div className="mx-auto w-100 text-center aos-init aos-animate" data-aos="fade-up" data-aos-duration="200">
+                        <div className="mx-auto w-100 text-center aos-init aos-animate mt-40" data-aos="fade-up" data-aos-duration="200">
                             <a
                                 href="/shop?source=new_launch"
-                                className="btn border-main-600 text-main-600 hover-bg-main-600 hover-border-main-600 hover-text-white rounded-8 px-32 py-12 mt-40"
+                                className="btn-more-orange"
                                 style={{ marginBottom: 0 }}
                             >
                                 Xem thêm sản phẩm

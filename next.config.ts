@@ -15,10 +15,10 @@ module.exports = {
         pathname: "/**",
       },
       {
-        protocol: "http",          
+        protocol: "http",
         hostname: "localhost",
-        port: "8000",              
-        pathname: "/**",           
+        port: "8000",
+        pathname: "/**",
       },
       {
         protocol: "http",

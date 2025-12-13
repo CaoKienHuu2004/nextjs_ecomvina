@@ -2,7 +2,6 @@
 import React, { useState, useEffect, use, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import FullHeader from "@/components/FullHeader";
-import FullFooter from "@/components/FullFooter";
 import Link from "next/link";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
@@ -14,11 +13,11 @@ import Cookies from "js-cookie";
 
 // Thêm type cho item favorite
 type FavoriteItem = {
-  id?: number;
-  id_sanpham?: number | string;
-  sanpham_id?: number | string;
-  sanpham?: { id?: number } | null;
-  // thêm fields nếu API trả thêm (vd: created_at, user_id, ...)
+    id?: number;
+    id_sanpham?: number | string;
+    sanpham_id?: number | string;
+    sanpham?: { id?: number } | null;
+    // thêm fields nếu API trả thêm (vd: created_at, user_id, ...)
 };
 export default function ProductDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
     const searchParams = useSearchParams();
@@ -68,7 +67,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
     const getAuthHeaders = (): Record<string, string> => {
         if (typeof window === "undefined") return {};
-        
+
         const token = Cookies.get("token") || Cookies.get("access_token") || null;
         return token ? { Authorization: `Bearer ${token}` } : {};
     };
@@ -146,7 +145,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     useEffect(() => {
         if (!product) return;
         setFavLoading(true);
-        fetch(`${API}/api/tai-khoan/yeuthichs`, { credentials: "include" , headers: { ...getAuthHeaders() } })
+        fetch(`${API}/api/tai-khoan/yeuthichs`, { credentials: "include", headers: { ...getAuthHeaders() } })
             .then(async (res) => {
                 if (!res.ok) return { status: false, data: [] as FavoriteItem[] };
                 return await res.json();
@@ -196,7 +195,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                 let idToToggle = favoriteId;
                 if (!idToToggle) {
                     // không có favoriteId: refetch list nhanh để tìm id
-                    const r = await fetch(`${API}/api/tai-khoan/yeuthichs`, { credentials: "include" , headers: { ...getAuthHeaders() } });
+                    const r = await fetch(`${API}/api/tai-khoan/yeuthichs`, { credentials: "include", headers: { ...getAuthHeaders() } });
                     const j = await r.json().catch(() => ({}));
                     const list = Array.isArray(j?.data) ? j.data as FavoriteItem[] : [];
                     const found = list.find(item => item.id_sanpham == product.id || item.sanpham?.id == product.id);
@@ -273,7 +272,6 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                         <span className="visually-hidden">Đang tải...</span>
                     </div>
                 </div>
-                <FullFooter />
             </>
         );
     }
@@ -286,7 +284,6 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                     <h4 className="text-danger">Lỗi: {error || "Không tìm thấy sản phẩm"}</h4>
                     <Link href="/" className="mt-3 btn btn-main-600">Về trang chủ</Link>
                 </div>
-                <FullFooter />
             </>
         );
     }
@@ -651,7 +648,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
                             <div className="mt-32">
                                 <div className="gap-8 px-32 py-16 border border-gray-100 rounded-8 flex-between">
-                                                                        <button
+                                    <button
                                         type="button"
                                         onClick={toggleFavorite}
                                         disabled={favLoading}
@@ -745,7 +742,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                             <div className="col-lg-6">
                                 <h6 className="mb-24 title">Đánh giá về sản phẩm</h6>
                                 <div className="gap-24 border-gray-100 d-flex align-items-start pb-44 border-bottom mb-44">
-                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/comment-img1.png" alt="" className="flex-shrink-0 w-52 h-52 object-fit-cover rounded-circle" />
+                                    <img src="https://amban.vn/assets/client/images/thumbs/comment-img1.png" alt="" className="flex-shrink-0 w-52 h-52 object-fit-cover rounded-circle" />
                                     <div className="flex-grow-1">
                                         <div className="gap-8 flex-between align-items-start">
                                             <div>
@@ -1034,7 +1031,6 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                 </section>
             )}
 
-            <FullFooter />
         </>
     );
 }

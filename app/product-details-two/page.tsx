@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import FullHeader from "@/components/FullHeader";
-import FullFooter from "@/components/FullFooter";
 
 export default function Page() {
   const sampleImgs = [1, 2, 3, 1, 2];
@@ -18,7 +17,7 @@ export default function Page() {
 
   return (
     <>
-      <FullHeader showTopNav={false} showCategoriesBar={false} showClassicTopBar={true} />
+      <FullHeader showClassicTopBar={true} showTopNav={false} />
 
       <div className="pt-40 mb-0 breadcrumb bg-main-two-60">
         <div className="container">
@@ -342,7 +341,6 @@ export default function Page() {
         </div>
       </section>
 
-      <FullFooter />
     </>
   );
 }

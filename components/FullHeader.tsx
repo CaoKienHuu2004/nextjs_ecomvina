@@ -298,7 +298,19 @@ export default function FullHeader({
                     src="/assets/images/logo/logo_nguyenban.png"
                     alt="Logo"
                     width={160}
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+                    height={60}
+=======
                     height={50}
+>>>>>>> Stashed changes
+=======
+                    height={50}
+>>>>>>> Stashed changes
+=======
+                    height={50}
+>>>>>>> Stashed changes
                   />
                 </Link>
               </div>
@@ -535,7 +547,7 @@ export default function FullHeader({
                       className="gap-8 px-20 py-16 text-white category__button flex-align fw-medium bg-main-two-600 h-100 md-rounded-top"
                     >
                       <span className="text-2xl d-md-flex d-none">
-                        <i className="ph ph-squares-four" />
+                        <i className="ph ph-squares-four text-warning-700" />
                       </span>
                       <span className="d-lg-flex d-none">All</span> Categories
                       <span className="text-md d-flex ms-auto">
@@ -711,7 +723,17 @@ export default function FullHeader({
                         aria-expanded={showCategoryMenu}
                       >
                         <span className="icon text-sm d-md-flex d-none">
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+                          <i className="ph ph-squares-four text-warning-700"></i>
+=======
+=======
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
                           <i className="ph ph-squares-four"></i>
+>>>>>>> Stashed changes
                         </span>
                         <span className="d-sm-flex d-none">Danh mục</span>
                       </button>
@@ -736,7 +758,22 @@ export default function FullHeader({
 
           )}
 
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+          <header
+            className="header border-bottom border-neutral-40 pt-16 pb-10 pz99"
+            style={{ background: "rgba(250, 250, 250, 0.9)" }}
+          >
+=======
           <header className="header border-bottom border-neutral-40 pt-16 pb-10 pz99">
+>>>>>>> Stashed changes
+=======
+          <header className="header border-bottom border-neutral-40 pt-16 pb-10 pz99">
+>>>>>>> Stashed changes
+=======
+          <header className="header border-bottom border-neutral-40 pt-16 pb-10 pz99">
+>>>>>>> Stashed changes
             <div className="container container-lg">
               <nav className="header-inner flex-between gap-16">
                 {/* Logo Start */}
@@ -746,8 +783,23 @@ export default function FullHeader({
                     <img
                       src="/assets/images/logo/logo_nguyenbannnnn.webp"
                       alt="Logo"
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+                      width={160}
+                      height={50}
+=======
                       width={140}
                       height={40}
+>>>>>>> Stashed changes
+=======
+                      width={140}
+                      height={40}
+>>>>>>> Stashed changes
+=======
+                      width={140}
+                      height={40}
+>>>>>>> Stashed changes
                     />
                   </Link>
                 </div>
@@ -795,10 +847,41 @@ export default function FullHeader({
                             onClick={() =>
                               userOpen ? setUserOpen(false) : openOnly("user")
                             }
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+                            className="d-flex align-items-center gap-10 fw-medium text-warning-700 py-14 px-24 bg-warning-soft rounded-pill hover-bg-warning-700 hover-text-white"
+                          >
+                            {user?.avatar ? (
+                              <img
+                                src={user.avatar.startsWith('http') ? user.avatar : `http://148.230.100.215${user.avatar}`}
+                                alt="Avatar"
+                                className="rounded-circle"
+                                style={{ width: 28, height: 28, objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <span className="d-flex align-items-center justify-content-center rounded-circle bg-warning-700 text-white" style={{ width: 28, height: 28, fontSize: 14 }}>
+                                {(user?.hoten || 'U').charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                            <span className="text d-md-flex d-none">
+                              {user?.hoten || "Tài Khoản"}
+=======
+=======
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
                             className="d-flex align-items-center gap-10 fw-medium text-main-600 py-14 px-24 bg-main-50 rounded-pill hover-bg-main-600 hover-text-white"
                           >
                             <span className="text d-md-flex d-none">
                               {user?.full_name || "User"}
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
                             </span>
                             <span className="arrow-icon">
                               <i className="ph ph-caret-down" />
@@ -867,7 +950,19 @@ export default function FullHeader({
                       <li className="d-sm-flex d-none">
                         <Link
                           href="/dang-nhap"
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+                          className="d-flex align-content-around gap-10 fw-medium text-warning-700 py-14 px-24 bg-warning-soft rounded-pill line-height-1 hover-bg-warning-700 hover-text-white"
+=======
                           className="d-flex align-content-around gap-10 fw-medium text-white py-14 px-24 rounded-pill line-height-1 header-login-btn"
+>>>>>>> Stashed changes
+=======
+                          className="d-flex align-content-around gap-10 fw-medium text-white py-14 px-24 rounded-pill line-height-1 header-login-btn"
+>>>>>>> Stashed changes
+=======
+                          className="d-flex align-content-around gap-10 fw-medium text-white py-14 px-24 rounded-pill line-height-1 header-login-btn"
+>>>>>>> Stashed changes
                         >
                           <span className="d-sm-flex d-none line-height-1">
                             <i className="ph-bold ph-user" />

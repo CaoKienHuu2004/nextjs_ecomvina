@@ -202,7 +202,7 @@ export default function TrendingProductsTabs() {
             <div className="section-heading mb-24">
               <div className="flex-between flex-align flex-wrap gap-8">
                 <h6 className="mb-0 wow fadeInLeft" style={{ visibility: "visible", animationName: "fadeInLeft" }}>
-                  <i className="ph-bold ph-squares-four text-main-600" /> Danh mục hàng đầu
+                  <i className="ph-bold ph-squares-four text-warning-700" /> Danh mục hàng đầu
                 </h6>
               </div>
             </div>
@@ -220,7 +220,7 @@ export default function TrendingProductsTabs() {
           <div className="section-heading mb-24">
             <div className="flex-between flex-align flex-wrap gap-8">
               <h6 className="mb-0 wow fadeInLeft" style={{ visibility: "visible", animationName: "fadeInLeft" }}>
-                <i className="ph-bold ph-squares-four text-main-600" /> Danh mục hàng đầu
+                <i className="ph-bold ph-squares-four text-warning-700" /> Danh mục hàng đầu
               </h6>
               <ul className="nav common-tab style-two nav-pills wow fadeInRight m-0" role="tablist">
                 {visibleTabs.map((tab) => (

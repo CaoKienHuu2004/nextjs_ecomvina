@@ -583,7 +583,7 @@ export default function ShopPage() {
 
   return (
     <>
-      <FullHeader showClassicTopBar={false} showTopNav={true} showCategoriesBar={false} />
+      <FullHeader showClassicTopBar={true} showTopNav={false} />
 
       <div className="breadcrumb mb-0 pt-40 bg-main-two-60">
         <div className="container container-lg">

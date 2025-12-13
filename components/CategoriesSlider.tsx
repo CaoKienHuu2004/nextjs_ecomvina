@@ -46,7 +46,7 @@ export default function CategoriesSlider() {
                 <div className="p-24 border border-gray-100 rounded-16">
                     <div className="mb-16 section-heading d-flex flex-between align-items-center">
                         <h6 className="mb-0">
-                            <i className="ph-bold ph-squares-four text-main-600"></i> Danh mục nổi bật
+                            <i className="ph-bold ph-squares-four text-warning-700"></i> Danh mục nổi bật
                         </h6>
                     </div>
 
