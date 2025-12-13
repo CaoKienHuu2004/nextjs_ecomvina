@@ -1,7 +1,8 @@
 "use client";
 import Link from 'next/link';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useCart, VoucherConditionType, Gia } from '@/hooks/useCart';
+import { useCart, parseVoucherCondition, isVoucherInDateRange, VoucherConditionType, Gia } from '@/hooks/useCart';
+import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData';
 import Image from 'next/image';
 import FullHeader from '@/components/FullHeader';
 import { type Coupon as ApiCoupon } from '@/lib/api';
@@ -388,6 +389,10 @@ function DeleteConfirmModal({
 
 function CartPageContent() {
   const { items, loading, updatesoluong, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total, gifts, totalGifts, availableVouchers } = useCart();
+<<<<<<< HEAD
+=======
+  const { data: homeData } = useHomeData();
+>>>>>>> a969a44191fee3be3fad0f860d16d68d9fd2535c
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: number | string; name: string }>({
     isOpen: false,
@@ -700,11 +705,12 @@ function CartPageContent() {
             </div>
             <div className="col-xl-3 col-lg-4">
               <div className="mt-16">
-                <div className="cart-sidebar border border-gray-100 rounded-8 px-24 py-30 pb-20">
-                  <h6 className="text-lg mb-20 flex-align gap-8">
-                    <i className="ph-bold ph-ticket text-main-600 text-xl"></i>Áp dụng Voucher
+                <div className="px-24 pb-20 border border-gray-100 cart-sidebar rounded-8 py-30">
+                  <h6 className="gap-8 mb-20 text-lg flex-align">
+                    <i className="text-xl ph-bold ph-ticket text-main-600"></i>Áp dụng Voucher
                   </h6>
 
+<<<<<<< HEAD
                   {/* Applied voucher (shows when a voucher has been applied, allows cancel) */}
                   {appliedVoucher && (
                     <div className="flex-align flex-between gap-8 mt-10 border-dashed border-gray-200 py-10 px-12 rounded-4">
@@ -730,6 +736,33 @@ function CartPageContent() {
                       </span>
                     </div>
                   )}
+=======
+            {/* Applied voucher (shows when a voucher has been applied, allows cancel) */}
+            {appliedVoucher && (
+              <div className="gap-8 px-12 py-10 mt-10 border-gray-200 border-dashed flex-align flex-between rounded-4">
+                <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
+                  <i className="text-2xl ph-bold ph-ticket text-main-two-600"></i>
+                  <div className="text-sm d-flex flex-column">
+                    <span className="text-sm text-gray-900 w-100">
+                      {appliedVoucher.giatri ? `Giảm ${formatPrice(Number(appliedVoucher.giatri))}` : ''}
+                    </span>
+                    <span className="text-xs text-gray-500 w-100">
+                      {String(appliedVoucher.code ?? appliedVoucher.magiamgia ?? '')}
+                    </span>
+                  </div>
+                </span>
+                <span className="gap-8 text-xs text-gray-900 flex-align fw-medium">
+                  <button
+                    type="button"
+                    onClick={() =>  removeVoucher()}
+                    className="p-6 text-xs btn border-danger-600 text-danger-600 hover-bg-danger-600 hover-text-white hover-border-danger-600 rounded-4"
+                  >
+                    Hủy
+                  </button>
+                </span>
+              </div>
+            )}
+>>>>>>> a969a44191fee3be3fad0f860d16d68d9fd2535c
 
                   {/* Danh sách voucher khả dụng - từ API đã lọc theo điều kiện giỏ hàng */}
                   <div className="mt-16">
@@ -931,9 +964,39 @@ function CartPageContent() {
                       {totalItems} sản phẩm
                     </span>
                   </div>
+<<<<<<< HEAD
                   <div className="gap-8 mb-20 flex-between">
                     <span className="text-gray-900 font-heading-two">Tạm tính:</span>
                     <span className="text-gray-900 fw-semibold">{formatPrice(subtotal)}</span>
+=======
+                );
+              })}
+
+            {/* Fallback "no vouchers" block (matches your sample) */}
+            {coupons.filter((v) => {
+              if (!v) return false;
+              if (v.trangthai !== 'Hoạt động') return false;
+              if (appliedVoucher && v.id === appliedVoucher.id) return false;
+              if (!isVoucherInDateRange(v.ngaybatdau, v.ngayketthuc)) return false;
+              const { type, minOrderValue } = parseVoucherCondition(v.dieukien, v.mota);
+              switch (type) {
+                case 'tatca':
+                  return true;
+                case 'don_toi_thieu':
+                case 'freeship':
+                  return subtotal >= minOrderValue;
+                case 'khachhang_moi':
+                case 'khachhang_than_thiet':
+                  return items.length > 0;
+                default:
+                  return true;
+              }
+            }).length === 0 && !appliedVoucher && (
+              <div className="gap-8 px-12 py-10 mt-10 flex-align flex-center rounded-4">
+                <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
+                  <div className="text-sm d-flex flex-column">
+                    <span className="text-sm text-gray-900 w-100">Chưa có voucher nào phù hợp !</span>
+>>>>>>> a969a44191fee3be3fad0f860d16d68d9fd2535c
                   </div>
 
                   {discountAmount > 0 && (
@@ -988,5 +1051,9 @@ function CartPageContent() {
 }
 
 export default function CartPage() {
-  return <CartPageContent />;
+  return (
+    <HomeDataProvider>
+      <CartPageContent />
+    </HomeDataProvider>
+  );
 }

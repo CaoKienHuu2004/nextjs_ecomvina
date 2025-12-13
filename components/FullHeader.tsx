@@ -798,10 +798,22 @@ export default function FullHeader({
                             onClick={() =>
                               userOpen ? setUserOpen(false) : openOnly("user")
                             }
-                            className="d-flex align-items-center gap-10 fw-medium text-main-600 py-14 px-24 bg-main-50 rounded-pill hover-bg-main-600 hover-text-white"
+                            className="d-flex align-items-center gap-10 fw-medium text-warning-700 py-14 px-24 bg-warning-soft rounded-pill hover-bg-warning-700 hover-text-white"
                           >
+                            {user?.avatar ? (
+                              <img
+                                src={user.avatar.startsWith('http') ? user.avatar : `http://148.230.100.215${user.avatar}`}
+                                alt="Avatar"
+                                className="rounded-circle"
+                                style={{ width: 28, height: 28, objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <span className="d-flex align-items-center justify-content-center rounded-circle bg-warning-700 text-white" style={{ width: 28, height: 28, fontSize: 14 }}>
+                                {(user?.hoten || 'U').charAt(0).toUpperCase()}
+                              </span>
+                            )}
                             <span className="text d-md-flex d-none">
-                              {user?.full_name || "User"}
+                              {user?.hoten || "Tài Khoản"}
                             </span>
                             <span className="arrow-icon">
                               <i className="ph ph-caret-down" />

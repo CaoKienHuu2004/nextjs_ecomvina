@@ -1032,3 +1032,13 @@ button.btn-more-orange:hover,
   border-color: #f39016 !important;
   color: #ffffff !important;
 }
+
+
+/* Nước yến sào đông trùng  */
+.product-card img[alt="Nước Yến sào Đông trùng hạ thảo Nest100 - Có đường"] {
+  /* Chỉnh sửa kích thước tại đây */
+  width: 420px !important;
+  height: 400px !important;
+  object-fit: contain !important;
+  margin: 0 auto !important;
+}
