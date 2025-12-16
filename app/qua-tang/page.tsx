@@ -156,7 +156,7 @@ export default function GiftPromotionPage() {
                 </div>
             </div>
 
-            <section className="shop py-40">
+            <section className="shop py-30 gift-promotion-page">
                 <div className="container container-lg">
                     <div className="row">
                         {/* Sidebar */}
@@ -416,7 +416,9 @@ export default function GiftPromotionPage() {
                         </div>
                     </div>
                 </div>
+
             </section>
+
 
         </>
     );

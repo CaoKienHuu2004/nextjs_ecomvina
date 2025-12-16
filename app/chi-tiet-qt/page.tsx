@@ -110,9 +110,10 @@ export default function GiftDetailPage() {
     const [loading, setLoading] = useState(true);
     const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     const [showCartAlert, setShowCartAlert] = useState(false);
+    const [giftAddedToCart, setGiftAddedToCart] = useState(false); // Track nếu đã tự động thêm quà
 
     // Cart hook
-    const { addToCart, loading: cartLoading, subtotal, totalItems } = useCart();
+    const { addToCart, loading: cartLoading, subtotal, totalItems, items } = useCart();
 
     // Lấy điều kiện từ API
     const MIN_PRODUCTS = gift?.dieukiensoluong || 3;
@@ -185,6 +186,66 @@ export default function GiftDetailPage() {
 
         loadGiftData();
     }, [giftSlug]);
+
+    // ✨ TỰ ĐỘNG THÊM QUÀ TẶNG VÀO GIỎ HÀNG KHI ĐỦ ĐIỀU KIỆN
+    useEffect(() => {
+        const autoAddGift = async () => {
+            // 1. Kiểm tra các điều kiện cơ bản
+            if (!gift?.id_bienthe || !gift?.bienthe_quatang) {
+                return; // Không có thông tin quà tặng
+            }
+
+            // 2. Kiểm tra đã đủ điều kiện chưa
+            const isEligible = hasEnoughProducts && hasEnoughAmount && progressPercent >= 100;
+
+            if (!isEligible) {
+                return; // Chưa đủ điều kiện
+            }
+
+            // 3. Kiểm tra đã tự động thêm quà chưa (tránh thêm nhiều lần)
+            if (giftAddedToCart) {
+                return; // Đã thêm rồi, không thêm lại
+            }
+
+            // 4. Kiểm tra quà đã có trong giỏ hàng chưa
+            const giftInCart = items.some(
+                (item) => item.id_bienthe === gift.id_bienthe
+            );
+
+            if (giftInCart) {
+                setGiftAddedToCart(true); // Đánh dấu đã có quà trong giỏ
+                return; // Quà đã có trong giỏ rồi
+            }
+
+            // 5. Tự động thêm quà tặng vào giỏ hàng
+            try {
+                console.log('🎁 Đủ điều kiện! Tự động thêm quà tặng vào giỏ...');
+
+                await addToCart({
+                    id_bienthe: gift.id_bienthe,
+                    id: gift.id,
+                    ten: gift.bienthe_quatang.ten_bienthe_quatang || gift.tieude,
+                    hinhanh: gift.bienthe_quatang.hinhanh || gift.hinhanh,
+                    gia: 0, // Quà tặng giá = 0
+                    id_chuongtrinh: gift.id_chuongtrinh,
+                }, 1);
+
+                // 6. Hiển thị thông báo thành công
+                setGiftAddedToCart(true); // Đánh dấu đã thêm quà
+                setShowCartAlert(true);
+                setTimeout(() => setShowCartAlert(false), 5000);
+
+                console.log('✅ Đã tự động thêm quà tặng vào giỏ hàng!');
+            } catch (error) {
+                console.error('❌ Lỗi khi tự động thêm quà:', error);
+            }
+        };
+
+        // Chỉ chạy khi có đủ điều kiện và chưa thêm quà
+        if (gift && !giftAddedToCart) {
+            autoAddGift();
+        }
+    }, [hasEnoughProducts, hasEnoughAmount, progressPercent, gift, giftAddedToCart, items, addToCart]);
 
     // Calculate time left
     const calculateTimeLeft = useCallback((): TimeLeft => {
@@ -340,26 +401,48 @@ export default function GiftDetailPage() {
                                             {/* Conditions */}
                                             <ul className="mt-20">
                                                 <li className="text-gray-400 mb-14 flex-align gap-14">
-                                                    <span className={`w-30 h-30 ${hasEnoughProducts ? 'bg-success-100 text-success-600' : 'bg-main-100 text-main-600'} text-md flex-center rounded-circle`}>
+                                                    <span
+                                                        className={`w-30 h-30 text-md flex-center rounded-circle`}
+                                                        style={{ backgroundColor: hasEnoughProducts ? '#e6f7f7' : '#fff3e6', color: hasEnoughProducts ? '#009999' : '#f39016' }}
+                                                    >
                                                         <i className={`ph-bold ${hasEnoughProducts ? 'ph-check' : 'ph-x'}`}></i>
                                                     </span>
                                                     <span className="text-heading fw-medium">
-                                                        Mua tối thiểu <span className={hasEnoughProducts ? 'text-success-600' : 'text-main-600'}>{MIN_PRODUCTS} sản phẩm</span> từ {gift.thongtin_thuonghieu?.ten_thuonghieu || 'nhà cung cấp'}
+                                                        Mua tối thiểu <span style={{ color: hasEnoughProducts ? '#009999' : '#f39016' }}>{MIN_PRODUCTS} sản phẩm</span> từ {gift.thongtin_thuonghieu?.ten_thuonghieu || 'nhà cung cấp'}
                                                     </span>
                                                 </li>
                                                 {(gift.dieukiengiatri ?? 0) > 0 && (
                                                     <li className="text-gray-400 mb-14 flex-align gap-14">
-                                                        <span className={`w-30 h-30 ${hasEnoughAmount ? 'bg-success-100 text-success-600' : 'bg-main-100 text-main-600'} text-md flex-center rounded-circle`}>
+                                                        <span
+                                                            className={`w-30 h-30 text-md flex-center rounded-circle`}
+                                                            style={{ backgroundColor: hasEnoughAmount ? '#e6f7f7' : '#fff3e6', color: hasEnoughAmount ? '#009999' : '#f39016' }}
+                                                        >
                                                             <i className={`ph-bold ${hasEnoughAmount ? 'ph-check' : 'ph-x'}`}></i>
                                                         </span>
                                                         <span className="text-heading fw-medium">
-                                                            Giá trị đơn hàng tối thiểu <span className={hasEnoughAmount ? 'text-success-600' : 'text-main-600'}>{formatPrice(gift.dieukiengiatri)} đ</span>
+                                                            Giá trị đơn hàng tối thiểu <span style={{ color: hasEnoughAmount ? '#009999' : '#f39016' }}>{formatPrice(gift.dieukiengiatri)} đ</span>
                                                         </span>
                                                     </li>
                                                 )}
                                             </ul>
 
                                             <span className="mt-10 mb-10 text-gray-700 border-top border-gray-100 d-block"></span>
+
+                                            {/* Alert khi đủ điều kiện và đã tự động thêm quà */}
+                                            {showCartAlert && (
+                                                <div className="alert alert-success alert-dismissible fade show mb-20" role="alert" style={{ backgroundColor: '#e6f7f7', borderColor: '#009999', color: '#006666' }}>
+                                                    <div className="flex-align gap-8">
+                                                        <i className="ph-fill ph-gift text-xl" style={{ color: '#009999' }}></i>
+                                                        <strong>🎉 Chúc mừng!</strong> Quà tặng đã được tự động thêm vào giỏ hàng của bạn.
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-close"
+                                                        onClick={() => setShowCartAlert(false)}
+                                                        aria-label="Close"
+                                                    ></button>
+                                                </div>
+                                            )}
 
                                             {/* Gift Product */}
                                             <span className="flex-align mb-10 mt-10 text-gray-900 text-md fw-medium">
@@ -411,14 +494,16 @@ export default function GiftDetailPage() {
                                                     <div
                                                         className="progress w-100 bg-color-three rounded-pill h-20"
                                                         role="progressbar"
-                                                        aria-label="Progress"
-                                                        aria-valuenow={progressPercent}
-                                                        aria-valuemin={0}
-                                                        aria-valuemax={100}
+                                                        aria-label="Tiến độ nhận quà tặng"
+                                                        {...{
+                                                            'aria-valuenow': progressPercent || 0,
+                                                            'aria-valuemin': 0,
+                                                            'aria-valuemax': 100
+                                                        }}
                                                     >
                                                         <div
-                                                            className={`progress-bar ${progressPercent >= 100 ? 'bg-success-600' : 'bg-main-600'} rounded-pill text-center`}
-                                                            style={{ width: `${Math.max(progressPercent, 10)}%` }}
+                                                            className="progress-bar rounded-pill text-center"
+                                                            style={{ backgroundColor: progressPercent >= 100 ? '#009999' : '#f39016', width: `${Math.max(progressPercent, 10)}%` }}
                                                         >
                                                             {progressPercent}%
                                                         </div>
@@ -490,12 +575,12 @@ export default function GiftDetailPage() {
                                     {/* Share Buttons */}
                                     <div className="mt-32">
                                         <div className="px-32 py-16 rounded-8 border border-gray-100 flex-between gap-8">
-                                            <a href="#" className="d-flex text-main-600 text-28">
+                                            <a href="#" className="d-flex text-main-600 text-28" aria-label="Chat">
                                                 <i className="ph-fill ph-chats-teardrop"></i>
                                             </a>
                                             <span className="h-26 border border-gray-100"></span>
                                             <div className="dropdown on-hover-item">
-                                                <button className="d-flex text-main-600 text-28" type="button">
+                                                <button className="d-flex text-main-600 text-28" type="button" aria-label="Chia sẻ">
                                                     <i className="ph-fill ph-share-network"></i>
                                                 </button>
                                                 <div className="on-hover-dropdown common-dropdown border-0 inset-inline-start-auto inset-inline-end-0">
@@ -506,6 +591,7 @@ export default function GiftDetailPage() {
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="w-44 h-44 flex-center bg-main-100 text-main-600 text-xl rounded-circle hover-bg-main-600 hover-text-white"
+                                                                aria-label="Chia sẻ trên Facebook"
                                                             >
                                                                 <i className="ph-fill ph-facebook-logo"></i>
                                                             </a>
@@ -516,6 +602,7 @@ export default function GiftDetailPage() {
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="w-44 h-44 flex-center bg-main-100 text-main-600 text-xl rounded-circle hover-bg-main-600 hover-text-white"
+                                                                aria-label="Chia sẻ trên Twitter"
                                                             >
                                                                 <i className="ph-fill ph-twitter-logo"></i>
                                                             </a>
@@ -526,6 +613,7 @@ export default function GiftDetailPage() {
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="w-44 h-44 flex-center bg-main-100 text-main-600 text-xl rounded-circle hover-bg-main-600 hover-text-white"
+                                                                aria-label="Chia sẻ trên Instagram"
                                                             >
                                                                 <i className="ph-fill ph-instagram-logo"></i>
                                                             </a>
@@ -536,6 +624,7 @@ export default function GiftDetailPage() {
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="w-44 h-44 flex-center bg-main-100 text-main-600 text-xl rounded-circle hover-bg-main-600 hover-text-white"
+                                                                aria-label="Chia sẻ trên LinkedIn"
                                                             >
                                                                 <i className="ph-fill ph-linkedin-logo"></i>
                                                             </a>
@@ -570,6 +659,7 @@ export default function GiftDetailPage() {
                                             type="button"
                                             id="new-arrival-prev"
                                             className="slick-prev flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1"
+                                            aria-label="Sản phẩm trước"
                                         >
                                             <i className="ph ph-caret-left"></i>
                                         </button>
@@ -577,6 +667,7 @@ export default function GiftDetailPage() {
                                             type="button"
                                             id="new-arrival-next"
                                             className="slick-next flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1"
+                                            aria-label="Sản phẩm tiếp theo"
                                         >
                                             <i className="ph ph-caret-right"></i>
                                         </button>

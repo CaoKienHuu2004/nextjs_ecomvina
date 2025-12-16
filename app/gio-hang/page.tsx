@@ -512,7 +512,10 @@ function CartPageContent() {
           )}
           <div className="row gy-4">
             <div className="col-xl-9 col-lg-8">
-              <div className="pb-0 border border-gray-100 cart-table rounded-8 p-30" aria-busy={loading}>
+              <div
+                className="pb-0 border border-gray-100 cart-table rounded-8 p-30"
+                {...{ 'aria-busy': loading }}
+              >
                 <form>
                   <div
                     className="overflow-x-auto scroll-sm scroll-sm-horizontal"
@@ -669,10 +672,13 @@ function CartPageContent() {
                                     className="border border-gray-100 rounded-8 flex-center"
                                     style={{ maxWidth: '100px', maxHeight: '100px', width: '100%', height: '100%' }}
                                   >
-                                    <img
+                                    <Image
                                       src={gift.hinhanh || '/assets/images/thumbs/product-placeholder.png'}
                                       alt={gift.ten_sanpham || 'Quà tặng'}
+                                      width={100}
+                                      height={100}
                                       className="w-100 rounded-8"
+                                      style={{ objectFit: 'cover' }}
                                     />
                                   </Link>
                                   <div className="table-product__content text-start">
@@ -723,6 +729,7 @@ function CartPageContent() {
                                     className="w-32 px-4 py-8 text-center bg-gray-100 border quantity__input flex-grow-1 border-start-0 border-end-0"
                                     value={`x ${gift.soluong}`}
                                     readOnly
+                                    aria-label="Số lượng quà tặng"
                                   />
                                 </div>
                               </td>

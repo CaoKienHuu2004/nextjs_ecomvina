@@ -53,9 +53,12 @@ export default function SearchPage() {
                     const discountPercent = item.gia?.discount_percent || 0;
                     const ratingValue = typeof item.rating === 'object' ? item.rating.average : item.rating || 0;
 
-                    // Normalize image URL
-                    let imageUrl = item.hinh_anh || "/assets/images/thumbs/default-product.png";
-                    if (imageUrl && !imageUrl.startsWith('http')) {
+                    // Normalize image URL - Xử lý chuỗi rỗng
+                    let imageUrl = item.hinh_anh && item.hinh_anh.trim() !== ""
+                        ? item.hinh_anh
+                        : "/assets/images/thumbs/product-placeholder.png";
+
+                    if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/assets')) {
                         imageUrl = `http://148.230.100.215${imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`}`;
                     }
 
@@ -69,7 +72,7 @@ export default function SearchPage() {
                         originalPrice: beforeDiscount,
                         discount: discountPercent,
                         rating: ratingValue,
-                        sold: parseInt(item.sold_count) || 0,
+                        sold: parseInt(item.sold_count || "0") || 0,
                     };
                 });
 

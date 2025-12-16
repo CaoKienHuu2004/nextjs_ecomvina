@@ -1103,7 +1103,11 @@ button.btn-more-orange:hover,
   margin-bottom: -80px;
 }
 
-
+/* Tạo khoảng cách giữa trang Quà tặng và FullFooter */
+.gift-promotion-page {
+  padding-bottom: 20px;
+  margin-bottom: -30px;
+}
 
 /* ====================================================================
    CSS RIÊNG CHO PHẦN "SẢN PHẨM TƯƠNG TỰ" - DỄ CHỈNH SỬA

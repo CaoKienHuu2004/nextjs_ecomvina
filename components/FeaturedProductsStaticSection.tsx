@@ -114,7 +114,7 @@ const FeaturedProductsStaticSection = () => {
         <div key={product.id} className="aos-init aos-animate" data-aos="fade-up" data-aos-duration="800">
             <div className="mt-12 product-card d-flex gap-16 p-0 border border-gray-100 hover-border-main-600 rounded-16 position-relative transition-2">
                 <a href={`/product-details/${product.slug}?category=${encodeURIComponent("Sản phẩm hàng đầu")}`} className="flex-center rounded-8 position-relative w-unset flex-shrink-0">
-                    <img src={product.mediaurl} alt={product.ten} className="rounded-start-4" style={{ width: "180px", height: "180px", objectFit: "cover" }} />
+                    <img src={product.mediaurl || '/assets/images/thumbs/product-placeholder.png'} alt={product.ten} className="rounded-start-4" style={{ width: "180px", height: "180px", objectFit: "cover" }} />
                 </a>
                 <div className="product-card__content w-100 mt-20 mb-10 flex-grow-1 pe-10 align-items-stretch flex-column justify-content-between d-flex">
                     <div>

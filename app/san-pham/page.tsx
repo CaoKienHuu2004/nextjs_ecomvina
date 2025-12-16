@@ -76,7 +76,6 @@ export default function Page() {
         setItems(res?.data || []);
         setTotal(res?.meta?.total || 0);
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, category, priceMin, priceMax, sort, page, perPage]);
 
   // ---- helpers to push query ----
@@ -114,7 +113,7 @@ export default function Page() {
               onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget as HTMLFormElement); push({ q: String(fd.get("q") || "") }); }}
             >
               <input name="q" defaultValue={q} type="text" className="form-control common-input rounded-start-3" placeholder="Tìm sản phẩm..." />
-              <button type="submit" className="px-24 text-2xl text-white border-0 input-group-text bg-main-two-600 rounded-end-3 hover-bg-main-two-700">
+              <button type="submit" className="px-24 text-2xl text-white border-0 input-group-text bg-main-two-600 rounded-end-3 hover-bg-main-two-700" aria-label="Tìm kiếm">
                 <i className="ph ph-magnifying-glass"></i>
               </button>
             </form>
@@ -125,6 +124,7 @@ export default function Page() {
                 className="w-auto form-select"
                 value={sort}
                 onChange={(e) => push({ sort: e.target.value })}
+                aria-label="Sắp xếp sản phẩm"
               >
                 <option value="recent">Mới nhất</option>
                 <option value="price_asc">Giá tăng dần</option>

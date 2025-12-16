@@ -323,6 +323,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                             type="button"
                                             className="flex-shrink-0 w-48 h-48 quantity__minus text-neutral-600 bg-gray-50 flex-center hover-bg-main-600 hover-text-white"
                                             onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                            aria-label="Giảm số lượng"
                                         >
                                             <i className="ph ph-minus"></i>
                                         </button>
@@ -332,11 +333,13 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                             min="1"
                                             className="w-32 px-16 text-center border border-gray-100 quantity__input flex-grow-1 border-start-0 border-end-0"
                                             onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                            aria-label="Số lượng sản phẩm"
                                         />
                                         <button
                                             type="button"
                                             className="flex-shrink-0 w-48 h-48 quantity__plus text-neutral-600 bg-gray-50 flex-center hover-bg-main-600 hover-text-white"
                                             onClick={() => setQuantity(quantity + 1)}
+                                            aria-label="Tăng số lượng"
                                         >
                                             <i className="ph ph-plus"></i>
                                         </button>
@@ -364,12 +367,12 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
                                 <div className="mt-32">
                                     <div className="gap-8 px-32 py-16 border border-gray-100 rounded-8 flex-between">
-                                        <a href="#" className="d-flex text-main-600 text-28">
+                                        <a href="#" className="d-flex text-main-600 text-28" aria-label="Chat với cửa hàng">
                                             <i className="ph-fill ph-chats-teardrop"></i>
                                         </a>
                                         <span className="border border-gray-100 h-26"></span>
                                         <div className="dropdown on-hover-item">
-                                            <button className="d-flex text-main-600 text-28" type="button">
+                                            <button className="d-flex text-main-600 text-28" type="button" aria-label="Chia sẻ">
                                                 <i className="ph-fill ph-share-network"></i>
                                             </button>
                                             <div className="border-0 on-hover-dropdown common-dropdown">
@@ -383,6 +386,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                             <a
                                                                 href={social.url}
                                                                 className="text-xl w-44 h-44 flex-center bg-main-100 text-main-600 rounded-circle hover-bg-main-600 hover-text-white"
+                                                                aria-label={`Chia sẻ trên ${social.url.includes('facebook') ? 'Facebook' : social.url.includes('twitter') ? 'Twitter' : 'Instagram'}`}
                                                             >
                                                                 <i className={social.icon}></i>
                                                             </a>

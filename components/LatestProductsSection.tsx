@@ -52,7 +52,7 @@ export default function LatestProductsSection() {
                 id: item.id,
                 ten: item.ten,
                 slug: item.slug,
-                mediaurl: item.hinh_anh,
+                mediaurl: item.hinh_anh || '/assets/images/thumbs/product-placeholder.png',
                 selling_price: item.gia.current,
                 original_price: item.gia.before_discount,
                 shop_name: item.thuonghieu,
