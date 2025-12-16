@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useCart, VoucherConditionType, Gia } from '@/hooks/useCart';
 import Image from 'next/image';
 import FullHeader from '@/components/FullHeader';
-import { type Coupon as ApiCoupon } from '@/lib/api';
+// import { type Coupon as ApiCoupon } from '@/lib/api'; // Unused
 
 
 // --- HELPER FUNCTIONS ---
@@ -31,19 +31,24 @@ const formatPrice = (price: number) => {
   }).format(price);
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getPrice = (gia: PriceInput): number => {
   if (typeof gia === 'number') return gia;
-  return Number((gia as any)?.current ?? 0);
+  const giaObj = gia as { current?: number } | null;
+  return Number(giaObj?.current ?? 0);
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getOriginPrice = (gia: PriceInput): number => {
   if (typeof gia === 'object' && gia !== null) {
-    return Number((gia as any).before_discount ?? 0);
+    const giaObj = gia as { before_discount?: number };
+    return Number(giaObj.before_discount ?? 0);
   }
   return 0;
 };
 
 // Helper kiểm tra hạn sử dụng voucher (nếu có ngày bắt đầu/kết thúc)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const isVoucherInDateRange = (start?: string, end?: string): boolean => {
   const now = new Date();
 
@@ -61,6 +66,7 @@ const isVoucherInDateRange = (start?: string, end?: string): boolean => {
 };
 
 // Helper parse điều kiện voucher từ chuỗi mô tả
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const parseVoucherCondition = (
   dieukien?: string,
   mota?: string
@@ -84,7 +90,7 @@ const parseVoucherCondition = (
   // Tìm số tiền tối thiểu trong chuỗi, ví dụ: 200000, 300.000, 500k
   const moneyMatch = text.match(/(\d+[\d\.\,]*)\s*(k|đ|d|vnd)?/i);
   if (moneyMatch) {
-    let raw = moneyMatch[1].replace(/[\.\,]/g, '');
+    const raw = moneyMatch[1].replace(/[\.\,]/g, '');
     let value = parseInt(raw || '0', 10);
     if (moneyMatch[2] && moneyMatch[2].toLowerCase() === 'k') {
       value *= 1000;
@@ -98,6 +104,7 @@ const parseVoucherCondition = (
 };
 
 // Helper format ngày
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return '';
   const date = new Date(dateStr);
@@ -132,7 +139,7 @@ function QuantityControl({
   onUpdate: (qty: number) => void;
 }) {
   const [localQty, setLocalQty] = useState(quantity);
-  const debounceRef = useRef<any | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync local state khi prop thay đổi từ bên ngoài
   useEffect(() => {
@@ -389,6 +396,7 @@ function DeleteConfirmModal({
 function CartPageContent() {
   const { items, loading, updatesoluong, removeItem, subtotal, totalItems, refreshCart, appliedVoucher, applyVoucher, removeVoucher, discountAmount, total, gifts, totalGifts, availableVouchers } = useCart();
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
+  const [voucherMessage, setVoucherMessage] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: number | string; name: string }>({
     isOpen: false,
     id: 0,
@@ -399,18 +407,20 @@ function CartPageContent() {
   const couponsFromHome: HomeCoupon[] = [];
 
   // Nếu hook useCart trả về vouchers thì ưu tiên dùng nó (map về shape HomeCoupon)
-  const coupons: HomeCoupon[] = (availableVouchers && availableVouchers.length > 0)
-    ? (availableVouchers as any[]).map((v) => ({
-      id: (v?.id ?? 0) as number,
-      magiamgia: v?.magiamgia ?? v?.code,
-      dieukien: v?.dieukien,
-      mota: v?.mota,
-      giatri: Number(v?.giatri ?? v?.giatri ?? 0),
-      ngaybatdau: v?.ngaybatdau,
-      ngayketthuc: v?.ngayketthuc,
-      trangthai: v?.trangthai ?? 'Hoạt động',
-    }))
-    : couponsFromHome;
+  // Unused variable - commented out to fix lint warning
+  // const coupons: HomeCoupon[] = (availableVouchers && availableVouchers.length > 0)
+  //   ? (availableVouchers as VoucherItem[]).map((v) => ({
+  //     id: (v?.id ?? 0) as number,
+  //     magiamgia: v?.magiamgia ?? v?.code,
+  //     dieukien: v?.dieukien,
+  //     mota: v?.mota,
+  //     giatri: Number(v?.giatri ?? v?.giatri ?? 0),
+  //     ngaybatdau: v?.ngaybatdau,
+  //     ngayketthuc: v?.ngayketthuc,
+  //     trangthai: v?.trangthai ?? 'Hoạt động',
+  //   }))
+  //   : couponsFromHome;
+  void couponsFromHome; // Suppress unused warning
 
 
   // Tính giảm giá từ giá gốc sản phẩm
@@ -450,22 +460,52 @@ function CartPageContent() {
     }, 3000);
   };
 
+  // Hủy voucher và hiển thị thông báo
+  const handleRemoveVoucher = () => {
+    removeVoucher();
+    setVoucherMessage('Đã hủy bỏ mã giảm giá.');
+
+    // Tự động ẩn thông báo sau 3 giây
+    setTimeout(() => {
+      setVoucherMessage(null);
+    }, 3000);
+  };
+
   return (
     <>
       <FullHeader showClassicTopBar={true} showTopNav={false} />
 
       <section className="py-20 cart">
         <div className="container container-lg">
-          {/* Thông báo xóa sản phẩm */}
-          {deleteMessage && (
+          {/* Thông báo hủy voucher */}
+          {voucherMessage && (
             <div
-              className="p-10 mb-20 border bg-success-200 border-success-600 text-success-900 fw-medium rounded-8"
+              className="p-10 mb-20 border bg-white fw-medium rounded-8"
               style={{
                 animation: 'fadeIn 0.3s ease',
+                borderColor: '#009999',
+                color: '#006666',
               }}
             >
               <div className="gap-8 d-flex align-items-center">
-                <i className="text-xl ph ph-check-circle text-success-600"></i>
+                <i className="text-xl ph ph-check-circle" style={{ color: '#009999' }}></i>
+                {voucherMessage}
+              </div>
+            </div>
+          )}
+
+          {/* Thông báo xóa sản phẩm */}
+          {deleteMessage && (
+            <div
+              className="p-10 mb-20 border bg-white fw-medium rounded-8"
+              style={{
+                animation: 'fadeIn 0.3s ease',
+                borderColor: '#009999',
+                color: '#006666',
+              }}
+            >
+              <div className="gap-8 d-flex align-items-center">
+                <i className="text-xl ph ph-check-circle" style={{ color: '#009999' }}></i>
                 {deleteMessage}
               </div>
             </div>
@@ -699,144 +739,147 @@ function CartPageContent() {
               )}
             </div>
             <div className="col-xl-3 col-lg-4">
-              <div className="mt-16">
-                <div className="px-24 pb-20 border border-gray-100 cart-sidebar rounded-8 py-30">
-                  <h6 className="gap-8 mb-20 text-lg flex-align">
-                    <i className="text-xl ph-bold ph-ticket text-main-600"></i>Áp dụng Voucher
-                  </h6>
+              {/* Voucher Section - Block riêng */}
+              <div className="px-24 pb-20 border border-gray-100 cart-sidebar rounded-8 py-30">
+                <h6 className="gap-8 mb-20 text-lg flex-align">
+                  <i className="text-xl ph-bold ph-ticket text-main-600"></i>Áp dụng Voucher
+                </h6>
 
-                  {/* Hiển thị voucher đã áp dụng */}
-                  {appliedVoucher && (
-                    <div className="gap-8 px-12 py-10 mt-10 mb-16 border flex-align flex-between border-success-200 bg-success-50 rounded-4">
-                      <span className="gap-8 text-sm flex-align fw-medium text-success-700 pe-10">
-                        <i className="text-2xl ph-bold ph-check-circle text-success-600"></i>
-                        <div className="text-sm d-flex flex-column">
-                          <span className="text-sm text-success-700 w-100">
-                            {appliedVoucher.mota}
-                          </span>
-                          <span className="text-xs text-success-600 w-100">
-                            Mã: {appliedVoucher.code}
-                          </span>
-                        </div>
-                      </span>
-                      <span className="gap-8 text-xs flex-align fw-medium text-success-700">
-                        <button
-                          onClick={() => removeVoucher()}
-                          className="p-6 text-xs btn bg-danger-100 hover-bg-danger-200 text-danger-700 rounded-4"
-                          style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}
-                        >
-                          Hủy
-                        </button>
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Danh sách voucher khả dụng - từ API đã lọc theo điều kiện giỏ hàng */}
-                  <div className="mt-16">
-                    {availableVouchers
-                      .filter(voucher => {
-                        // Bỏ qua voucher đã áp dụng
-                        if (appliedVoucher && voucher.id === appliedVoucher.id) return false;
-                        return true;
-                      })
-                      .map((voucher) => {
-                        const conditionLabel = getConditionLabel(voucher.condition_type || 'don_toi_thieu', voucher.min_order_value || 0);
-
-                        return (
-                          <div key={voucher.id} className="gap-8 px-12 py-10 mt-10 border-dashed flex-align flex-between rounded-4 border-gray-200">
-                            <span className="gap-8 text-sm text-gray-900 flex-align fw-medium" style={{ flex: '1', minWidth: 0 }}>
-                              <i className="text-2xl ph-bold ph-ticket text-main-600" style={{ flexShrink: 0 }}></i>
-                              <div className="text-sm d-flex flex-column" style={{ flex: '1', minWidth: 0 }}>
-                                <span className="text-sm text-gray-900" style={{ wordBreak: 'break-word' }}>
-                                  {voucher.mota}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Mã: {voucher.code}
-                                </span>
-                                {conditionLabel && (
-                                  <span className="text-xs text-success-600">
-                                    {conditionLabel}
-                                  </span>
-                                )}
-                                {voucher.ngayketthuc && (
-                                  <span className="text-xs text-gray-400">
-                                    HSD: {formatDate(voucher.ngayketthuc)}
-                                  </span>
-                                )}
-                              </div>
-                            </span>
-                            <button
-                              onClick={() => {
-                                applyVoucher(voucher);
-                              }}
-                              className="text-xs btn rounded-4 text-white bg-main-600 hover-bg-main-100 hover-text-main-600"
-                            >
-                              Chọn
-                            </button>
-                          </div>
-                        )
-                      })}
-
-                    {/* Hiển thị thông báo khi không có voucher nào */}
-                    {availableVouchers.filter(v => !appliedVoucher || v.id !== appliedVoucher.id).length === 0 && !appliedVoucher && (
-                      <div className="gap-8 px-12 py-10 mt-10 flex-align flex-center rounded-4">
-                        <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
-                          <div className="text-sm d-flex flex-column">
-                            <span className="text-sm text-gray-900 w-100">Chưa có voucher nào phù hợp !</span>
-                            <span className="text-xs text-gray-500">Thêm sản phẩm để mở khóa voucher</span>
-                          </div>
+                {/* Hiển thị voucher đã áp dụng */}
+                {appliedVoucher && (
+                  <div className="gap-8 px-12 py-10 mt-10 mb-16 border flex-align flex-between border-success-200 bg-success-50 rounded-4">
+                    <span className="gap-8 text-sm flex-align fw-medium text-success-700 pe-10">
+                      <i className="text-2xl ph-bold ph-check-circle text-success-600"></i>
+                      <div className="text-sm d-flex flex-column">
+                        <span className="text-sm text-success-700 w-100">
+                          {appliedVoucher.mota}
+                        </span>
+                        <span className="text-xs text-success-600 w-100">
+                          Mã: {appliedVoucher.code}
                         </span>
                       </div>
-                    )}
-                  </div >
-                  <div className="px-20 py-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
-                    <div className="mb-20">
-                      <h6 className="gap-4 mb-6 text-lg flex-align"><i className="text-xl ph-bold ph-shopping-cart text-main-600"></i> Thông tin giỏ hàng</h6>
-                      <span className="gap-1 text-sm text-gray-600 flex-align fw-medium">
-                        {totalItems} sản phẩm
-                      </span>
-                    </div>
-                    <div className="gap-8 mb-20 flex-between">
-                      <span className="text-gray-900 font-heading-two">Tạm tính:</span>
-                      <span className="text-gray-900 fw-semibold">{formatPrice(subtotal)}</span>
-                    </div>
-
-                    {discountAmount > 0 && (
-                      <div className="gap-8 flex-between">
-                        <span className="text-gray-900 font-heading-two">Giảm giá Voucher:</span>
-                        <span className="text-success-600 fw-semibold">-{formatPrice(Number(discountAmount ?? 0))}</span>
-                      </div>
-                    )}
-
-                    <div className="pt-24 my-20 border-gray-100 border-top">
-                      <div className="gap-8 flex-between">
-                        <span className="text-lg text-gray-900 fw-semibold">Tổng giá trị:</span>
-                        <span className="text-lg text-main-600 fw-semibold">
-                          {formatPrice(total)}
-                        </span>
-                      </div>
-                      <div className="gap-8 mt-6 text-end">
-                        <span className="text-sm text-success-600 fw-normal">Tiết kiệm:</span>
-                        <span className="text-sm text-success-600 fw-normal ms-2">{formatPrice(productDiscount + (discountAmount ?? 0))}</span>
-                      </div>
-                    </div>
-                    <Link
-                      href="/thanh-toan"
-                      className={`btn btn-main py-14 w-100 rounded-8 ${items.length === 0 ? 'disabled opacity-50' : ''}`}
-                      style={{
-                        pointerEvents: items.length === 0 ? 'none' : 'auto',
-                      }}
-                    >
-                      Tiến hành thanh toán
-                    </Link>
+                    </span>
+                    <span className="gap-8 text-xs flex-align fw-medium text-success-700">
+                      <button
+                        onClick={() => handleRemoveVoucher()}
+                        className="p-6 text-xs btn bg-danger-100 hover-bg-danger-200 text-danger-700 rounded-4"
+                        style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      >
+                        Hủy
+                      </button>
+                    </span>
                   </div>
-                  <span className="mt-20 w-100 d-block">
-                    <Link href="/shop" className="text-sm text-main-600 fw-medium flex-align d-flex flex-center">
-                      <i className="ph-bold ph-arrow-fat-lines-left text-main-600 text-md pe-10"></i> <span>Tiếp tục mua hàng</span>
-                    </Link>
-                  </span>
-                </div>
+                )}
+
+                {/* Danh sách voucher khả dụng */}
+                {availableVouchers
+                  .filter(voucher => {
+                    if (appliedVoucher && voucher.id === appliedVoucher.id) return false;
+                    return true;
+                  })
+                  .map((voucher) => {
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    const conditionLabel = getConditionLabel(voucher.condition_type || 'don_toi_thieu', voucher.min_order_value || 0);
+
+                    return (
+                      <div key={voucher.id} className="gap-8 px-12 py-10 mt-10 border-dashed flex-align flex-between rounded-4 border-gray-200">
+                        <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
+                          <i className="text-2xl ph-bold ph-ticket" style={{ color: '#009999' }}></i>
+                          <div className="text-sm d-flex flex-column">
+                            <span className="text-sm text-gray-900 w-100">
+                              {voucher.mota}
+                            </span>
+                            <span
+                              title={voucher.code}
+                              className="text-xs text-gray-500"
+                              style={{ width: '130px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                            >
+                              {voucher.code}
+                            </span>
+                          </div>
+                        </span>
+                        <span className="gap-8 text-xs flex-align fw-medium text-gray-900">
+                          <button
+                            onClick={() => applyVoucher(voucher)}
+                            className="p-6 text-xs btn rounded-4"
+                            style={{ cursor: 'pointer', whiteSpace: 'nowrap', backgroundColor: '#009999', color: '#fff', border: '1px solid #009999' }}
+                          >
+                            Chọn
+                          </button>
+                        </span>
+                      </div>
+                    )
+                  })}
+
+                {/* Hiển thị thông báo khi không có voucher nào */}
+                {availableVouchers.filter(v => !appliedVoucher || v.id !== appliedVoucher.id).length === 0 && !appliedVoucher && (
+                  <div className="gap-8 px-12 py-10 mt-10 flex-align flex-center rounded-4">
+                    <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
+                      <div className="text-sm d-flex flex-column">
+                        <span className="text-sm text-gray-900 w-100">Chưa có voucher nào phù hợp !</span>
+                        <span className="text-xs text-gray-500">Thêm sản phẩm để mở khóa voucher</span>
+                      </div>
+                    </span>
+                  </div>
+                )}
               </div>
+
+              {/* Thông tin giỏ hàng - Block riêng */}
+              <div className="px-20 py-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
+                <div className="mb-20">
+                  <h6 className="gap-4 mb-6 text-lg flex-align">
+                    <i className="text-xl ph-bold ph-shopping-cart text-main-600"></i>Thông tin giỏ hàng
+                  </h6>
+                  <a href="#" className="gap-1 text-sm text-gray-600 flex-align fw-medium" style={{ cursor: 'pointer' }}>
+                    {totalItems} sản phẩm {totalGifts > 0 && `+ ${totalGifts} quà tặng`}
+                  </a>
+                </div>
+                <div className="gap-8 mb-20 flex-between">
+                  <span className="text-gray-900 font-heading-two">Tạm tính:</span>
+                  <span className="text-gray-900 fw-semibold">{formatPrice(subtotal)}</span>
+                </div>
+
+                {discountAmount > 0 && (
+                  <div className="gap-8 flex-between">
+                    <span className="text-gray-900 font-heading-two">Giảm giá Voucher:</span>
+                    <span className="text-success-600 fw-semibold">-{formatPrice(Number(discountAmount ?? 0))}</span>
+                  </div>
+                )}
+
+                <div className="pt-24 my-20 border-gray-100 border-top">
+                  <div className="gap-8 flex-between">
+                    <span className="text-lg text-gray-900 fw-semibold">Tổng giá trị:</span>
+                    <span className="text-lg text-main-600 fw-semibold">
+                      {formatPrice(total)}
+                    </span>
+                  </div>
+                  <div className="gap-8 text-end">
+                    <span className="text-sm fw-normal" style={{ color: '#009999' }}>Tiết kiệm:</span>
+                    <span className="text-sm fw-normal" style={{ color: '#009999' }}>
+                      {formatPrice(productDiscount + (discountAmount ?? 0))}
+                    </span>
+                  </div>
+                </div>
+                <Link
+                  href="/thanh-toan"
+                  className={`btn btn-main py-14 w-100 rounded-8 ${items.length === 0 ? 'disabled opacity-50' : ''}`}
+                  style={{ pointerEvents: items.length === 0 ? 'none' : 'auto' }}
+                >
+                  Tiến hành thanh toán
+                </Link>
+              </div>
+
+              {/* Link tiếp tục mua hàng */}
+              <span className="mt-20 w-100">
+                <Link
+                  href="/shop"
+                  className="text-sm fw-medium flex-align d-flex flex-center transtional-2 link"
+                  style={{ cursor: 'pointer', color: '#009999' }}
+                >
+                  <i className="ph-bold ph-arrow-fat-lines-left text-md pe-10" style={{ color: '#009999' }}></i>
+                  <span style={{ color: '#009999' }}>Tiếp tục mua hàng</span>
+                </Link>
+              </span>
             </div>
           </div>
         </div>

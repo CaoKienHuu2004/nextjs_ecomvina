@@ -260,7 +260,7 @@ export interface HomePageResponse {
     best_products: HomeHotSaleProduct[];
     new_launch: HomeHotSaleProduct[];
     most_watched: HomeHotSaleProduct[];
-    new_coupon?: Coupon[];            
+    new_coupon?: Coupon[];
     posts_to_explore?: BlogPost[];
   };
 }
@@ -423,6 +423,11 @@ export interface ProductDetail {
   images?: string[];
   thuonghieu?: string;
   shop_name?: string;
+  nhacungcap?: {
+    ten?: string;
+    slug?: string;
+    logo?: string;
+  };
   mota?: string;
   mo_ta?: string;
   thong_tin_chi_tiet?: string;
@@ -474,7 +479,11 @@ export interface ProductDetailResponse {
  */
 export async function fetchProductDetail(slug: string): Promise<ProductDetailResponse> {
   const HOME_API_URL = "http://148.230.100.215";
-  const url = `${HOME_API_URL}/api/sanphams-all/${slug}`;
+  // Encode slug để xử lý các ký tự đặc biệt
+  const encodedSlug = encodeURIComponent(slug);
+  const url = `${HOME_API_URL}/api/sanphams-all/${encodedSlug}`;
+
+  console.log(`🔍 Fetching product from: ${url}`);
 
   const response = await fetch(url, {
     method: "GET",
@@ -485,6 +494,7 @@ export async function fetchProductDetail(slug: string): Promise<ProductDetailRes
   });
 
   if (!response.ok) {
+    console.error(`❌ API returned ${response.status} for slug: "${slug}"`);
     throw new Error(`Product detail API error: ${response.status}`);
   }
 

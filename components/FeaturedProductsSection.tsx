@@ -159,7 +159,7 @@ export default function FeaturedProductsSection() {
                             </div>
 
                             <div className="gap-4 flex-align">
-                              <span className="text-main-two-600 text-md d-flex">
+                              <span className="text-md d-flex" style={{ color: "#009999" }}>
                                 <i className="ph-fill ph-storefront"></i>
                               </span>
                               <span className="text-xs text-gray-500">

@@ -139,7 +139,7 @@ export default function GiftEventsSection() {
           </div>
 
           <div className="gift-event-slider arrow-style-two">
-            <div className="d-flex flex-wrap justify-content-center" style={{ gap: "12px", marginLeft: "40px" }}>
+            <div className="d-flex flex-wrap justify-content-center" style={{ gap: "12px", marginLeft: "-20px" }}>
               {displayedGifts.map((gift) => {
                 // Tạo slug từ tieude nếu không có sẵn
                 const giftSlug = gift.slug || createSlug(gift.tieude);

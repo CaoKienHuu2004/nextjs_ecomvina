@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import FullHeader from "@/components/FullHeader";
-// import { productDetailUrl } from "@/utils/paths";
+import { productDetailUrl } from "@/utils/paths";
 
 type PriceRange = { label: string; min: number; max: number };
 type Sidebar = {
@@ -103,7 +103,7 @@ export default function Page() {
   // ---- UI ----
   return (
     <>
-      <FullHeader showClassicTopBar={true} showTopNav={false}/>
+      <FullHeader showClassicTopBar={true} showTopNav={false} />
 
       <section className="py-32">
         <div className="container container-lg">
@@ -158,7 +158,7 @@ export default function Page() {
                 <h6 className="mb-12">Khoảng giá</h6>
                 <div className="gap-8 d-flex flex-column">
                   {sidebar?.filters?.price?.map((p) => {
-                    const selected = (asNumber(priceMin()) === p.min) && (asNumber(priceMax()) === p.max);
+                    const selected = (asNumber(priceMin) === p.min) && (asNumber(priceMax) === p.max);
                     function asNumber(v: string | null) { return v ? Number(v) : NaN; }
                     return (
                       <label key={p.label} className="gap-8 d-flex align-items-center">
@@ -241,7 +241,7 @@ export default function Page() {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ product_id: p.id, qty: 1 }),
-                              }).catch(() => {});
+                              }).catch(() => { });
                             }}
                           >
                             Thêm vào giỏ
