@@ -4,10 +4,22 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import ProductMiniCard from "@/components/ProductMiniCard";
 
+type RecommendProduct = {
+  id: number;
+  ten: string;
+  slug?: string;
+  mediaurl?: string | null;
+  gia?: {
+    current: number;
+    before_discount: number | null;
+    discount_percent: number;
+  } | null;
+};
+
 export default function RecommendedSection({ title = "Có thể bạn quan tâm", perPage = 8 }: { title?: string; perPage?: number }) {
   const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
   const url = `${API}/api/sanphams-selection?selection=recommend&per_page=${perPage}`;
-  const [items, setItems] = React.useState<any[]>([]);
+  const [items, setItems] = React.useState<RecommendProduct[]>([]);
   const [loading, setLoading] = React.useState(true);
   const prevRef = React.useRef<HTMLButtonElement | null>(null);
   const nextRef = React.useRef<HTMLButtonElement | null>(null);
@@ -69,7 +81,7 @@ export default function RecommendedSection({ title = "Có thể bạn quan tâm"
               1200: { slidesPerView: 6 },
             }}
           >
-            {items.map((p: any) => (
+            {items.map((p) => (
               <SwiperSlide key={p.id} className="px-6">
                 <ProductMiniCard
                   href={`/products/${p.slug || p.id}`}

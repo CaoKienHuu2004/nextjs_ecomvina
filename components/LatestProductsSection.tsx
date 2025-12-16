@@ -115,6 +115,7 @@ export default function LatestProductsSection() {
                                                     href={`/product-details/${product.slug}?category=${encodeURIComponent("Hàng mới chào sân")}`}
                                                     className={`flex-center rounded-8 bg-gray-50 position-relative ${isCustomImage ? 'custom-image-container' : ''}`}
                                                     style={{ height: "210px" }}
+                                                    aria-label={product.ten}
                                                 >
                                                     <Image
                                                         alt={product.ten}

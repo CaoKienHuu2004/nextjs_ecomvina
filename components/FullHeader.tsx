@@ -403,7 +403,6 @@ export default function FullHeader({
                     >
                       <li
                         className="common-dropdown__item nav-submenu__item"
-                        role="none"
                       >
                         <Link
                           href="/yeu-thich"
@@ -422,7 +421,6 @@ export default function FullHeader({
                         <>
                           <li
                             className="common-dropdown__item nav-submenu__item"
-                            role="none"
                           >
                             <Link
                               href="/dang-nhap"
@@ -435,7 +433,6 @@ export default function FullHeader({
                           </li>
                           <li
                             className="common-dropdown__item nav-submenu__item"
-                            role="none"
                           >
                             <Link
                               href="/don-hang"
@@ -448,7 +445,6 @@ export default function FullHeader({
                           </li>
                           <li
                             className="common-dropdown__item nav-submenu__item"
-                            role="none"
                           >
                             <button
                               type="button"
@@ -467,7 +463,6 @@ export default function FullHeader({
                         <>
                           <li
                             className="common-dropdown__item nav-submenu__item"
-                            role="none"
                           >
                             <Link
                               href="/dang-nhap"
@@ -480,7 +475,6 @@ export default function FullHeader({
                           </li>
                           <li
                             className="common-dropdown__item nav-submenu__item"
-                            role="none"
                           >
                             <Link
                               href="/dang-nhap"
@@ -822,7 +816,7 @@ export default function FullHeader({
                               className="bg-white rounded-md shadow common-dropdown nav-submenu scroll-sm position-absolute"
                               style={{ zIndex: 9999 }} // thêm zIndex để dropdown không bị che khuất
                             >
-                              <li className="common-dropdown__item nav-submenu__item" role="none">
+                              <li className="common-dropdown__item nav-submenu__item">
                                 <Link
                                   href="/yeu-thich"
                                   role="menuitem"
@@ -836,7 +830,7 @@ export default function FullHeader({
                                   </span>
                                 </Link>
                               </li>
-                              <li className="common-dropdown__item nav-submenu__item" role="none">
+                              <li className="common-dropdown__item nav-submenu__item">
                                 <Link
                                   href="/tai-khoan"
                                   role="menuitem"
@@ -846,7 +840,7 @@ export default function FullHeader({
                                   Tài khoản
                                 </Link>
                               </li>
-                              <li className="common-dropdown__item nav-submenu__item" role="none">
+                              <li className="common-dropdown__item nav-submenu__item">
                                 <Link
                                   href="/don-hang"
                                   role="menuitem"
@@ -856,7 +850,7 @@ export default function FullHeader({
                                   Đơn hàng của tôi
                                 </Link>
                               </li>
-                              <li className="common-dropdown__item nav-submenu__item" role="none">
+                              <li className="common-dropdown__item nav-submenu__item">
                                 <button
                                   type="button"
                                   onClick={() => {

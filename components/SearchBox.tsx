@@ -14,6 +14,24 @@ type Product = {
   gia_ban: number;
 };
 
+type CategoryProduct = {
+  id: number;
+  ten?: string;
+  slug?: string;
+  hinh_anh?: string;
+  thuonghieu?: string;
+  category_name?: string;
+  gia?: {
+    current?: number;
+    before_discount?: number;
+  };
+};
+
+type TopCategory = {
+  ten: string;
+  sanpham?: CategoryProduct[];
+};
+
 type SearchBoxProps = {
   placeholder?: string;
 };
@@ -66,8 +84,8 @@ export default function SearchBox({ placeholder = "Thuốc giảm cân dành cho
           const data = res?.data || {};
 
           // 1. Lấy sản phẩm từ các danh mục (gắn thêm tên danh mục để tìm kiếm)
-          const prodsFromCats = (data.top_categories || []).flatMap((c: any) =>
-            (c.sanpham || []).map((p: any) => ({ ...p, category_name: c.ten }))
+          const prodsFromCats = (data.top_categories || []).flatMap((c: TopCategory) =>
+            (c.sanpham || []).map((p: CategoryProduct) => ({ ...p, category_name: c.ten }))
           );
 
           // 2. Lấy sản phẩm từ các mục nổi bật khác
@@ -86,13 +104,13 @@ export default function SearchBox({ placeholder = "Thuốc giảm cân dành cho
 
           // 5. Lọc thông minh (Tên SP || Danh mục || Thương hiệu)
           const lowerQ = q.trim().toLowerCase();
-          return uniqueProds.filter((p: any) => {
+          return uniqueProds.filter((p) => {
             const matchName = p.ten?.toLowerCase().includes(lowerQ);
             const matchCat = p.category_name?.toLowerCase().includes(lowerQ);
             const matchBrand = p.thuonghieu?.toLowerCase().includes(lowerQ);
 
             return matchName || matchCat || matchBrand;
-          }).map((p: any) => ({
+          }).map((p) => ({
             id: p.id,
             ten: p.ten,
             slug: p.slug,

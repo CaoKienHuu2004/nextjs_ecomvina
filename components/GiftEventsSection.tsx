@@ -19,7 +19,7 @@ function createSlug(title: string): string {
 }
 
 export default function GiftEventsSection() {
-  const { data: homeData, loading: homeLoading } = useHomeData();
+  const { data: homeData } = useHomeData();
   const [gifts, setGifts] = useState<GiftEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -82,9 +82,6 @@ export default function GiftEventsSection() {
       return newIndex >= gifts.length ? 0 : newIndex;
     });
   };
-
-  // Luôn cho phép navigation nếu có nhiều hơn 5 items (để chuyển ảnh)
-  const showNavigation = gifts.length > itemsPerPage;
 
   return (
     <section className="deals-weeek pt-10 overflow-hidden fix-scale-30">
