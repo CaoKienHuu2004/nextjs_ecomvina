@@ -90,6 +90,7 @@ export default function FeaturedProductsSection() {
                         type="button"
                         id="featured-products-prev"
                         className="text-xl border border-gray-100 slick-prev slick-arrow flex-center rounded-circle hover-border-neutral-600 hover-bg-neutral-600 hover-text-white transition-1"
+                        aria-label="Sản phẩm trước"
                       >
                         <i className="ph ph-caret-left"></i>
                       </button>
@@ -97,6 +98,7 @@ export default function FeaturedProductsSection() {
                         type="button"
                         id="featured-products-next"
                         className="text-xl border border-gray-100 slick-next slick-arrow flex-center rounded-circle hover-border-neutral-600 hover-bg-neutral-600 hover-text-white transition-1"
+                        aria-label="Sản phẩm tiếp theo"
                       >
                         <i className="ph ph-caret-right"></i>
                       </button>
