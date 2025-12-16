@@ -368,7 +368,7 @@ export default function FullHeader({
                   <button
                     type="button"
                     aria-haspopup="menu"
-                    aria-expanded={userOpen}
+                    {...{ 'aria-expanded': userOpen }}
                     onClick={() =>
                       userOpen ? setUserOpen(false) : openOnly("user")
                     }
@@ -398,7 +398,6 @@ export default function FullHeader({
                   </button>
                   {userOpen && (
                     <ul
-                      role="menu"
                       className="bg-white rounded-md shadow common-dropdown nav-submenu scroll-sm position-absolute"
                       style={{ zIndex: 9999 }} // thêm zIndex để dropdown không bị che khuất
                     >
@@ -528,7 +527,7 @@ export default function FullHeader({
                     <button
                       type="button"
                       aria-haspopup="menu"
-                      aria-expanded={catOpen}
+                      {...{ 'aria-expanded': catOpen }}
                       onClick={() =>
                         catOpen ? setCatOpen(false) : openOnly("cat")
                       }
@@ -546,7 +545,6 @@ export default function FullHeader({
                     {/* Desktop Dropdown (React-controlled) */}
                     {catOpen && (
                       <div
-                        role="menu"
                         className="p-0 bg-white rounded-md shadow responsive-dropdown common-dropdown nav-submenu submenus-submenu-wrapper position-absolute"
                       >
                         <ul className="p-0 py-8 overflow-y-auto scroll-sm w-300 max-h-400">
@@ -708,7 +706,7 @@ export default function FullHeader({
                       <button
                         className="category__button flex-align gap-4 text-sm text-white rounded-top"
                         type="button"
-                        aria-expanded={showCategoryMenu}
+                        {...{ 'aria-expanded': showCategoryMenu }}
                       >
                         <span className="icon text-sm d-md-flex d-none">
                           <i className="ph ph-squares-four"></i>
@@ -794,7 +792,7 @@ export default function FullHeader({
                           <button
                             type="button"
                             aria-haspopup="menu"
-                            aria-expanded={userOpen}
+                            {...{ 'aria-expanded': userOpen }}
                             onClick={() =>
                               userOpen ? setUserOpen(false) : openOnly("user")
                             }
@@ -821,7 +819,6 @@ export default function FullHeader({
                           </button>
                           {userOpen && (
                             <ul
-                              role="menu"
                               className="bg-white rounded-md shadow common-dropdown nav-submenu scroll-sm position-absolute"
                               style={{ zIndex: 9999 }} // thêm zIndex để dropdown không bị che khuất
                             >
@@ -898,6 +895,7 @@ export default function FullHeader({
                     type="button"
                     onClick={() => setMobileOpen(!mobileOpen)}
                     className="toggle-mobileMenu d-lg-none ms-3n text-gray-800 text-4xl d-flex"
+                    aria-label="Toggle mobile menu"
                   >
                     <i className="ph ph-list" />
                   </button>

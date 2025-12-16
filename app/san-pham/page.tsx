@@ -31,6 +31,8 @@ function numberWithDots(n: number) {
   try { return new Intl.NumberFormat("vi-VN").format(n); } catch { return String(n); }
 }
 
+function asNumber(v: string | null) { return v ? Number(v) : NaN; }
+
 export default function Page() {
   const router = useRouter();
   const qs = useSearchParams();
@@ -159,7 +161,6 @@ export default function Page() {
                 <div className="gap-8 d-flex flex-column">
                   {sidebar?.filters?.price?.map((p) => {
                     const selected = (asNumber(priceMin) === p.min) && (asNumber(priceMax) === p.max);
-                    function asNumber(v: string | null) { return v ? Number(v) : NaN; }
                     return (
                       <label key={p.label} className="gap-8 d-flex align-items-center">
                         <input
@@ -258,11 +259,11 @@ export default function Page() {
                 <nav>
                   <ul className="gap-8 pagination">
                     <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
-                      <button className="page-link" onClick={() => push({ page: Math.max(1, page - 1) })}><i className="ph ph-caret-left" /></button>
+                      <button className="page-link" onClick={() => push({ page: Math.max(1, page - 1) })} aria-label="Trang trước"><i className="ph ph-caret-left" /></button>
                     </li>
                     <li className="page-item"><span className="page-link">{page}</span></li>
                     <li className={`page-item ${items.length < perPage ? "disabled" : ""}`}>
-                      <button className="page-link" onClick={() => push({ page: page + 1 })}><i className="ph ph-caret-right" /></button>
+                      <button className="page-link" onClick={() => push({ page: page + 1 })} aria-label="Trang sau"><i className="ph ph-caret-right" /></button>
                     </li>
                   </ul>
                 </nav>

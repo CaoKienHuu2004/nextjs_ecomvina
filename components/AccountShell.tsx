@@ -78,7 +78,7 @@ export default function AccountShell({
           <div className="row g-16">
             <aside className="col-lg-3">
               <div className="shop-sidebar">
-                <button type="button" className="w-32 h-32 mt-8 border border-gray-100 shop-sidebar__close d-lg-none d-flex flex-center rounded-circle hover-bg-main-600 position-absolute inset-inline-end-0 me-10 hover-text-white hover-border-main-600">
+                <button type="button" className="w-32 h-32 mt-8 border border-gray-100 shop-sidebar__close d-lg-none d-flex flex-center rounded-circle hover-bg-main-600 position-absolute inset-inline-end-0 me-10 hover-text-white hover-border-main-600" aria-label="Đóng menu">
                   <i className="ph ph-x" />
                 </button>
 
