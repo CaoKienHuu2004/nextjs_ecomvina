@@ -257,7 +257,7 @@ export default function BlogDetailSlugPage({ params }: { params: Promise<{ slug:
                                                         <i className="ph ph-calendar-blank"></i>
                                                     </span>
                                                     <span className="text-xs text-gray-500">
-                                                        {post.date || 'Mới đăng'}
+                                                        {(post as any).date || 'Mới đăng'}
                                                     </span>
                                                 </div>
                                             </div>
