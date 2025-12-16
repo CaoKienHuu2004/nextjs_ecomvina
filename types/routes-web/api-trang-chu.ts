@@ -80,13 +80,13 @@ export type ThuongHieu = {
 };
 
 // Union type cho tất cả các item trong response
-export type TrangChuItem = 
-  | TuKhoa 
-  | BannerQuangCao 
-  | DanhMuc 
-  | SanPham 
-  | ChuongTrinhKhuyenMai 
-  | DanhMucVoiSanPham 
+export type TrangChuItem =
+  | TuKhoa
+  | BannerQuangCao
+  | DanhMuc
+  | SanPham
+  | ChuongTrinhKhuyenMai
+  | DanhMucVoiSanPham
   | ThuongHieu;
 
 // Type guards để xác định loại item
@@ -271,18 +271,4 @@ export const filterSanPhams = (sanPhams: SanPham[], options: FilterOptions): San
   }
 
   return filtered;
-};
-
-// Export tất cả types
-export type {
-  TuKhoa,
-  BannerQuangCao,
-  DanhMuc,
-  SanPham,
-  ChuongTrinhKhuyenMai,
-  DanhMucVoiSanPham,
-  ThuongHieu,
-  TrangChuItem,
-  TrangChuResponse,
-  PhanLoaiTrangChu,
 };
