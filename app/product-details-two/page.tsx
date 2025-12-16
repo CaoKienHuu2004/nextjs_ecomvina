@@ -321,7 +321,7 @@ export default function Page() {
                     </div>
                     <div className="mt-12 product-card__content">
                       <div className="mb-8 product-card__price">
-                        <span className="text-heading text-md fw-semibold ">{p.price} {p.note ? (<span className="text-gray-500 fw-normal">{p.note}</span>) : null} </span>
+                        <span className="text-heading text-md fw-semibold ">{p.price} {(p as any).note ? (<span className="text-gray-500 fw-normal">{(p as any).note}</span>) : null} </span>
                         <span className="text-gray-400 text-md fw-semibold text-decoration-line-through"> {p.old}</span>
                       </div>
                       <div className="gap-6 flex-align">
