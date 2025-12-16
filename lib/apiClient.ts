@@ -5,11 +5,11 @@ import { API_ROUTES } from "./apiRoutes";
 export function getTrangChu(params?: Record<string, string | number>) {
   const qs = params
     ? `?${new URLSearchParams(
-        Object.entries(params).reduce((acc, [key, value]) => {
-          acc[key] = String(value);
-          return acc;
-        }, {} as Record<string, string>)
-      ).toString()}`
+      Object.entries(params).reduce((acc, [key, value]) => {
+        acc[key] = String(value);
+        return acc;
+      }, {} as Record<string, string>)
+    ).toString()}`
     : "";
 
   return apiGet<any>(`${API_ROUTES.TRANG_CHU}${qs}`);
@@ -17,14 +17,14 @@ export function getTrangChu(params?: Record<string, string | number>) {
 // Tìm kiếm
 export function timKiem(params: { query?: string; danhmuc?: string; thuonghieu?: string; locgia?: string; page?: number; per_page?: number }) {
   const qs = `?${new URLSearchParams(
-    Object.fromEntries(Object.entries(params || {}).filter(([,v]) => v !== undefined && v !== "" ).map(([k,v]) => [k, String(v)]))
+    Object.fromEntries(Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)]))
   ).toString()}`;
   return apiGet<any>(`${API_ROUTES.TIM_KIEM}${qs}`);
 }
 
 // Sản phẩm
 export const getSanPhamList = (params?: Record<string, string | number>) => {
-  const qs = params ? `?${new URLSearchParams(Object.entries(params).map(([k,v]) => [k, String(v)]))}` : "";
+  const qs = params ? `?${new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]))}` : "";
   return apiGet<any>(`${API_ROUTES.SAN_PHAM_LIST}${qs}`);
 };
 export const getSanPhamById = (id: string | number) => apiGet<any>(API_ROUTES.SAN_PHAM_SHOW(id));
