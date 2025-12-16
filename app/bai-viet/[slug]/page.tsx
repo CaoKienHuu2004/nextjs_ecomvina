@@ -131,7 +131,7 @@ export default function BlogDetailSlugPage({ params }: { params: Promise<{ slug:
                                                         <i className="ph ph-calendar-dots"></i>
                                                     </span>
                                                     <span className="text-sm text-gray-500">
-                                                        {currentPost.date || new Date().toLocaleDateString('vi-VN')}
+                                                       {(currentPost as any).date || new Date().toLocaleDateString('vi-VN')}
                                                     </span>
                                                 </div>
                                                 <div className="flex-align flex-wrap gap-8">
@@ -257,7 +257,7 @@ export default function BlogDetailSlugPage({ params }: { params: Promise<{ slug:
                                                         <i className="ph ph-calendar-blank"></i>
                                                     </span>
                                                     <span className="text-xs text-gray-500">
-                                                        {post.date || 'Mới đăng'}
+                                                        {(post as any).date || 'Mới đăng'}
                                                     </span>
                                                 </div>
                                             </div>

@@ -153,7 +153,7 @@ export default function MostInterestedSection() {
                             </div>
                         </div>
                         <div className="mx-auto w-100 text-center aos-init aos-animate mt-40" data-aos="fade-up" data-aos-duration="200">
-                            <a href="/shop?source=most_watched" className="btn-more-orange">
+                            <a href="/shop?source=most_watched" className="btn-more-orange mt-10">
                                 Xem thêm sản phẩm
                             </a>
                         </div>

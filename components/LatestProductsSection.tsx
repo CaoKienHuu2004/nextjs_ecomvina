@@ -20,6 +20,7 @@ interface Product {
 const CUSTOM_IMAGE_SLUGS = [
     'ao-ni-dai-tay-be-gai-rabity',
     'nuoc-tay-trang-rua-mat-cap-am-can-bang-do-ph-tren-da-cell-fusion-c-low-ph-pharrier-cleansing-water',
+
     // Thêm slug khác nếu cần
 ];
 
@@ -176,7 +177,7 @@ export default function LatestProductsSection() {
                         <div className="mx-auto w-100 text-center aos-init aos-animate mt-40" data-aos="fade-up" data-aos-duration="200">
                             <a
                                 href="/shop?source=new_launch"
-                                className="btn-more-orange"
+                                className="btn-more-orange mt-10"
                                 style={{ marginBottom: 0 }}
                             >
                                 Xem thêm sản phẩm

@@ -61,14 +61,14 @@
     --display-one: clamp(2.5rem, -0.0733rem + 6.3692vw, 7.5rem);
     /* Font Size End */
     /* template main color */
-    --main-h: 3;
-    --main-s: 71%;
-    --main-l: 56%;
+    --main-h: 33;
+    --main-s: 90%;
+    --main-l: 51%;
     --main: var(--main-h) var(--main-s) var(--main-l);
     /* template main color */
-    --main-two-h: 3;
-    --main-two-s: 71%;
-    --main-two-l: 56%;
+    --main-two-h: 33;
+    --main-two-s: 90%;
+    --main-two-l: 51%;
     --main-two: var(--main-two-h) var(--main-two-s) var(--main-two-l);
     /* White Color */
     --white: 0 0% 100%;
@@ -1067,6 +1067,16 @@ input[type=number] {
 
 .common-tab.style-two .nav-link:hover {
     color: var(--main-two-600);
+}
+
+/* Force nav tabs/pills to use brand color */
+.nav-tabs .nav-link.active,
+.nav-pills .nav-link.active,
+.nav-underline .nav-link.active,
+.navbar-nav .nav-link.active {
+    color: hsl(var(--white)) !important;
+    background-color: var(--main-600) !important;
+    border-color: var(--main-600) !important;
 }
 
 /* ================================= Tab Css End =========================== */
@@ -10093,9 +10103,9 @@ input:focus-visible {
 /* ======================= Newsletter Css End =========================== */
 /* Home Two Css Start */
 .color-two:root {
-    --main-h: 3;
-    --main-s: 71%;
-    --main-l: 56%;
+    --main-h: 33;
+    --main-s: 90%;
+    --main-l: 51%;
 }
 
 .font-exo h1,

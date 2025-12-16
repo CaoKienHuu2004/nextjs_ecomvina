@@ -76,6 +76,14 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
                                     aria-controls={`content-${cat.id}`}
                                     aria-selected={activeTab === idx}
                                     onClick={() => setActiveTab(idx)}
+                                    style={{
+                                        borderRadius: "999px",
+                                        borderColor: "#009999",
+                                        color: activeTab === idx ? "#fff" : "#009999",
+                                        backgroundColor: activeTab === idx ? "#009999" : "#fff",
+                                        padding: "8px 18px",
+                                        transition: "all 0.2s ease"
+                                    }}
                                 >
                                     {cat.ten}
                                 </button>

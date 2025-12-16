@@ -2,8 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth"; 
+// import { useRouter } from "next/navigation"; // Unused
+import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
 
 export type AccountShellProps = {
@@ -17,8 +17,8 @@ export default function AccountShell({
   current = "wishlist",
   children,
 }: AccountShellProps) {
-  const router = useRouter();
-  
+  // const router = useRouter(); // Unused
+
   // 2. Lấy thông tin user và hàm logout từ AuthContext toàn cục
   // Dữ liệu này đã được đồng bộ từ Server (layout.tsx) nên sẽ có ngay lập tức
   const { user, logout } = useAuth();
@@ -28,10 +28,10 @@ export default function AccountShell({
   const getAvatarUrl = (path?: string) => {
     const defaultAvatar = "/assets/images/default-avatar.png";
     if (!path) return defaultAvatar;
-    
+
     // Nếu ảnh đã là link tuyệt đối (google, facebook...) thì giữ nguyên
     if (path.startsWith("http")) return path;
-    
+
     // Nếu ảnh từ server Laravel (tương đối), nối thêm domain
     // Bạn có thể thay hardcode IP bằng process.env.NEXT_PUBLIC_SERVER_API
     return `http://148.230.100.215${path.startsWith('/') ? '' : '/'}${path}`;
@@ -86,7 +86,6 @@ export default function AccountShell({
                   <div className="pb-16 mb-16 border-gray-100 border-bottom">
                     <Link href="/thong-tin-ca-nhan" className="gap-12 px-16 py-8 mb-0 bg-gray-50 rounded-8 flex-between d-flex" style={{ justifyContent: "start" }}>
                       <span className="flex-shrink-0 text-xl bg-white text-main-600 rounded-circle flex-center" style={{ width: 45, height: 45 }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={avatarSrc} alt="avatar" className="w-100 h-100 object-fit-cover rounded-circle" />
                       </span>
                       <div className="d-flex flex-column">
@@ -129,12 +128,12 @@ export default function AccountShell({
                 </div>
               </div>
             </aside>
-            
+
 
             <main className="col-lg-9">
-              
-                {children}
-              
+
+              {children}
+
             </main>
           </div>
         </div>

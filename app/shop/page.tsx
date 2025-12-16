@@ -488,18 +488,44 @@ export default function ShopPage() {
     return CATEGORY_OPTIONS;
   }, [apiCategories]);
 
-  // Tạo brand options từ API
+  // Tạo brand options từ API (ưu tiên danh sách mẫu, loại trùng)
   const dynamicBrandOptions = useMemo(() => {
-    if (apiBrands.length > 0) {
-      return [
-        { value: "", label: "Tất cả" },
-        ...apiBrands.map(brand => ({
-          value: brand.slug,
-          label: brand.ten
-        }))
-      ];
-    }
-    return BRAND_OPTIONS;
+    const preferredBrands = [
+      { value: "stv-trading", label: "STV Trading" },
+      { value: "cchoi", label: "C'CHOI" },
+      { value: "acaci-labs", label: "ACACI LABS" },
+      { value: "global-yen-sao-nest100", label: "GLOBAL (Yến Sào NEST100)" },
+      { value: "chat-viet-group", label: "CHẤT VIỆT GROUP" },
+      { value: "nutri-viet-nam", label: "NUTRI VIỆT NAM" },
+      { value: "ong-mat-binh-phuoc", label: "Ong Mật Bình Phước" },
+      { value: "kuchen-viet-nam", label: "KUCHEN Việt Nam" },
+    ];
+
+    const map = new Map<string, { value: string; label: string }>();
+
+    // Ưu tiên danh sách mẫu
+    preferredBrands.forEach((b) => map.set(b.value, b));
+
+    // Thêm từ API (loại trùng)
+    apiBrands.forEach((brand) => {
+      if (!map.has(brand.slug)) {
+        map.set(brand.slug, { value: brand.slug, label: brand.ten });
+      }
+    });
+
+    const merged = Array.from(map.values());
+
+    // Sắp xếp theo thứ tự preferred trước, còn lại theo alphabet
+    merged.sort((a, b) => {
+      const ia = preferredBrands.findIndex((p) => p.value === a.value);
+      const ib = preferredBrands.findIndex((p) => p.value === b.value);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return a.label.localeCompare(b.label, "vi");
+    });
+
+    return [{ value: "", label: "Tất cả" }, ...merged];
   }, [apiBrands]);
 
   // Tạo price range options từ API
@@ -646,7 +672,7 @@ export default function ShopPage() {
                               checked={tempFilters.danhmuc === cat.value}
                               onChange={(e) => setTempFilters({ ...tempFilters, danhmuc: e.target.value })}
                             />
-                            <label className="form-check-label" htmlFor={cat.value || "all"}>
+                            <label className="form-check-label fw-semibold text-black" htmlFor={cat.value || "all"}>
                               {cat.label}{cat.value && 'count' in cat ? ` (${cat.count})` : ""}
                             </label>
                           </div>
@@ -672,7 +698,7 @@ export default function ShopPage() {
                               checked={tempFilters.locgia === price.value}
                               onChange={(e) => setTempFilters({ ...tempFilters, locgia: e.target.value })}
                             />
-                            <label className="form-check-label" htmlFor={price.value || "all-price"}>
+                            <label className="form-check-label fw-semibold text-black" htmlFor={price.value || "all-price"}>
                               {price.label}
                             </label>
                           </div>
@@ -686,24 +712,27 @@ export default function ShopPage() {
                       Lọc theo thương hiệu
                     </h6>
                     <ul className="max-h-540 overflow-y-auto scroll-sm">
-                      {dynamicBrandOptions.map((brand, index) => (
-                        <li key={`brand-${index}-${brand.value || "all"}`} className="mb-16">
-                          <div className="form-check common-check common-radio">
-                            <input
-                              className="form-check-input"
-                              type="radio"
-                              name="thuonghieu"
-                              id={`brand-${brand.value || "all"}`}
-                              value={brand.value}
-                              checked={tempFilters.thuonghieu === brand.value}
-                              onChange={(e) => setTempFilters({ ...tempFilters, thuonghieu: e.target.value })}
-                            />
-                            <label className="form-check-label" htmlFor={`brand-${brand.value || "all"}`}>
-                              {brand.label}
-                            </label>
-                          </div>
-                        </li>
-                      ))}
+                      {dynamicBrandOptions.map((brand, index) => {
+                        const brandId = `thuonghieu${index + 1}`;
+                        return (
+                          <li key={`brand-${index}-${brand.value || "all"}`} className="mb-16">
+                            <div className="form-check common-check common-radio">
+                              <input
+                                className="form-check-input"
+                                type="radio"
+                                name="thuonghieu"
+                                id={brandId}
+                                value={brand.value}
+                                checked={tempFilters.thuonghieu === brand.value}
+                                onChange={(e) => setTempFilters({ ...tempFilters, thuonghieu: e.target.value })}
+                              />
+                              <label className="form-check-label fw-semibold text-black" htmlFor={brandId}>
+                                {brand.label}
+                              </label>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
 
@@ -730,8 +759,8 @@ export default function ShopPage() {
                   </div>
 
                   <div className="shop-sidebar__box rounded-8">
-                    <a href="https://shopee.tw" target="_blank" rel="noreferrer noopener">
-                      <img className="rounded-8 w-100" src="/assets/images/bg/shoppe.jpg" alt="Shopee Banner" />
+                    <a href="#" target="_blank" rel="noreferrer noopener">
+                      <img className="rounded-8 w-100" src="/assets/images/bg/banner6_tienluat.webp" alt="Shopee Banner" />
                     </a>
                   </div>
                   {topBrands.length > 0 && (
