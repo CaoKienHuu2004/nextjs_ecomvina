@@ -1,6 +1,7 @@
 import React from "react";
 import "./globals.css";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import AppShell from "@/components/AppShell";
 import { WishlistProvider } from "@/hooks/useWishlist";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -34,6 +35,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </AppShell>
           </WishlistProvider>
         </AuthProvider>
+
+        <Analytics />
 
         {/* Các script giữ nguyên */}
         <Script src="/assets/js/jquery-3.7.1.min.js" strategy="beforeInteractive" />
