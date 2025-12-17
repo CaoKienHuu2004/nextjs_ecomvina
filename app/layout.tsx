@@ -35,6 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </AppShell>
           </WishlistProvider>
         </AuthProvider>
+        <Analytics />
 
         <Analytics />
 
