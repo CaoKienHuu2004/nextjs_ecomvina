@@ -32,6 +32,11 @@ module.exports = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.sieuthivina.cloud',
+        pathname: '/**',
+      },
     ],
   },
 };
