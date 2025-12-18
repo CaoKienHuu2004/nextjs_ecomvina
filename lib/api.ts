@@ -1,7 +1,7 @@
 import { VoucherConditionType } from "@/hooks/useCart";
 
 // lib/api.ts
-const BASE_URL = process.env.SERVER_API || process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+const BASE_URL = process.env.SERVER_API || process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
 
 if (!BASE_URL) {
   console.warn("⚠️ BASE_URL chưa được khai báo trong .env");
@@ -314,7 +314,7 @@ export async function fetchHomePage(headers?: Record<string, string>, perPage: n
     return homePageCache.data;
   }
 
-  const HOME_API_URL = "http://148.230.100.215";
+  const HOME_API_URL = "https://sieuthivina.cloud";
   const url = `${HOME_API_URL}/api/trang-chu${perPage !== 6 ? `?per_page=${perPage}` : ''}`;
 
   const result = await fetchWithRetry(async () => {
@@ -478,7 +478,7 @@ export interface ProductDetailResponse {
  * @returns Promise with product detail data
  */
 export async function fetchProductDetail(slug: string): Promise<ProductDetailResponse> {
-  const HOME_API_URL = "http://148.230.100.215";
+  const HOME_API_URL = "https://sieuthivina.cloud";
   // Encode slug để xử lý các ký tự đặc biệt
   const encodedSlug = encodeURIComponent(slug);
   const url = `${HOME_API_URL}/api/sanphams-all/${encodedSlug}`;
@@ -697,7 +697,7 @@ export async function fetchShopProducts(params?: {
   page?: number;
   per_page?: number;
 }): Promise<ShopProductsResponse> {
-  const HOME_API_URL = "http://148.230.100.215";
+  const HOME_API_URL = "https://sieuthivina.cloud";
 
   // Build query string from params
   const queryParams = new URLSearchParams();

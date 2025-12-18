@@ -82,7 +82,7 @@ export default function ThanhToanPage() {
 
     setIsSubmitting(true);
     try {
-      const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+      const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
       const token = Cookies.get("access_token");
 
       const payload = {

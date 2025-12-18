@@ -372,7 +372,7 @@ export function useCart() {
 
   const hasSyncedRef = useRef(false);
 
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
 
   // Kiểm tra đăng nhập dựa vào token thực sự có trong cookie
   const hasValidToken = useCallback((): boolean => {

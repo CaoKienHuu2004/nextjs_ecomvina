@@ -17,7 +17,7 @@ type Review = {
 type ProductOption = { id: number; name: string };
 
 export default function ReviewsPage() {
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);

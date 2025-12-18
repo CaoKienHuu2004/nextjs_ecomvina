@@ -37,7 +37,7 @@ type SearchBoxProps = {
 };
 
 export default function SearchBox({ placeholder = "Thuốc giảm cân dành cho người béo..." }: SearchBoxProps) {
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
   const [q, setQ] = React.useState("");
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);

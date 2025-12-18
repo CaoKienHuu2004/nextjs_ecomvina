@@ -108,7 +108,7 @@ export default function Page(): JSX.Element {
       const token = getToken();
       if (!token) return;
 
-      const res = await fetch("http://148.230.100.215/api/tai-khoan/diachis", {
+      const res = await fetch("https://sieuthivina.cloud/api/tai-khoan/diachis", {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Accept": "application/json"
@@ -137,7 +137,7 @@ export default function Page(): JSX.Element {
     if (!confirm("Bạn có chắc muốn xóa địa chỉ này không?")) return;
 
     try {
-      const res = await fetch(`http://148.230.100.215/api/tai-khoan/diachis/${id}`, {
+      const res = await fetch(`https://sieuthivina.cloud/api/tai-khoan/diachis/${id}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${getToken()}`,
@@ -160,7 +160,7 @@ export default function Page(): JSX.Element {
   // 4. SET DEFAULT: Đặt mặc định
   const handleSetDefault = async (id: number) => {
     try {
-      const res = await fetch(`http://148.230.100.215/api/tai-khoan/diachis/${id}/macdinh`, {
+      const res = await fetch(`https://sieuthivina.cloud/api/tai-khoan/diachis/${id}/macdinh`, {
         method: "PATCH",
         headers: {
           "Authorization": `Bearer ${getToken()}`,
@@ -210,8 +210,8 @@ export default function Page(): JSX.Element {
 
     const isEdit = editing.id !== 0;
     const url = isEdit 
-      ? `http://148.230.100.215/api/tai-khoan/diachis/${editing.id}` 
-      : `http://148.230.100.215/api/tai-khoan/diachis`;
+      ? `https://sieuthivina.cloud/api/tai-khoan/diachis/${editing.id}` 
+      : `https://sieuthivina.cloud/api/tai-khoan/diachis`;
     
     const method = isEdit ? "PUT" : "POST";
 

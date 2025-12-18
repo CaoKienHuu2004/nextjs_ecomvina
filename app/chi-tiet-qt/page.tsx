@@ -6,7 +6,7 @@ import Link from 'next/link';
 import FullHeader from '@/components/FullHeader';
 import { useCart } from '@/hooks/useCart';
 
-const API_URL = process.env.NEXT_PUBLIC_SERVER_API || 'http://148.230.100.215';
+const API_URL = process.env.NEXT_PUBLIC_SERVER_API || 'https://sieuthivina.cloud';
 
 interface TimeLeft {
     days: number;

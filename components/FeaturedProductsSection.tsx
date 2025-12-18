@@ -19,7 +19,7 @@ export default function FeaturedProductsSection() {
   const [items, setItems] = useState<Prod[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
   const viewAllHref = "/products?source=best_products&sort=popular";
 
   useEffect(() => {

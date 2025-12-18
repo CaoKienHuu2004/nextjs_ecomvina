@@ -158,7 +158,7 @@ export default function FullHeader({
 
   // Chuẩn hoá host để cookie không rớt (localhost ↔ 127.0.0.1)
   const API = useMemo(() => {
-    const raw = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+    const raw = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
     try {
       if (typeof window === "undefined") return raw;
       const u = new URL(raw);
@@ -666,43 +666,43 @@ export default function FullHeader({
         // CLASSIC HEADER (giữ cấu trúc cũ, nhưng không jQuery)
         <>
           {showClassicTopBar && (
-            <div className="header-top bg-main-600 flex-between py-10 d-none d-lg-block">
+            <div className="py-10 header-top bg-main-600 flex-between d-none d-lg-block">
               <div className="container container-lg">
-                <div className="flex-between flex-wrap gap-8">
-                  <ul className="header-top__right flex-align flex-wrap gap-16">
+                <div className="flex-wrap gap-8 flex-between">
+                  <ul className="flex-wrap gap-16 header-top__right flex-align">
                     {!isLoggedIn && (
                       <li className="flex-align">
-                        <Link href="/dang-ky" className="text-white text-sm hover-text-white">
-                          <i className="ph-bold ph-user text-white"></i> Đăng ký thành viên
+                        <Link href="/dang-ky" className="text-sm text-white hover-text-white">
+                          <i className="text-white ph-bold ph-user"></i> Đăng ký thành viên
                         </Link>
                       </li>
                     )}
                     <li className="flex-align">
-                      <Link href="/gioi-thieu" className="text-white text-sm hover-text-white pe-1">
-                        <i className="ph-bold ph-info text-white"></i> Giới thiệu về Siêu Thị Vina
+                      <Link href="/gioi-thieu" className="text-sm text-white hover-text-white pe-1">
+                        <i className="text-white ph-bold ph-info"></i> Giới thiệu về Siêu Thị Vina
                       </Link>
                     </li>
                     <li className="flex-align">
-                      <Link href="/lien-he" className="text-white text-sm hover-text-white">
+                      <Link href="/lien-he" className="text-sm text-white hover-text-white">
                         <i className="ph-bold ph-chat-dots"></i> Liên hệ hỗ trợ
                       </Link>
                     </li>
                   </ul>
 
-                  <ul className="header-top__right flex-align flex-wrap gap-16">
+                  <ul className="flex-wrap gap-16 header-top__right flex-align">
                     {/* Danh mục */}
                     <li
-                      className="d-block on-hover-item text-white flex-shrink-0"
+                      className="flex-shrink-0 text-white d-block on-hover-item"
                       ref={categoryButtonRef}
                       onMouseEnter={handleMouseEnter}
                       onMouseLeave={handleMouseLeave}
                     >
                       <button
-                        className="category__button flex-align gap-4 text-sm text-white rounded-top"
+                        className="gap-4 text-sm text-white category__button flex-align rounded-top"
                         type="button"
                         {...{ 'aria-expanded': showCategoryMenu }}
                       >
-                        <span className="icon text-sm d-md-flex d-none">
+                        <span className="text-sm icon d-md-flex d-none">
                           <i className="ph ph-squares-four"></i>
                         </span>
                         <span className="d-sm-flex d-none">Danh mục</span>
@@ -710,14 +710,14 @@ export default function FullHeader({
                     </li>
 
                     <li className="flex-align">
-                      <Link href="/tra-cuu-don-hang" className="text-white text-sm hover-text-white">
+                      <Link href="/tra-cuu-don-hang" className="text-sm text-white hover-text-white">
                         <i className="ph-bold ph-notepad"></i> Tra cứu đơn hàng
                       </Link>
                     </li>
                     <li className="flex-align">
-                      <Link href="/gio-hang" className="text-white text-sm hover-text-white" data-cart-icon>
+                      <Link href="/gio-hang" className="text-sm text-white hover-text-white" data-cart-icon>
                         <i className="ph-bold ph-shopping-cart"></i> Giỏ hàng
-                        <span className="badge bg-main-two-600 rounded-4 px-6 py-4 ms-6">{totalItems}</span>
+                        <span className="px-6 py-4 badge bg-main-two-600 rounded-4 ms-6">{totalItems}</span>
                       </Link>
                     </li>
                   </ul>
@@ -729,11 +729,11 @@ export default function FullHeader({
           )}
 
           <header
-            className="header border-bottom border-neutral-40 pt-16 pb-10 pz99"
+            className="pt-16 pb-10 header border-bottom border-neutral-40 pz99"
             style={{ background: "rgba(250, 250, 250, 0.9)" }}
           >
             <div className="container container-lg">
-              <nav className="header-inner flex-between gap-16">
+              <nav className="gap-16 header-inner flex-between">
                 {/* Logo Start */}
                 <div className="logo">
                   <Link href="/" className="link">
@@ -753,20 +753,20 @@ export default function FullHeader({
                   <div className="mx-20">
                     <SearchBoxWithSuggestions />
 
-                    <div className="flex-align mt-10 gap-12 title">
-                      <Link href="/tim-kiem?query=Sâm Ngọc Linh" className="text-sm link text-gray-600 hover-text-main-600 fst-italic">
+                    <div className="gap-12 mt-10 flex-align title">
+                      <Link href="/tim-kiem?query=Sâm Ngọc Linh" className="text-sm text-gray-600 link hover-text-main-600 fst-italic">
                         Sâm Ngọc Linh
                       </Link>
-                      <Link href="/tim-kiem?query=Sách hán ngữ 3" className="text-sm link text-gray-600 hover-text-main-600 fst-italic">
+                      <Link href="/tim-kiem?query=Sách hán ngữ 3" className="text-sm text-gray-600 link hover-text-main-600 fst-italic">
                         Sách hán ngữ 3
                       </Link>
-                      <Link href="/tim-kiem?query=Móc khóa genshin" className="text-sm link text-gray-600 hover-text-main-600 fst-italic">
+                      <Link href="/tim-kiem?query=Móc khóa genshin" className="text-sm text-gray-600 link hover-text-main-600 fst-italic">
                         Móc khóa genshin
                       </Link>
-                      <Link href="/tim-kiem?query=Đồ chơi minecraft" className="text-sm link text-gray-600 hover-text-main-600 fst-italic">
+                      <Link href="/tim-kiem?query=Đồ chơi minecraft" className="text-sm text-gray-600 link hover-text-main-600 fst-italic">
                         Đồ chơi minecraft
                       </Link>
-                      <Link href="/tim-kiem?query=Điện nội thất" className="text-sm link text-gray-600 hover-text-main-600 fst-italic">
+                      <Link href="/tim-kiem?query=Điện nội thất" className="text-sm text-gray-600 link hover-text-main-600 fst-italic">
                         Điện nội thất
                       </Link>
                     </div>
@@ -777,7 +777,7 @@ export default function FullHeader({
                 {/* Middle Header Right start */}
                 <div className="header-right flex-align">
                   {isLoggedIn ? (
-                    <ul className="header-top__right style-two style-three flex-align flex-wrap d-lg-block d-none">
+                    <ul className="flex-wrap header-top__right style-two style-three flex-align d-lg-block d-none">
                       <li className="d-sm-flex d-none">
                         <div
                           ref={userRef}
@@ -790,17 +790,17 @@ export default function FullHeader({
                             onClick={() =>
                               userOpen ? setUserOpen(false) : openOnly("user")
                             }
-                            className="d-flex align-items-center gap-10 fw-medium text-warning-700 py-14 px-24 bg-warning-soft rounded-pill hover-bg-warning-700 hover-text-white"
+                            className="gap-10 px-24 d-flex align-items-center fw-medium text-warning-700 py-14 bg-warning-soft rounded-pill hover-bg-warning-700 hover-text-white"
                           >
                             {user?.avatar ? (
                               <img
-                                src={user.avatar.startsWith('http') ? user.avatar : `http://148.230.100.215${user.avatar}`}
+                                src={user.avatar.startsWith('http') ? user.avatar : `https://sieuthivina.cloud${user.avatar}`}
                                 alt="Avatar"
                                 className="rounded-circle"
                                 style={{ width: 28, height: 28, objectFit: 'cover' }}
                               />
                             ) : (
-                              <span className="d-flex align-items-center justify-content-center rounded-circle bg-warning-700 text-white" style={{ width: 28, height: 28, fontSize: 14 }}>
+                              <span className="text-white d-flex align-items-center justify-content-center rounded-circle bg-warning-700" style={{ width: 28, height: 28, fontSize: 14 }}>
                                 {(user?.hoten || 'U').charAt(0).toUpperCase()}
                               </span>
                             )}
@@ -869,11 +869,11 @@ export default function FullHeader({
                       </li>
                     </ul>
                   ) : (
-                    <ul className="header-top__right style-two style-three flex-align flex-wrap d-lg-block d-none">
+                    <ul className="flex-wrap header-top__right style-two style-three flex-align d-lg-block d-none">
                       <li className="d-sm-flex d-none">
                         <Link
                           href="/dang-nhap"
-                          className="d-flex align-content-around gap-10 fw-medium text-warning-700 py-14 px-24 bg-warning-soft rounded-pill line-height-1 hover-bg-warning-700 hover-text-white"
+                          className="gap-10 px-24 d-flex align-content-around fw-medium text-warning-700 py-14 bg-warning-soft rounded-pill line-height-1 hover-bg-warning-700 hover-text-white"
                         >
                           <span className="d-sm-flex d-none line-height-1">
                             <i className="ph-bold ph-user" />
@@ -888,7 +888,7 @@ export default function FullHeader({
                   <button
                     type="button"
                     onClick={() => setMobileOpen(!mobileOpen)}
-                    className="toggle-mobileMenu d-lg-none ms-3n text-gray-800 text-4xl d-flex"
+                    className="text-4xl text-gray-800 toggle-mobileMenu d-lg-none ms-3n d-flex"
                     aria-label="Toggle mobile menu"
                   >
                     <i className="ph ph-list" />

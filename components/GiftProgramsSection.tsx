@@ -84,7 +84,7 @@ export default function GiftProgramsSection() {
                                     {/* Image */}
                                     <div className="position-relative gift-image-wrapper">
                                         <Image
-                                            src={program.hinhanh.startsWith('http') ? program.hinhanh : `http://148.230.100.215/assets/client/images/thumbs/${program.hinhanh}`}
+                                            src={program.hinhanh.startsWith('http') ? program.hinhanh : `https://sieuthivina.cloud/assets/client/images/thumbs/${program.hinhanh}`}
                                             alt={program.tieude}
                                             fill
                                             className="object-fit-cover"

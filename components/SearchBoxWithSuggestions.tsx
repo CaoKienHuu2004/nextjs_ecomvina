@@ -46,7 +46,7 @@ export default function SearchBoxWithSuggestions({ placeholder = "chẤt viỆt 
 
                 let imageUrl = item.hinh_anh || "/assets/images/thumbs/default-product.png";
                 if (imageUrl && !imageUrl.startsWith("http")) {
-                    imageUrl = `http://148.230.100.215${imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`}`;
+                    imageUrl = `https://sieuthivina.cloud${imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`}`;
                 }
 
                 return {

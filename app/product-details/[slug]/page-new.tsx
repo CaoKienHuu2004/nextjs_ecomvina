@@ -34,7 +34,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
         const fetchProduct = async () => {
             try {
                 const slug = resolvedParams.slug;
-                const API = process.env.NEXT_PUBLIC_SERVER_API || 'http://148.230.100.215';
+                const API = process.env.NEXT_PUBLIC_SERVER_API || 'https://sieuthivina.cloud';
 
                 const response = await fetch(`${API}/api/featured-products`);
                 const data = await response.json();

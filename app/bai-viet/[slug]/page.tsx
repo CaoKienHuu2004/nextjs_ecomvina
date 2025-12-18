@@ -51,7 +51,7 @@ export default function BlogDetailSlugPage({ params }: { params: Promise<{ slug:
             return '/assets/images/thumbs/default-product.png';
         }
         if (url.startsWith('http')) return url;
-        return `http://148.230.100.215${url.startsWith('/') ? url : `/${url}`}`;
+        return `https://sieuthivina.cloud${url.startsWith('/') ? url : `/${url}`}`;
     };
 
     if (loading) {

@@ -603,7 +603,7 @@ export default function ShopPage() {
       return logo;
     }
 
-    const api = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+    const api = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
     return `${api}/${logo.replace(/^\/+/g, "")}`;
   };
 

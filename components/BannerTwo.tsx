@@ -85,7 +85,7 @@ export default function BannerTwo() {
           {
             id: 9001,
             vitri: "home_banner_slider",
-            hinhanh: "http://148.230.100.215/assets/client/images/bg/banner-droppii-1.png",
+            hinhanh: "https://sieuthivina.cloud/assets/client/images/bg/banner-droppii-1.png",
             lienket: "https://droppii.vn",
             mota: "Banner Droppii 1",
             trangthai: "Hiển thị",
@@ -94,7 +94,7 @@ export default function BannerTwo() {
           {
             id: 9002,
             vitri: "home_banner_slider",
-            hinhanh: "http://148.230.100.215/assets/client/images/bg/banner-droppii-2.png",
+            hinhanh: "https://sieuthivina.cloud/assets/client/images/bg/banner-droppii-2.png",
             lienket: "https://droppii.vn",
             mota: "Banner Droppii 2",
             trangthai: "Hiển thị",

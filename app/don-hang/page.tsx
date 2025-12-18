@@ -102,7 +102,7 @@ export default function OrdersPage() {
   const pageSize = 5;
 
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<DetailedOrder | null>(null);
@@ -121,7 +121,7 @@ export default function OrdersPage() {
     const fetchOrders = async () => {
       try {
         setLoading(true);
-        const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+        const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
         const token = Cookies.get("access_token");
 
         const res = await fetch(`${API}/api/tai-khoan/donhangs`, {

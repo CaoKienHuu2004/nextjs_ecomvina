@@ -16,7 +16,7 @@ type Ctx = {
 const WishlistContext = createContext<Ctx | null>(null);
 
 function useWishlistCore(): Ctx {
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
   const [ids, setIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
 

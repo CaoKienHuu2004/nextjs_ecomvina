@@ -37,7 +37,7 @@ export async function addToCart(id_bienthe: number, soluong = 1) {
   console.log("🛒 addToCart called:", { id_bienthe, soluong });
 
   // Chuẩn hoá API base để cookie đi kèm
-  const raw = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+  const raw = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
   const API = (() => {
     try {
       if (typeof window === "undefined") return raw;

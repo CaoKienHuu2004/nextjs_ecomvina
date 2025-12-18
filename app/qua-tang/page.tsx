@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import FullHeader from '@/components/FullHeader';
 
-const API_URL = process.env.NEXT_PUBLIC_SERVER_API || 'http://148.230.100.215';
+const API_URL = process.env.NEXT_PUBLIC_SERVER_API || 'https://sieuthivina.cloud';
 
 // Interface cho dữ liệu quà tặng từ API mới
 interface QuaTang {

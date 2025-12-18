@@ -6,7 +6,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
 
-const API_URL = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+const API_URL = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
 
 const TopBrandsStaticSection = () => {
     const { data: homeData, loading: homeLoading } = useHomeData();

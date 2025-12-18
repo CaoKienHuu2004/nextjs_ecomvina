@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { AuthUser } from "@/hooks/useAuth";
 
-const API_URL = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+const API_URL = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
 
 export async function getUserFromServer(): Promise<AuthUser | null> {
   // 1. Đọc cookie "access_token" ngay trên server Next.js

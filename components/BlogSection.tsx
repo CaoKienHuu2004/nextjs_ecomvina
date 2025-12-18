@@ -3,7 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useHomeData } from '@/hooks/useHomeData';
 
-const API_URL = 'http://148.230.100.215';
+const API_URL = 'https://sieuthivina.cloud';
 
 export default function BlogSection() {
     const { data: homeData, loading } = useHomeData();

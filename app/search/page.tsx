@@ -59,7 +59,7 @@ export default function SearchPage() {
                         : "/assets/images/thumbs/product-placeholder.png";
 
                     if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/assets')) {
-                        imageUrl = `http://148.230.100.215${imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`}`;
+                        imageUrl = `https://sieuthivina.cloud${imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`}`;
                     }
 
                     return {

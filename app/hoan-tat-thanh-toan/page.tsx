@@ -104,7 +104,7 @@ export default function HoanTatThanhToanPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [order, setOrder] = useState<ServerOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
   const getAuthHeaders = (): Record<string, string> => {
   const t = Cookies.get("access_token");
   return t ? { Authorization: `Bearer ${t}` } : {};
@@ -118,7 +118,7 @@ export default function HoanTatThanhToanPage() {
   setLoading(true);
     try {
 
-      const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+      const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
       const token = Cookies.get("access_token");
       const headers: Record<string, string> = { "Accept": "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;

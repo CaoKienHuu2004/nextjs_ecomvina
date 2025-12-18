@@ -33,7 +33,7 @@ type ProductListItem = {
 export default function ProductsPage() {
   const sp = useSearchParams();
   const source = (sp.get("source") || "hot_sales").toLowerCase();
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
 
   const [loading, setLoading] = React.useState(true);
   const [items, setItems] = React.useState<ProductListItem[]>([]);

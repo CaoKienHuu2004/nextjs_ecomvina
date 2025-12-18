@@ -17,7 +17,7 @@ type RecommendProduct = {
 };
 
 export default function RecommendedSection({ title = "Có thể bạn quan tâm", perPage = 8 }: { title?: string; perPage?: number }) {
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
   const url = `${API}/api/sanphams-selection?selection=recommend&per_page=${perPage}`;
   const [items, setItems] = React.useState<RecommendProduct[]>([]);
   const [loading, setLoading] = React.useState(true);

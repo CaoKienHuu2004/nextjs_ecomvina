@@ -26,7 +26,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     const resolvedParams = use(params);
     const slug = resolvedParams.slug;
     const sliderRef = useRef<Slider>(null);
-    const API = useMemo(() => process.env.NEXT_PUBLIC_SERVER_API ?? "http://148.230.100.215", []);
+    const API = useMemo(() => process.env.NEXT_PUBLIC_SERVER_API ?? "https://sieuthivina.cloud", []);
 
     const { addToCart } = useCart();
 

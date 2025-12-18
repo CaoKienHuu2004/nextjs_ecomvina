@@ -104,7 +104,7 @@ export default function Page() {
             console.debug("REGISTER payload:", payload);
 
             // Sử dụng fetch trực tiếp giống trang đăng nhập
-            const rawResp = await fetch("http://148.230.100.215/api/auth/dang-ky", {
+            const rawResp = await fetch("https://sieuthivina.cloud/api/auth/dang-ky", {
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },

@@ -34,7 +34,7 @@ export default function AccountShell({
     
     // Nếu ảnh từ server Laravel (tương đối), nối thêm domain
     // Bạn có thể thay hardcode IP bằng process.env.NEXT_PUBLIC_SERVER_API
-    return `http://148.230.100.215${path.startsWith('/') ? '' : '/'}${path}`;
+    return `https://sieuthivina.cloud${path.startsWith('/') ? '' : '/'}${path}`;
   };
 
   // 4. Chuẩn bị dữ liệu hiển thị
