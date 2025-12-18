@@ -62,7 +62,7 @@ export default function FeatureSection() {
   }, []);
 
   return (
-    <div className="feature bg-main-two-600 fix-scale-20 mt-10 px-16 pt-28 pb-24 rounded-6" id="featureSection">
+    <div className="px-16 pb-24 mt-10 feature bg-main-two-600 fix-scale-20 pt-28 rounded-6" id="featureSection">
       <div className="px-0">
         <div className="position-relative arrow-center">
           <div className="feature-item-wrapper slick-initialized slick-slider">
@@ -82,14 +82,14 @@ export default function FeatureSection() {
                     >
                       <div>
                         <div
-                          className="feature-item text-center wow bounceIn aos-init aos-animate"
+                          className="text-center feature-item wow bounceIn aos-init aos-animate"
                           data-aos="fade-up"
                           data-aos-duration="400"
                         >
                           <div className="feature-item__thumb rounded-circle">
                             <Link
                               href={`/shop?category=${category.slug}`}
-                              className="w-100 h-100 p-10 flex-center"
+                              className="p-10 w-100 h-100 flex-center"
                             >
                               <Image
                                 src={category.image}
@@ -100,8 +100,8 @@ export default function FeatureSection() {
                               />
                             </Link>
                           </div>
-                          <div className="feature-item__content mt-16">
-                            <h6 className="text-md fw-medium mb-8">
+                          <div className="mt-16 feature-item__content">
+                            <h6 className="mb-8 text-md fw-medium">
                               <Link
                                 href={`/shop?category=${category.slug}`}
                                 className="text-inherit"
@@ -121,6 +121,10 @@ export default function FeatureSection() {
         </div>
       </div>
       <style jsx>{`
+        .feature {
+          background-color: #187575 !important; /* Mã màu xanh lá chuẩn */
+          /* Hoặc bạn có thể dùng màu xanh đậm hơn: #198754 */
+        }
         .feature-item-wrapper {
           position: relative;
           overflow: hidden;
@@ -132,6 +136,11 @@ export default function FeatureSection() {
         .slick-track {
           display: flex;
           position: relative;
+          overflow-x: auto; /* Cho phép cuộn ngang nếu nội dung tràn */
+          scrollbar-width: none; /* Ẩn thanh cuộn trên Firefox */
+        }
+        .slick-track::-webkit-scrollbar {
+          display: none; /* Ẩn thanh cuộn trên Chrome/Safari */
         }
         .slick-slide {
           flex-shrink: 0;
@@ -141,6 +150,7 @@ export default function FeatureSection() {
         .feature-item {
           width: 100%;
           display: inline-block;
+          text-decoration: none;
         }
         .feature-item__thumb {
           background: #e9f7ee;
@@ -170,6 +180,7 @@ export default function FeatureSection() {
           line-height: 1.3;
           margin-top: 6px;
           font-weight: 500;
+          color: white; /* Đảm bảo chữ màu trắng trên nền xanh */
         }
 
         @media (max-width: 991px) {
