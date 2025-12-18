@@ -6,7 +6,6 @@ import MostInterestedSection from "@/components/MostInterestedSection";
 import TopBrandsStaticSection from "@/components/TopBrandsStaticSection";
 import FeaturedProductsStaticSection from "@/components/FeaturedProductsStaticSection";
 import BannerTwo from "@/components/BannerTwo";
-import FeatureSection from "@/components/FeatureSection";
 import PreloaderFix from "@/components/PreloaderFix";
 import OverlayLayers from "@/components/OverlayLayers";
 import ScrollTopProgress from "@/components/ScrollTopProgress";
@@ -87,9 +86,6 @@ export default function Home() {
         <BannerTwo />
         {/* ============================ Banner Section End =============================== */}
 
-        {/* ============================ promotional banner Start ========================== */}
-        <FeatureSection />
-        {/* ============================ promotional banner End ========================== */}
 
         {/* ========================= TOP DEALS * SIÊU RẺ ================================ */}
         <TopDealsSection title="Top deal • Siêu rẻ" perPage={10} />

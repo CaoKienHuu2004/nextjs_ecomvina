@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { type HomeBanner } from "@/lib/api";
 import { useHomeData } from "@/hooks/useHomeData";
+import FeatureSection from "./FeatureSection";
 
 // Swiper
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -165,10 +166,8 @@ export default function BannerTwo() {
                     clickable: true,
                     dynamicBullets: false
                   }}
-                  navigation={false}
-                  onSwiper={(swiper) => {
-                    swiperRef.current = swiper;
-                  }}
+                  // navigation={false}
+                  onSwiper={(swiper) => { swiperRef.current = swiper; }}
                   className="banner-item-two__slider"
                 >
                   {homeSlides.map((b) => {
@@ -182,7 +181,7 @@ export default function BannerTwo() {
                             src={img}
                             alt={alt}
                             className="d-lg-block d-none rounded-5"
-                            style={{ width: "100%", height: "350px", objectFit: "cover" }}
+                            style={{ width: "100%", height: "595px", objectFit: "cover" }}
                           />
                           <img
                             src={img}
@@ -233,49 +232,61 @@ export default function BannerTwo() {
               </div>
             </div>
           </div>
+          <div className="col-lg-6">
+            <div className="row">
+              {/* Phải: 4 ô nhỏ - Cột 1 */}
+              <div className="col-12 col-lg-6 mt-20 ps-10 pe-5 d-lg-block d-none">
+                {sideCol1.map((b, idx) => {
+                  const img = buildImgUrl(b.hinhanh || "");
+                  const href = b.lienket || "#";
+                  const alt = b.mota || "Banner";
+                  return (
+                    <div key={`s1-${b.id}-${idx}`} className={idx === 1 ? "row g-24 mt-10 me-0" : "row g-24 me-0"}>
+                      <a href={href} className="p-0 m-0">
+                        <img
+                          src={img}
+                          alt={alt}
+                          className="p-0 rounded-5"
+                          style={{ width: "100%", height: "200px", objectFit: "cover" }}
+                        />
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
 
-          {/* Phải: 4 ô nhỏ - Cột 1 */}
-          <div className="col-12 col-lg-3 mt-20 ps-10 pe-5 d-lg-block d-none">
-            {sideCol1.map((b, idx) => {
-              const img = buildImgUrl(b.hinhanh || "");
-              const href = b.lienket || "#";
-              const alt = b.mota || "Banner";
-              return (
-                <div key={`s1-${b.id}-${idx}`} className={idx === 1 ? "row g-24 mt-10 me-0" : "row g-24 me-0"}>
-                  <a href={href} className="p-0 m-0">
-                    <img
-                      src={img}
-                      alt={alt}
-                      className="p-0 rounded-5"
-                      style={{ width: "100%", height: "170px", objectFit: "cover" }}
-                    />
-                  </a>
-                </div>
-              );
-            })}
+              {/* Phải: 4 ô nhỏ - Cột 2 */}
+              <div className="col-12 col-lg-6 mt-20 px-5 d-lg-block d-none">
+                {sideCol2.map((b, idx) => {
+                  const img = buildImgUrl(b.hinhanh || "");
+                  const href = b.lienket || "#";
+                  const alt = b.mota || "Banner";
+                  return (
+                    <div key={`s2-${b.id}-${idx}`} className={idx === 1 ? "row g-24 mt-10 ms-0 w-100" : "row g-24 ms-0 w-100"}>
+                      <a href={href} className="p-0 m-0">
+                        <img
+                          src={img}
+                          alt={alt}
+                          className="p-0 rounded-5"
+                          style={{ width: "100%", height: "200px", objectFit: "cover" }}
+                        />
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="row">
+              <div className="col-lg-12 px-0">
+                <FeatureSection />
+              </div>
+            </div>
           </div>
 
-          {/* Phải: 4 ô nhỏ - Cột 2 */}
-          <div className="col-12 col-lg-3 mt-20 px-5 d-lg-block d-none">
-            {sideCol2.map((b, idx) => {
-              const img = buildImgUrl(b.hinhanh || "");
-              const href = b.lienket || "#";
-              const alt = b.mota || "Banner";
-              return (
-                <div key={`s2-${b.id}-${idx}`} className={idx === 1 ? "row g-24 mt-10 ms-0 w-100" : "row g-24 ms-0 w-100"}>
-                  <a href={href} className="p-0 m-0">
-                    <img
-                      src={img}
-                      alt={alt}
-                      className="p-0 rounded-5"
-                      style={{ width: "100%", height: "170px", objectFit: "cover" }}
-                    />
-                  </a>
-                </div>
-              );
-            })}
-          </div>
         </div>
+
+        {/* Row dưới: Section Danh mục (Feature Section) */}
+
       </div>
     </div>
   );

@@ -62,8 +62,8 @@ export default function FeatureSection() {
   }, []);
 
   return (
-    <div className="feature mt-10 fix-scale-20" id="featureSection">
-      <div className="container container-lg px-0">
+    <div className="feature bg-main-two-600 fix-scale-20 mt-10 px-16 pt-28 pb-24 rounded-6" id="featureSection">
+      <div className="px-0">
         <div className="position-relative arrow-center">
           <div className="feature-item-wrapper slick-initialized slick-slider">
             <div className="slick-list draggable">
