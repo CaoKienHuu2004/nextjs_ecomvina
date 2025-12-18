@@ -59,7 +59,7 @@ export function AuthProvider({
   const [token, setToken] = useState<string | null>(() => Cookies.get(TOKEN_KEY) || null);
   
   const router = useRouter();
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
 
   const changePassword = useCallback(async (current_password: string, new_password: string, new_password_confirmation: string) => {
     const t = Cookies.get(TOKEN_KEY) || token;
