@@ -694,25 +694,19 @@ export function useCart() {
   }, [hasValidToken, syncLocalToServer, fetchCart, loadLocalCart]);
 
   useEffect(() => {
-  const onUpdated = (e: Event | CustomEvent) => {
-    const detail = (e as CustomEvent).detail;
-    // Nếu event gửi { force: true } => thực sự muốn fetch từ server
-    if (detail && detail.force) {
-      fetchCart();
-      return;
-    }
-    // Nếu event không có detail => do legacy, giữ fetch (optional)
-    if (!detail) {
-      fetchCart();
-      return;
-    }
-    // Nếu chỉ có count => chỉ cập nhật UI (không fetch)
-    // Nếu bạn cần xử lý count ở 1 nơi khác, có thể cập nhật trạng thái tổng ở đây.
-    // Không gọi fetchCart() để tránh double requests.
-  };
-  window.addEventListener("cart:updated", onUpdated as EventListener);
-  return () => window.removeEventListener("cart:updated", onUpdated as EventListener);
-}, [fetchCart]);
+  const handleCartUpdated = async () => {
+      // [QUAN TRỌNG] Thêm dòng này để bảo vệ component
+      if (typeof isMountedRef !== 'undefined' && !isMountedRef.current) return;
+      
+      await fetchCart();
+    };
+
+    window.addEventListener("cart:updated", handleCartUpdated);
+    
+    return () => {
+      window.removeEventListener("cart:updated", handleCartUpdated);
+    };
+  }, [fetchCart]);
 
   // --- ACTIONS ---
     const addToCart = useCallback(async (product: AddToCartInput, soluong = 1, id_chuongtrinh?: number | string) => {

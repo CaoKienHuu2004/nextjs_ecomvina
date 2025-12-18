@@ -6,6 +6,7 @@ import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData';
 import Image from 'next/image';
 import FullHeader from '@/components/FullHeader';
 import { type Coupon as ApiCoupon } from '@/lib/api';
+import QuantityControl from '@/components/TangGiamSL';
 
 // --- HELPER FUNCTIONS ---
 type PriceInput = number | Gia | undefined | null;
@@ -69,86 +70,6 @@ const getConditionLabel = (conditionType: VoucherConditionType, minOrderValue: n
   }
 };
 
-// Component QuantityControl với optimistic update và debounce
-function QuantityControl({
-  quantity,
-  onUpdate,
-}: {
-  quantity: number;
-  onUpdate: (qty: number) => void;
-}) {
-  const [localQty, setLocalQty] = useState(quantity);
-  const debounceRef = useRef<any | null>(null);
-
-  // Sync local state khi prop thay đổi từ bên ngoài
-  useEffect(() => {
-    setLocalQty(quantity);
-  }, [quantity]);
-
-  const handleQuantityChange = useCallback(
-    (newQty: number) => {
-      // Không cho giảm xuống dưới 1
-      if (newQty < 1) {
-        return;
-      }
-
-      // Cập nhật UI ngay lập tức
-      setLocalQty(newQty);
-
-      // Debounce API call
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-
-      debounceRef.current = setTimeout(() => {
-        onUpdate(newQty);
-      }, 300);
-    },
-    [onUpdate]
-  );
-
-  // Cleanup timeout khi unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, []);
-
-  return (
-    <div className="overflow-hidden d-flex rounded-4" style={{ transition: 'all 0.2s ease' }}>
-      <button
-        type="button"
-        title="Giảm số lượng"
-        aria-label="Giảm số lượng"
-        className={`quantity__minus border border-end border-gray-100 flex-shrink-0 h-48 w-48 flex-center hover-bg-main-600 hover-text-white ${localQty <= 1 ? 'text-gray-300 cursor-not-allowed' : 'text-neutral-600'}`}
-        onClick={() => handleQuantityChange(localQty - 1)}
-        disabled={localQty <= 1}
-      >
-        <i className="ph ph-minus"></i>
-      </button>
-      <input
-        type="number"
-        className="w-32 px-4 text-center border border-gray-100 quantity__input flex-grow-1 border-start-0 border-end-0"
-        value={localQty}
-        min={1}
-        aria-label="Số lượng sản phẩm"
-        title="Số lượng"
-        onChange={(e) => handleQuantityChange(parseInt(e.target.value || '1', 10) || 1)}
-      />
-      <button
-        type="button"
-        title="Tăng số lượng"
-        aria-label="Tăng số lượng"
-        className="flex-shrink-0 w-48 h-48 border border-gray-100 quantity__plus border-end text-neutral-600 flex-center hover-bg-main-600 hover-text-white"
-        onClick={() => handleQuantityChange(localQty + 1)}
-      >
-        <i className="ph ph-plus"></i>
-      </button>
-    </div>
-  );
-}
 
 // Component Modal xác nhận xóa
 function DeleteConfirmModal({
@@ -529,7 +450,8 @@ function CartPageContent() {
                                 <td className="px-5 py-20">
                                   <QuantityControl
                                     quantity={item.soluong}
-                                    onUpdate={(qty) => updatesoluong(item.id_giohang, qty)}
+                                    onUpdate={(newQty) => updatesoluong(item.id_giohang, newQty)} 
+                                    disabled={loading}
                                   />
                                 </td>
                                 <td className="px-5 py-20">
@@ -647,16 +569,16 @@ function CartPageContent() {
             </div>
             <div className="col-xl-3 col-lg-4">
               <div className="mt-16">
-                <div className="cart-sidebar border border-gray-100 rounded-8 px-24 py-30 pb-20">
-                  <h6 className="text-lg mb-20 flex-align gap-8">
-                    <i className="ph-bold ph-ticket text-main-600 text-xl"></i>Áp dụng Voucher
+                <div className="px-24 pb-20 border border-gray-100 cart-sidebar rounded-8 py-30">
+                  <h6 className="gap-8 mb-20 text-lg flex-align">
+                    <i className="text-xl ph-bold ph-ticket text-main-600"></i>Áp dụng Voucher
                   </h6>
 
             {/* Applied voucher (shows when a voucher has been applied, allows cancel) */}
             {appliedVoucher && (
-              <div className="flex-align flex-between gap-8 mt-10 border-dashed border-gray-200 py-10 px-12 rounded-4">
-                <span className="flex-align gap-8 text-sm fw-medium text-gray-900 pe-10">
-                  <i className="ph-bold ph-ticket text-main-two-600 text-2xl"></i>
+              <div className="gap-8 px-12 py-10 mt-10 border-gray-200 border-dashed flex-align flex-between rounded-4">
+                <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
+                  <i className="text-2xl ph-bold ph-ticket text-main-two-600"></i>
                   <div className="text-sm d-flex flex-column">
                     <span className="text-sm text-gray-900 w-100">
                       {appliedVoucher.giatri ? `Giảm ${formatPrice(Number(appliedVoucher.giatri))}` : ''}
@@ -666,11 +588,11 @@ function CartPageContent() {
                     </span>
                   </div>
                 </span>
-                <span className="flex-align gap-8 text-xs fw-medium text-gray-900">
+                <span className="gap-8 text-xs text-gray-900 flex-align fw-medium">
                   <button
                     type="button"
                     onClick={() =>  removeVoucher()}
-                    className="btn border-danger-600 text-danger-600 hover-bg-danger-600 hover-text-white hover-border-danger-600 p-6 rounded-4 text-xs"
+                    className="p-6 text-xs btn border-danger-600 text-danger-600 hover-bg-danger-600 hover-text-white hover-border-danger-600 rounded-4"
                   >
                     Hủy
                   </button>
@@ -766,8 +688,8 @@ function CartPageContent() {
                   return true;
               }
             }).length === 0 && !appliedVoucher && (
-              <div className="flex-align flex-center gap-8 mt-10 py-10 px-12 rounded-4">
-                <span className="flex-align gap-8 text-sm fw-medium text-gray-900 pe-10">
+              <div className="gap-8 px-12 py-10 mt-10 flex-align flex-center rounded-4">
+                <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
                   <div className="text-sm d-flex flex-column">
                     <span className="text-sm text-gray-900 w-100">Chưa có voucher nào phù hợp !</span>
                   </div>
