@@ -12,7 +12,7 @@ const endpoint_routes_api_fectch_datapost_gui_lien_he_ =
 
 const sodienthoai_call_lienhe_cua_web = "8860911975996";
 const sodienthoai_lienhe_cua_web = "+886 0911 975 996";
-const email_lienhe_cua_web = "hotro@amban.vn";
+const email_lienhe_cua_web = "hotro@sieuthivina.com";
 const diachi_lienhe_cua_web = "801/2A Phạm Thế Hiển, Phường 4, Quận 8, TP.HCM.";
 // config
 

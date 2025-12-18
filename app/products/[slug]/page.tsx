@@ -742,7 +742,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                             <div className="col-lg-6">
                                 <h6 className="mb-24 title">Đánh giá về sản phẩm</h6>
                                 <div className="gap-24 border-gray-100 d-flex align-items-start pb-44 border-bottom mb-44">
-                                    <img src="https://amban.vn/assets/client/images/thumbs/comment-img1.png" alt="" className="flex-shrink-0 w-52 h-52 object-fit-cover rounded-circle" />
+                                    <img src="https://sieuthivina.com/assets/client/images/thumbs/comment-img1.png" alt="" className="flex-shrink-0 w-52 h-52 object-fit-cover rounded-circle" />
                                     <div className="flex-grow-1">
                                         <div className="gap-8 flex-between align-items-start">
                                             <div>

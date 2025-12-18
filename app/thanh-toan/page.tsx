@@ -40,6 +40,7 @@ export default function ThanhToanPage() {
   const router = useRouter();
   const { user, isLoggedIn } = useAuth();
   const { items, subtotal, total, discountAmount, clearCart } = useCart();
+  
 
   type CartItem = (typeof items)[number];
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
@@ -47,7 +48,6 @@ export default function ThanhToanPage() {
   const [paymentMethod, setPaymentMethod] = useState("cod"); // 1: COD, 3: QR
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
-  const { addToCart, appliedVoucher } = useCart();
   
 
   // 1. Load địa chỉ mặc định khi user load xong
@@ -76,88 +76,99 @@ export default function ThanhToanPage() {
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAddress) {
-        alert("Vui lòng chọn địa chỉ nhận hàng.");
-        return;
+      alert("Vui lòng chọn địa chỉ nhận hàng.");
+      return;
     }
 
     setIsSubmitting(true);
     try {
-        const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
-        const token = Cookies.get("access_token");
+      const API = process.env.NEXT_PUBLIC_SERVER_API || "http://148.230.100.215";
+      const token = Cookies.get("access_token");
 
-        const payload = {
-            id_diachinguoidung: selectedAddress.id,
-            ma_phuongthuc: paymentMethod, // 1 hoặc 3
-            // {
-            // "ma_phuongthuc": "cod",
-            // "ma_magiamgia": NEWSTORE50K
-            // }
-            ma_magiamgia: null,nguoinhan: selectedAddress?.ten_nguoinhan ?? user?.hoten ?? "",
-            ma_magiamgia_id: appliedVoucher?.id ?? null,
-            diachinhan: selectedAddress?.diachi ?? "",
-            sodienthoai: selectedAddress?.sodienthoai ?? "",
-            khuvucgiao: selectedAddress?.tinhthanh ?? "",
-            };
+      const payload = {
+        id_diachinguoidung: selectedAddress.id,
+        ma_phuongthuc: paymentMethod,
+        ma_magiamgia: null,
+        // nguoinhan: selectedAddress?.ten_nguoinhan ?? user?.hoten ?? "",
+        // diachinhan: selectedAddress?.diachi ?? "",
+        // sodienthoai: selectedAddress?.sodienthoai ?? "",
+        // khuvucgiao: selectedAddress?.tinhthanh ?? "",
+      };
 
-        const res = await fetch(`${API}/api/tai-khoan/donhangs`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
-                "Accept": "application/json",
-            },
-            body: JSON.stringify(payload),
-            });
+      const res = await fetch(`${API}/api/tai-khoan/donhangs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": token ? `Bearer ${token}` : "",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-            // parse response
-            const json = await res.json().catch(() => ({}));
-            console.log("createOrder response:", res.status, json);
+      const json = await res.json().catch(() => ({}));
+      console.log("createOrder response:", res.status, json);
 
-            // nếu lỗi validation hoặc server trả status:false
-            if (!res.ok || json.status === false) {
-            const msg = json.message;
-            if (msg && typeof msg === "object") {
-                const flat = Object.values(msg).flat().filter(Boolean).join("\n");
-                alert(flat || "Đặt hàng thất bại. Vui lòng kiểm tra dữ liệu.");
-            } else {
-                alert(msg?.toString?.() || "Đặt hàng thất bại. Vui lòng thử lại.");
-            }
-            setIsSubmitting(false);
-            return; // bắt buộc: dừng ở đây khi có lỗi
-            }
+      if (!res.ok || json.status === false) {
+        const msg = json.message;
+        if (msg && typeof msg === "object") {
+          const flat = Object.values(msg).flat().filter(Boolean).join("\n");
+          alert(flat || "Đặt hàng thất bại. Vui lòng kiểm tra dữ liệu.");
+        } else {
+          alert(msg?.toString?.() || "Đặt hàng thất bại. Vui lòng thử lại.");
+        }
+        setIsSubmitting(false);
+        return;
+      }
 
-            // ==== thành công ở đây ====
-            const orderData = json.data ?? json;
-            const orderId = orderData?.id;
-            const orderCode = orderData?.madon;if (paymentMethod === "cod") {
-            if (paymentMethod === "cod") {
-                clearCart();
-            router.push(`/hoan-tat-thanh-toan?order_id=${orderId}`);
-            return;
-            } else if (paymentMethod === "dbt") {
-            const resPay = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/payment-url`, {
-                method: "POST",
-                headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-                }
-            });
+      const orderData = json.data ?? json;
+      const orderId = orderData?.id;
+      console.log("Order created, id=", orderId);
 
-            const payJson = await resPay.json().catch(() => ({}));
+      if (!orderId) {
+        alert("Không lấy được ID đơn hàng từ server.");
+        setIsSubmitting(false);
+        return;
+      }
 
-            if (payJson.status && payJson.payment_url) {
-                clearCart();
-                setRedirecting(true);
-                setTimeout(() => {
-                window.location.href = payJson.payment_url;
-                }, 500);
-                return;
-            } else {
-                alert(payJson.message || "Không tạo được liên kết VNPay");
-                return;
-            }
-            }
-            // if (paymentMethod === "cp") {
+      // xử lý theo phương thức
+      if (paymentMethod === "cod") {
+        clearCart();
+        router.push(`/hoan-tat-thanh-toan?order_id=${orderId}`);
+        return;
+      }
+
+      if (paymentMethod === "dbt") {
+        // gọi API tạo payment link
+        const resPay = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/payment-url`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : "",
+            "Accept": "application/json",
+          },
+          // nếu server cần body như { provider: "vnpay" } hãy thêm vào đây
+          // body: JSON.stringify({ provider: "vnpay" }),
+        });
+
+        const payJson = await resPay.json().catch(() => ({}));
+        console.log("payment-url response:", resPay.status, payJson);
+
+        if (!resPay.ok) {
+          alert(payJson.message || "Không thể tạo liên kết thanh toán (server trả lỗi).");
+          return;
+        }
+
+        if (payJson.status && payJson.payment_url) {
+          clearCart();
+          setRedirecting(true);
+          // chuyển hướng trực tiếp (có thể dùng window.location.href)
+          window.location.href = payJson.payment_url;
+          return;
+        } else {
+          alert(payJson.message || "Không tạo được liên kết VNPay");
+          return;
+        }
+        // if (paymentMethod === "cp") {
             //     const resPay = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/payment-url`, {
             //         method: "POST",
             //         headers: {
@@ -177,14 +188,14 @@ export default function ThanhToanPage() {
             //         alert(payJson.message || "Không tạo được liên kết VietQR");
             //     }
             // }
-        } else {
-            alert("Đặt hàng thất bại. Vui lòng thử lại.");
-        }
+      }
+
+      alert("Phương thức thanh toán không được hỗ trợ.");
     } catch (error) {
-        console.error(error);
-        alert("Lỗi kết nối.");
+      console.error(error);
+      alert("Lỗi kết nối.");
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -193,6 +204,7 @@ export default function ThanhToanPage() {
     }
 
   // Render 1 dòng sản phẩm trong bảng tóm tắt
+
 //   const renderSummaryRow = (item: typeof items[0], isGift = false) => {
 //     const sp = item.product || {};
 //     const price = getPrice(sp.gia);
@@ -222,6 +234,7 @@ export default function ThanhToanPage() {
         (rec.id_giohang ?? rec.id ?? rec.id_sanpham) ?? `${name}_${idx}`;
 
     return (
+
     <tr key={String(keyVal)}>
       <td className="px-5 py-10 rounded-4">
         {isGift && (
@@ -333,6 +346,7 @@ export default function ThanhToanPage() {
                                 </tr>
                             </thead>
                             <tbody>
+
                             {mainItems.map((item, i) => renderSummaryRow(item, false, i))}
                             {giftItems.map((item, i) => renderSummaryRow(item, true, i))}
                             </tbody>
@@ -381,6 +395,7 @@ export default function ThanhToanPage() {
                                 Thanh toán qua VietQR (QR Code)
                             </label>
                         </div>
+                    </label>
                     </label> */}
                 </div>
             </div>

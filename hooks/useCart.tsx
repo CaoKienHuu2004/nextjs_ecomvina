@@ -306,8 +306,30 @@ export function useCart() {
   const { isLoggedIn } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const emitTimeoutRef = useRef<number | null>(null);
+  const pendingDetailRef = useRef<{ count?: number; force?: boolean } | null>(null);
 
   const isMountedRef = useRef(true);
+
+  const emitCartUpdated = useCallback((detail: { count?: number; force?: boolean } = {}) => {
+  // merge detail: nếu có count mới thì cập nhật, nếu có force thì giữ force
+    pendingDetailRef.current = {
+      ...(pendingDetailRef.current || {}),
+      ...detail,
+      force: (pendingDetailRef.current?.force || detail.force) || undefined
+    };
+
+    if (emitTimeoutRef.current) {
+      window.clearTimeout(emitTimeoutRef.current);
+    }
+    // debounce 300ms (tùy chỉnh)
+    emitTimeoutRef.current = window.setTimeout(() => {
+      const d = pendingDetailRef.current || {};
+      pendingDetailRef.current = null;
+      emitTimeoutRef.current = null;
+      window.dispatchEvent(new CustomEvent("cart:updated", { detail: d }));
+    }, 300);
+  }, []);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -365,6 +387,7 @@ export function useCart() {
     };
     // nếu user chưa đăng nhập => không thêm Authorization (cho phép dùng session cookie)
     if (!isLoggedIn) return headers;
+    // Lấy token thật sự từ cookie (nếu có) và chỉ thêm Authorization khi có token
     const token = Cookies.get("access_token") || Cookies.get("token");
     if (token) headers.Authorization = `Bearer ${token}`;
     return headers;
@@ -379,10 +402,6 @@ export function useCart() {
     const detail = bienthe?.detail;
     const sanpham = bienthe?.sanpham;
 
-    // DEBUG: Log để xem cấu trúc
-    console.log('📦 Cart item bienthe:', bienthe);
-    console.log('📦 Cart item sanpham:', sanpham);
-    console.log('📦 Cart item detail:', detail);
 
     let productInfo: ProductDisplayInfo | undefined = undefined;
 
@@ -621,7 +640,7 @@ export function useCart() {
       setItems(serverItems);
       setGifts(serverGifts);
       const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-      window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+      emitCartUpdated({ count });
     } finally { setLoading(false); }
   }, [API, getAuthHeaders, loadLocalCart, clearLocalCart, loadServerCart]);
 
@@ -675,10 +694,25 @@ export function useCart() {
   }, [hasValidToken, syncLocalToServer, fetchCart, loadLocalCart]);
 
   useEffect(() => {
-    const onUpdated = () => fetchCart();
-    window.addEventListener("cart:updated", onUpdated);
-    return () => window.removeEventListener("cart:updated", onUpdated);
-  }, [fetchCart]);
+  const onUpdated = (e: Event | CustomEvent) => {
+    const detail = (e as CustomEvent).detail;
+    // Nếu event gửi { force: true } => thực sự muốn fetch từ server
+    if (detail && detail.force) {
+      fetchCart();
+      return;
+    }
+    // Nếu event không có detail => do legacy, giữ fetch (optional)
+    if (!detail) {
+      fetchCart();
+      return;
+    }
+    // Nếu chỉ có count => chỉ cập nhật UI (không fetch)
+    // Nếu bạn cần xử lý count ở 1 nơi khác, có thể cập nhật trạng thái tổng ở đây.
+    // Không gọi fetchCart() để tránh double requests.
+  };
+  window.addEventListener("cart:updated", onUpdated as EventListener);
+  return () => window.removeEventListener("cart:updated", onUpdated as EventListener);
+}, [fetchCart]);
 
   // --- ACTIONS ---
     const addToCart = useCallback(async (product: AddToCartInput, soluong = 1, id_chuongtrinh?: number | string) => {
@@ -726,7 +760,7 @@ export function useCart() {
             // Dispatch event with optional count
             if (typeof window !== "undefined") {
               const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-              window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+              emitCartUpdated({ count });
             }
           } else {
             const { items: serverItems, gifts: serverGifts } = await loadServerCart();
@@ -736,7 +770,7 @@ export function useCart() {
             }
             if (typeof window !== "undefined") {
               const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-              window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+              emitCartUpdated({ count });
             }
           }
         } else {
@@ -783,7 +817,7 @@ export function useCart() {
 
         if (typeof window !== "undefined") {
           const count = localCart.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-          window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+          emitCartUpdated({ count });
         }
       }
     } finally {
@@ -798,8 +832,11 @@ export function useCart() {
   // optimistic update và lấy kết quả updated
   let updatedItems: CartItem[] = [];
   setItems(prev => {
-    updatedItems = prev.map(it => it.id_giohang === id_giohang ? { ...it, soluong } : it);
-    return updatedItems;
+    const updated = prev.filter(it => it.id_giohang !== id_giohang);
+    // emit từ updated
+    const count = updated.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+    emitCartUpdated({ count });
+    return updated;
   });
 
   const hasToken = hasValidToken();
@@ -822,12 +859,13 @@ export function useCart() {
 
     if (typeof window !== 'undefined') {
       const count = updatedItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-      window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+      emitCartUpdated({ count });
     }
   }, [API, getAuthHeaders, hasValidToken, fetchCart, loadLocalCart, saveLocalCart]);
 
   const removeItem = useCallback(async (id_giohang: number | string) => {
-  // optimistic remove
+    //mo comment dong nay de tat request 2 lan (nho bo comment updatedItems = updated; va doan "[SỬA] Không gọi loadServerCart() ở đây — dùng updatedItems để tính count")
+    // let updatedItems: CartItem[] = [];
   setItems(prev => prev.filter(it => it.id_giohang !== id_giohang));
 
   const hasToken = hasValidToken();
@@ -844,17 +882,20 @@ export function useCart() {
       const local = loadLocalCart();
       const updated = local.filter(it => it.id_giohang !== id_giohang);
       saveLocalCart(updated);
+      // updatedItems = updated;
     }
 
     // [THÊM] Bắn sự kiện
     if (typeof window !== 'undefined') {
-      const count = (typeof window !== 'undefined') ? (await (async () => { 
-        // compute count from current storage/state
-        const current = hasToken ? (await loadServerCart()).items : loadLocalCart();
-        return current.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-      })()) : 0;
-      window.dispatchEvent(new CustomEvent("cart:updated", { detail: { count } }));
+      const count = items.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+      emitCartUpdated({ count });
     }
+
+    // [SỬA] Không gọi loadServerCart() ở đây — dùng updatedItems để tính count
+    // if (typeof window !== 'undefined') {
+    //   const count = updatedItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+    //   emitCartUpdated({ count });
+    // }
   }, [API, getAuthHeaders, hasValidToken, fetchCart, loadLocalCart, saveLocalCart, loadServerCart]);
 
   const clearCart = useCallback(() => {

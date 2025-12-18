@@ -36,7 +36,7 @@ export default function Footer() {
                   <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
                     <i className="ph-fill ph-envelope"></i>
                   </span>
-                  <a href="mailto:hotro@amban.vn" className="text-md text-gray-900 hover-text-main-600">hotro@amban.vn</a>
+                  <a href="mailto:hotro@sieuthivina.com" className="text-md text-gray-900 hover-text-main-600">hotro@sieuthivina.com</a>
                 </div>
                 <div className="flex-align gap-16 mb-16">
                   <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
@@ -118,7 +118,7 @@ export default function Footer() {
             <p className="bottom-footer__text wow fadeInLeftBig" style={{ visibility: 'visible', animationName: 'fadeInLeftBig' }}>Bản quyền thuộc về Sieuthivina.com </p>
             <div className="flex-align gap-8 flex-wrap wow fadeInRightBig" style={{ visibility: 'visible', animationName: 'fadeInRightBig' }}>
               <span className="text-heading text-sm">Hỗ trợ thanh toán</span>
-              <img src="https://amban.vn/assets/client/images/thumbs/payment-method.png" alt="" />
+              <img src="https://sieuthivina.com/assets/client/images/thumbs/payment-method.png" alt="" />
             </div>
           </div>
         </div>

@@ -92,3 +92,10 @@ export const statusBadgeClass = (status?: string): string => {
 export const getStatusBadgeProps = (status?: string) => {
   return { icon: statusIcon(status), className: statusBadgeClass(status) };
 };
+
+// Helper format tiền dùng chung (VNĐ)
+export const formatPrice = (val?: number | string | null): string => {
+  const n = Number(val ?? 0);
+  if (!Number.isFinite(n) || n === 0) return "0 ₫";
+  return n.toLocaleString("vi-VN") + " ₫";
+};

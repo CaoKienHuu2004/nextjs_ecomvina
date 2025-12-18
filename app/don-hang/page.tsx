@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo,useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import FullHeader from "@/components/FullHeader";
 import AccountShell from "@/components/AccountShell";
 import { useAuth } from "@/hooks/useAuth";
-import { getTrangThaiDonHang, getPhuongThucThanhToan, getStatusBadgeProps, statusIcon, statusBadgeClass } from "@/utils/chitietdh";
+import { getTrangThaiDonHang, getPhuongThucThanhToan, getStatusBadgeProps, statusIcon, statusBadgeClass, formatPrice } from "@/utils/chitietdh";
 import Cookies from "js-cookie";
 
 // --- 1. ĐỊNH NGHĨA TYPE CHUẨN (Khớp với API Laravel) ---
@@ -63,7 +63,7 @@ type Order = {
 type OrderGroup = { label?: string; trangthai?: string; soluong?: number; donhang: Order[] };
 
 type DetailedOrder = Order & {
-  phuongthuc?: { id?: number; ten?: string; maphuongthuc?: string };
+  phuongthuc?: { id?: number; ten?: string; ma_phuongthuc?: string };
   phivanchuyen?: { id?: number; ten?: string; phi?: number };
   diachigiaohang?: { hoten?: string; sodienthoai?: string; diachi?: string; tinhthanh?: string; trangthai?: string };
   magiamgia?: { magiamgia?: string; giatri?: number; mota?: string };
@@ -78,9 +78,9 @@ type DetailedOrder = Order & {
 // Type cho Filter
 type FilterStatus = "all" | "pending" | "confirmed" | "processing" | "shipping" | "completed" | "cancelled";
 
-// Map mã phương thức thanh toán (maphuongthuc) sang label hiển thị
+// Map mã phương thức thanh toán (ma_phuongthuc) sang label hiển thị
 const formatPaymentMethod = (ph?: DetailedOrder["phuongthuc"]) => {
-  const code = ph?.maphuongthuc ?? "";
+  const code = ph?.ma_phuongthuc ?? "";
   if (code === "cod") return "Thanh toán khi nhận hàng (COD)";
   if (code === "dbt") return "Chuyển khoản ngân hàng (tự động)";
   if (code === "cp") return "Thanh toán trực tiếp (thủ công)";
@@ -91,6 +91,7 @@ const formatPaymentMethod = (ph?: DetailedOrder["phuongthuc"]) => {
 
 export default function OrdersPage() {
   const { user, isLoggedIn } = useAuth();
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<OrderGroup[]>([]);
@@ -296,6 +297,221 @@ export default function OrdersPage() {
     }
   };
 
+  // --------------------------
+  // Payment-choice modal state
+  // --------------------------
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentModalOrderId, setPaymentModalOrderId] = useState<number | null>(null);
+  const [paymentModalAction, setPaymentModalAction] = useState<"reorder" | "retry" | null>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+
+  // tạo form popup chọn phương thức thanh toán
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const primaryBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // lock body scroll and handle ESC key while modal open
+  useEffect(() => {
+    if (!paymentModalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closePaymentModal();
+      if (e.key === "Tab" && modalRef.current) {
+        // simple focus trap: keep focus inside modal
+        const focusables = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          (last as HTMLElement).focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          (first as HTMLElement).focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", onKey);
+    // set initial focus
+    setTimeout(() => primaryBtnRef.current?.focus(), 0);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [paymentModalOpen]);
+
+
+  const openPaymentModal = (orderId: number, action: "reorder" | "retry") => {
+    setPaymentModalOrderId(orderId);
+    setPaymentModalAction(action);
+    setPaymentModalOpen(true);
+  };
+  const closePaymentModal = () => {
+    if (paymentProcessing) return;
+    setPaymentModalOpen(false);
+    setPaymentModalOrderId(null);
+    setPaymentModalAction(null);
+  };
+
+  // helper to set payment method for an order
+  const setOrderPaymentMethod = async (orderId: number, methodCode: string) => {
+    const token = Cookies.get("access_token");
+    const res = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/phuong-thuc`, {
+      method: "PATCH",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": token ? `Bearer ${token}` : "",
+      },
+      body: JSON.stringify({ ma_phuongthuc: methodCode }),
+    });
+    return res;
+  };
+
+  // helper: map payment method -> default status to send to /trang-thai
+  const getStatusForMethod = (methodCode: string, action: "reorder" | "retry") => {
+    // Trả về cả trạng thái đơn và trạng thái thanh toán để gửi lên server.
+    // Điều chỉnh string theo spec backend nếu cần (ví dụ đổi key thành 'trangthai' / 'trangthaithanhtoan').
+    if (methodCode === "dbt") {
+      // Trạng thái đơn khi tạo/chuẩn bị thanh toán: chờ xử lý.
+      // Trạng thái thanh toán ban đầu: chưa thanh toán (server sẽ cập nhật thành 'Đã thanh toán' sau callback của VNPay).
+      return { orderStatus: "Chờ xử lý", paymentStatus: "Chưa thanh toán" };
+    }
+    if (methodCode === "cod") {
+      // COD: tạo đơn và giữ trạng thái chưa thanh toán
+      return { orderStatus: "Chờ xử lý", paymentStatus: "Chưa thanh toán" };
+    }
+    // default
+    return { orderStatus: "Chờ xử lý", paymentStatus: "Chưa thanh toán" };
+  };
+  // optional: call endpoint to update order status (server-side will decide new status)
+  const setOrderStatus = async (orderId: number, payload: Record<string, unknown> = {}) => {
+    const token = Cookies.get("access_token");
+    const res = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/trang-thai`, {
+      method: "PATCH",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": token ? `Bearer ${token}` : "",
+      },
+      body: JSON.stringify(payload),
+    });
+    return res;
+  };
+
+  // core: process chosen method for reorder / retry
+  const processPaymentChoice = async (methodCode: string) => {
+    if (!paymentModalOrderId || !paymentModalAction) return;
+    setPaymentProcessing(true);
+    try {
+      if (paymentModalAction === "reorder") {
+        // 1) create new order by mua-lai
+        const token = Cookies.get("access_token");
+        const res = await fetch(`${API}/api/tai-khoan/donhangs/${paymentModalOrderId}/mua-lai-don-hang`, {
+          method: "PATCH",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : "",
+          },
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(json.message || "Không thể mua lại đơn hàng. Vui lòng thử lại.");
+          return;
+        }
+        // try to extract new order id
+        const newId = json.id ?? json.id_donhang ?? (() => {
+          const m = String(json.message || "").match(/(\d{2,})/);
+          return m ? Number(m[1]) : undefined;
+        })();
+        if (!newId) {
+          alert("Đã mua lại nhưng không xác định được mã đơn mới. Vui lòng kiểm tra giỏ hàng.");
+          router.push("/gio-hang");
+          return;
+        }
+
+        // Nếu chọn VNPay (dbt) => gán phương thức + set trạng thái -> lấy payment_url -> redirect
+        // Lấy mapping trạng thái cho phương thức
+        const mapped = getStatusForMethod(methodCode, "reorder");
+        // 2) Gán phương thức
+        await setOrderPaymentMethod(newId, methodCode);
+        // 3) Set trạng thái đơn + trạng thái thanh toán (gửi cả trường trạng thái thanh toán để backend lưu)
+        // Gửi payload với hai khóa phổ biến: 'status' (hoặc 'trangthai') và 'trangthaithanhtoan'.
+        await setOrderStatus(newId, { status: mapped.orderStatus, trangthaithanhtoan: mapped.paymentStatus });
+
+        // 4) Nếu là VNPay (dbt) -> gọi payment-url để redirect
+        if (methodCode === "dbt") {
+          await retryPayment(newId);
+          return;
+        }
+        // Với COD hoặc khác: không redirect, chuyển về danh sách đơn
+        router.push("/don-hang");
+
+      } else if (paymentModalAction === "retry") {
+        // 1) ask server to prepare order for retry (thanh-toan-lai-don-hang)
+        const token = Cookies.get("access_token");
+        const res = await fetch(`${API}/api/tai-khoan/donhangs/${paymentModalOrderId}/thanh-toan-lai-don-hang`, {
+          method: "PATCH",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : "",
+          },
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(json.message || "Không thể yêu cầu thanh toán lại. Vui lòng thử lại.");
+          return;
+        }
+
+        // Nếu chọn VNPay (dbt) => gán + set trạng thái -> redirect tới payment_url
+        // Map trạng thái theo phương thức
+        const mapped = getStatusForMethod(methodCode, "retry");
+        // Gán phương thức
+        await setOrderPaymentMethod(paymentModalOrderId, methodCode);
+        // Set trạng thái đơn + trạng thái thanh toán
+        await setOrderStatus(paymentModalOrderId!, { status: mapped.orderStatus, trangthaithanhtoan: mapped.paymentStatus });
+        // Nếu dbt -> redirect sang cổng
+        if (methodCode === "dbt") {
+          await retryPayment(paymentModalOrderId);
+          return;
+        }
+
+        // Với COD hoặc khác: refresh detail view
+        await openDetail(paymentModalOrderId);
+        alert(json.message || "Đã cập nhật phương thức. Bạn có thể kiểm tra trạng thái đơn.");
+      }
+    } catch (err) {
+      console.error("processPaymentChoice error", err);
+      alert("Lỗi kết nối. Vui lòng thử lại.");
+    } finally {
+      setPaymentProcessing(false);
+      closePaymentModal();
+    }
+  };
+  // --------------------------
+  // END payment-choice modal
+  // 
+
+  // --- MUA LẠI ĐƠN HÀNG: mở modal chọn phương thức thanh toán ---
+  // legacy handler kept for compatibility (not used if using modal flow)
+  const handleReorder = async (orderId: number) => {
+    // fallback: open modal to choose payment method
+    openPaymentModal(orderId, "reorder");
+  };
+
+  // --- Thanh toán lại cho đơn đã hủy (server cập nhật trạng thái -> gọi payment-url) ---
+  const handleRetryPaymentFromCancelled = async (orderId: number) => {
+    // open modal to choose payment method then proceed
+    openPaymentModal(orderId, "retry");
+  };
+
   // --- LOGIC FILTER ---
   // Helper map trạng thái từ API sang key filter
   const getFilterKey = (status?: string): FilterStatus => {
@@ -332,13 +548,8 @@ export default function OrdersPage() {
 
   // --- HELPER RENDER ---
   // if (orders.length > 0 && orders[0].chitietdonhang && orders[0].chitietdonhang.length > 0) {
-  //   const fmtMoney = (val: number) => val.toLocaleString("vi-VN") + " ₫";
+  //   const formatPrice = (val: number) => val.toLocaleString("vi-VN") + " ₫";
   // }
-  const fmtMoney = (val?: number | string | null) => {
-    const n = Number(val ?? 0);
-    if (!Number.isFinite(n) || n === 0) return "0 ₫";
-    return n.toLocaleString("vi-VN") + " ₫";
-  };
   const formatOrderDate = (iso?: string) => {
     if (!iso) return "";
     try {
@@ -427,7 +638,7 @@ export default function OrdersPage() {
                   </div>
                   <div className="mt-5 text-sm text-gray-800">
                     <span className="fw-medium">Phí vận chuyển:</span>{" "}
-                    <span className="fst-italic">{fmtMoney(detailOrder.phivanchuyen?.phi ?? detailOrder.phigiaohang ?? 0)}</span>
+                    <span className="fst-italic">{formatPrice(detailOrder.phivanchuyen?.phi ?? detailOrder.phigiaohang ?? 0)}</span>
                   </div>
                   <div className="mt-5 text-sm text-gray-800">
                     <span className="fw-medium">Khu vực giao:</span>{" "}
@@ -436,7 +647,7 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* Thanh toán (fallbacks: phuongthuc.maphuongthuc / phuongthuc.ten / trangthaithanhtoan) */}
+              {/* Thanh toán (fallbacks: phuongthuc.ma_phuongthuc / phuongthuc.ten / trangthaithanhtoan) */}
               <div className="gap-5 p-0 px-6 col-lg-4 d-flex flex-column">
                 <span className="text-lg text-gray-900 fw-semibold">Hình thức thanh toán</span>
                 <div className="px-10 py-10 border border-gray-300 rounded-4 h-100">
@@ -451,7 +662,7 @@ export default function OrdersPage() {
                   </div>
 
                   {/* Thanh toán lại nếu cần */}
-                  {detailOrder.phuongthuc?.maphuongthuc === "dbt" && isPaymentPending(detailOrder) && (
+                  {detailOrder.phuongthuc?.ma_phuongthuc === "dbt" && isPaymentPending(detailOrder) && (
                     <button
                       type="button"
                       onClick={() => retryPayment(detailOrder.id, "dbt")}
@@ -461,7 +672,7 @@ export default function OrdersPage() {
                       <i className="ph-bold ph-credit-card" /> Thanh toán VNPay
                     </button>
                   )}
-                  {detailOrder.phuongthuc?.maphuongthuc === "cp" && isPaymentPending(detailOrder) && (
+                  {/* {detailOrder.phuongthuc?.ma_phuongthuc === "cp" && isPaymentPending(detailOrder) && (
                     <button
                       type="button"
                       onClick={() => retryPayment(detailOrder.id, "cp")}
@@ -470,7 +681,7 @@ export default function OrdersPage() {
                     >
                       <i className="ph-bold ph-qr-code" /> Thanh toán VietQR
                     </button>
-                  )}
+                  )} */}
                 </div>
               </div>
             </div>
@@ -486,58 +697,83 @@ export default function OrdersPage() {
                     <div className="text-sm text-gray-600">{(detailOrder.chitietdonhang ?? []).length} sản phẩm</div>
                   </div>
 
-                  <div className="px-5 py-6">
-                    {(detailOrder.chitietdonhang ?? []).map((it) => {
-                      // Fallbacks for variant / product name / image / variant label
-                      const variant = it.bienthe ?? undefined;
-                      const sp = (variant as OrderItem["bienthe"])?.sanpham ?? {};
-                      const title = sp.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
-                      const imgRaw =
-                        (sp.hinhanhsanpham?.[0]?.hinhanh as string | undefined) ??
-                        (sp.hinhanh as string | undefined) ??
-                        (it.hinhanh as string | undefined) ??
-                        "/assets/images/thumbs/placeholder.png";
-                      const imgSrc = String(imgRaw).startsWith("http")
-                        ? String(imgRaw)
-                        : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${String(imgRaw)}`;
-                      const variantLabel =
-                        (variant as OrderItem["bienthe"])?.loaibienthe?.ten ??
-                        (variant as OrderItem["bienthe"])?.tenloaibienthe ??
-                        it.tenloaibienthe ??
-                        it.bienthe?.tenloaibienthe ??
-                        "";
-                      const qty = it.soluong ?? it.quantity ?? 0;
-                      const price = it.dongia ?? it.price ?? 0;
+                  {(() => {
+                      const items = (detailOrder.chitietdonhang ?? []);
+                      const purchased = items.filter(it => Number(it.dongia ?? it.price ?? 0) > 0);
+                      const gifts = items.filter(it => Number(it.dongia ?? it.price ?? 0) === 0);
 
-                      return (
-                        <div key={it.id} className="gap-12 mb-12 d-flex align-items-center">
-                          <a href="#" className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: 90, maxHeight: 90 }}>
-                            <Image src={imgSrc} alt={title} width={90} height={90} className="object-cover w-100 rounded-8" unoptimized />
-                          </a>
-
-                          <div className="text-start w-100">
-                            <h6 className="mb-0 title text-md fw-semibold">
-                              <a href="#" className="link text-line-2" title={title} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: 350, display: "inline-block" }}>
+                      const renderItem = (it: OrderItem) => {
+                        const variant = it.bienthe ?? undefined;
+                        const sp = (variant as OrderItem["bienthe"])?.sanpham ?? {};
+                        const title = sp.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
+                        const imgRaw =
+                          (sp.hinhanhsanpham?.[0]?.hinhanh as string | undefined) ??
+                          (sp.hinhanh as string | undefined) ??
+                          (it.hinhanh as string | undefined) ??
+                          "/assets/images/thumbs/placeholder.png";
+                        const imgSrc = String(imgRaw).startsWith("http")
+                          ? String(imgRaw)
+                          : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${String(imgRaw)}`;
+                        const variantLabel =
+                          (variant as OrderItem["bienthe"])?.loaibienthe?.ten ??
+                          (variant as OrderItem["bienthe"])?.tenloaibienthe ??
+                          it.tenloaibienthe ??
+                          it.bienthe?.tenloaibienthe ??
+                          "";
+                        const qty = it.soluong ?? it.quantity ?? 0;
+                        const price = Number(it.dongia ?? it.price ?? 0);
+                        const orig = Number((it.bienthe as any)?.giagoc ?? (it as any).giagoc ?? (it as any).price ?? price);
+                        const hasDiscount = orig > price && orig > 0;
+                        const discountPct = hasDiscount ? Math.round((orig - price) / orig * 100) : 0;
+                        return (
+                          <div key={it.id} className="gap-12 mb-12 d-flex align-items-center">
+                            <a href="#" className="border border-gray-100 rounded-8 flex-center" style={{ width: 72, height: 72, flexShrink: 0 }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={imgSrc} alt={title} className="object-cover rounded-6" style={{ width: 72, height: 72 }} />
+                            </a>
+                            <div className="text-start w-100">
+                              <h6 className="mb-2 title text-md fw-semibold" style={{ maxWidth: 520, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {title}
-                              </a>
-                            </h6>
-
-                            <div className="gap-16 mb-6 flex-align">
-                              <div className="gap-8 px-6 py-4 text-sm btn bg-gray-50 text-heading rounded-8 flex-center fw-normal">
-                                {variantLabel}
+                              </h6>
+                              <div className="gap-12 mb-6 flex-align">
+                                <div className="gap-8 px-6 py-4 text-sm btn bg-gray-50 text-heading rounded-8 flex-center fw-normal">{variantLabel}</div>
+                                <div className="text-sm text-gray-600">Số lượng: <span className="fw-medium">{qty}</span></div>
                               </div>
                             </div>
-
-                            <div className="mb-6 product-card__price">
-                              <div className="gap-24 flex-align flex-between">
-                                <span className="text-heading text-md fw-medium">Số lượng: {qty}</span>
-                                <span className="text-gray-600 text-md fw-semibold">{fmtMoney(price)}</span>
-                              </div>
+                            <div className="text-end" style={{ minWidth: 160 }}>
+                              {price === 0 ? (
+                                <>
+                                  <div className="text-sm text-gray-500">Quà tặng miễn phí</div>
+                                  <div className="text-gray-700 text-md fw-semibold">0 ₫</div>
+                                </>
+                              ) : (
+                                <>
+                                  {hasDiscount && <div className="text-sm text-gray-500"><s>{formatPrice(orig)}</s> <span className="ms-2 text-danger-600 fw-medium">-{discountPct}%</span></div>}
+                                  <div className="text-md fw-semibold text-main-600">{formatPrice(price)}</div>
+                                </>
+                              )}
                             </div>
                           </div>
-                        </div>
+                        );
+                      };
+
+                      return (
+                        <>
+                          {/* Purchased items */}
+                          {purchased.map(renderItem)}
+                          {/* Divider + Gifts */}
+                          {gifts.length > 0 && (
+                            <>
+                              <div className="my-6 border-gray-200 border-top" />
+                              <div className="mb-4 text-sm text-gray-600">Quà tặng nhận được</div>
+                              <div style={{ paddingLeft: 20 }}>
+                                {gifts.map(renderItem)}
+                              </div>
+                            </>
+                          )}
+                        </>
                       );
-                    })}
+                    })()}
                   </div>
 
                   {/* Tổng tiền */}
@@ -546,7 +782,7 @@ export default function OrdersPage() {
                       <span></span>
                       <div className="gap-24 flex-align flex-between" style={{ width: "22%" }}>
                         <span className="text-gray-700 text-md">Tạm tính:</span>
-                        <span className="text-gray-900 text-md fw-semibold">{fmtMoney(detailOrder.tamtinh ?? detailOrder.thanhtien ?? 0)}</span>
+                        <span className="text-gray-900 text-md fw-semibold">{formatPrice(detailOrder.tamtinh ?? detailOrder.thanhtien ?? 0)}</span>
                       </div>
                     </div>
 
@@ -554,7 +790,7 @@ export default function OrdersPage() {
                       <span></span>
                       <div className="gap-24 flex-align flex-between" style={{ width: "22%" }}>
                         <span className="text-gray-700 text-md">Phí giao hàng:</span>
-                        <span className="text-md text-info-900 fw-semibold">{fmtMoney(detailOrder.phivanchuyen?.phi ?? detailOrder.phigiaohang ?? 0)}</span>
+                        <span className="text-md text-info-900 fw-semibold">{formatPrice(detailOrder.phivanchuyen?.phi ?? detailOrder.phigiaohang ?? 0)}</span>
                       </div>
                     </div>
 
@@ -563,7 +799,7 @@ export default function OrdersPage() {
                         <span></span>
                         <div style={{ width: "22%" }} className="gap-24 flex-align flex-between">
                           <span className="text-gray-700 text-md">Giảm giá:</span>
-                          <span className="text-md text-success-600 fw-semibold">-{fmtMoney(detailOrder.magiamgia.giatri)}</span>
+                          <span className="text-md text-success-600 fw-semibold">-{formatPrice(detailOrder.magiamgia.giatri)}</span>
                         </div>
                       </div>
                     ) : null}
@@ -572,7 +808,7 @@ export default function OrdersPage() {
                       <span></span>
                       <div className="gap-24 flex-align">
                         <span className="text-xl text-gray-900 fw-bold">Tổng tiền:</span>
-                        <span className="text-xl text-main-600 fw-bold">{fmtMoney(detailOrder.thanhtien ?? detailOrder.tamtinh ?? 0)}</span>
+                        <span className="text-xl text-main-600 fw-bold">{formatPrice(detailOrder.thanhtien ?? detailOrder.tamtinh ?? 0)}</span>
                       </div>
                     </div>
                   </div>
@@ -584,6 +820,17 @@ export default function OrdersPage() {
                   </a>
 
                   <div className="gap-12 flex-align">
+                    {/* Nếu đơn đang ở trạng thái chờ thanh toán -> hiển thị Quay lại thanh toán */}
+                    {getFilterKey(detailOrder.trangthai) === "pending" && (
+                      <button
+                        type="button"
+                        onClick={() => retryPayment(detailOrder.id,"dbt")}
+                        className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
+                      >
+                        <i className="ph-bold ph-credit-card" /> Quay lại thanh toán
+                      </button>
+                    )}
+                    
                     {isCancellable(detailOrder.trangthai) && (
                       <button onClick={() => handleCancelOrder(detailOrder.id)} className="gap-8 px-8 py-4 border fw-medium text-main-600 text-md border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
                         <i className="ph-bold ph-trash"></i> Hủy đơn
@@ -593,7 +840,6 @@ export default function OrdersPage() {
                 </div>
               </div>
             </div>
-          </div>
         ) : (
           /* ELSE: render original orders list section (paste your existing section here) */
           <section className="mt-10 overflow-hidden trending-productss fix-scale-80">
@@ -664,27 +910,97 @@ export default function OrdersPage() {
                       </div>
 
                       <div className="px-5 py-6">
-                        <div className="gap-12 d-flex align-items-center">
-                          <a href="#" className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: 80, maxHeight: 80 }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={anhSpDau} alt={tenSpDau} className="w-100 rounded-8" />
-                          </a>
-                          <div className="table-product__content text-start">
-                            <h6 className="mb-0 text-sm title fw-semibold">
-                              <a href="#" className="link text-line-2" title={tenSpDau} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: 350, display: "inline-block" }}>{tenSpDau}</a>
-                            </h6>
-                            <div className="gap-16 mb-6 flex-align">
-                              <a href="#" className="gap-8 px-6 py-4 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">{tenLoaiBienTheDau}</a>
-                            </div>
-                            <div className="mb-6 product-card__price">
-                              <div className="gap-24 flex-align">
-                                <span className="text-sm text-heading fw-medium">Số lượng: {firstItem?.soluong ?? 1}</span>
-                                <span className="text-main-600 text-md fw-bold">{fmtMoney(firstItem?.dongia)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <input type="hidden" className="item-id" value={firstItem?.id ?? 0} />
+                       { (order.chitietdonhang ?? []).length === 0 ? (
+                          <div className="py-3 text-sm text-center text-gray-500">Không có sản phẩm</div>
+                        ) : (
+                          (() => {
+                            const items = order.chitietdonhang ?? [];
+                            const purchased = items.filter(it => Number(it.dongia ?? it.price ?? 0) > 0);
+                            const gifts = items.filter(it => Number(it.dongia ?? it.price ?? 0) === 0);
+
+                            const renderCompact = (it: OrderItem) => {
+                              const title = it.bienthe?.sanpham?.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
+                              const imgRaw = it.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh ?? it.bienthe?.sanpham?.hinhanh ?? it.hinhanh ?? "/assets/images/thumbs/placeholder.png";
+                              const img = String(imgRaw).startsWith("http") ? imgRaw : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${imgRaw}`;
+                              const qty = it.soluong ?? it.quantity ?? 0;
+                              const price = Number(it.dongia ?? it.price ?? 0);
+                              const orig = Number(it.bienthe?.giagoc ?? (it as any).giagoc ?? 0);
+                              const hasDiscount = orig > 0 && orig > price;
+                              const discountPct = hasDiscount ? Math.round((orig - price) / orig * 100) : 0;
+
+                              return (
+                                <div key={it.id} className="py-2 d-flex align-items-center justify-content-between border-bottom">
+                                  <div className="gap-12 d-flex align-items-center" style={{ maxWidth: 420 }}>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={img} alt={title} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8 }} />
+                                    <div style={{ minWidth: 0 }}>
+                                      <div className="text-sm fw-medium text-truncate" style={{ maxWidth: 320 }}>{title}</div>
+                                      <div className="gap-12 d-flex align-items-center">
+                                        <div className="text-xs text-gray-500">Số lượng: <span className="fw-medium">{qty}</span></div>
+                                        <div className="gap-8 d-flex align-items-baseline">
+                                          {hasDiscount && (
+                                            <span className="text-xs text-gray-400 fw-semibold text-decoration-line-through">
+                                              {formatPrice(orig)}
+                                            </span>
+                                          )}
+                                          <span className="text-sm fw-semibold text-main-600">{formatPrice(price)}</span>
+                                          {hasDiscount && (
+                                            <span className="text-xs text-main-two-600 ms-2">-{discountPct}%</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div style={{ width: 8 }} />
+                                </div>
+                              );
+                            };
+
+                            const renderGift = (g: OrderItem, idx: number) => {
+                              const title = g.tensanpham ?? g.name ?? "Quà tặng";
+                              const imgRaw = g.hinhanh ?? g.bienthe?.sanpham?.hinhanh ?? "/assets/images/thumbs/product-placeholder.png";
+                              const img = String(imgRaw).startsWith("http") ? imgRaw : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${imgRaw}`;
+                              const qty = g.soluong ?? g.quantity ?? 1;
+                              const orig = Number(g.bienthe?.giagoc ?? (g as any).giagoc ?? 0);
+                              return (
+                                <div key={String(g.bienthe?.id ?? g.id ?? idx)} className="py-2 d-flex align-items-center justify-content-between">
+                                  <div className="gap-12 d-flex align-items-center" style={{ maxWidth: 420 }}>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={img} alt={title} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8 }} />
+                                    <div style={{ minWidth: 0 }}>
+                                      <div className="text-sm fw-medium text-truncate" style={{ maxWidth: 320 }}>{title}</div>
+                                      <div className="text-xs text-gray-500">Số lượng: <span className="fw-medium">{qty}</span></div>
+                                    </div>
+                                  </div>
+                                  <div className="text-end" style={{ minWidth: 120 }}>
+                                    {orig > 0 && (
+                                      <div className="text-xs text-gray-400 fw-semibold text-decoration-line-through">{formatPrice(orig)}</div>
+                                    )}
+                                    <div className="gap-4 text-xs flex-align text-main-two-600"><i className="text-sm ph-fill ph-seal-percent"></i> Quà tặng miễn phí</div>
+                                  </div>
+                                </div>
+                              );
+                            };
+                            return (
+                              <>
+                                {purchased.map(renderCompact)}
+
+                                {gifts.length > 0 && (
+                                  <>
+                                    <div className="my-3 border-gray-200 border-top" />
+                                    <div className="mb-2 text-sm text-gray-600 d-flex align-items-center">
+                                      <i className="ph-bold ph-gift text-main-600 me-2"></i>
+                                      <span>Quà tặng của bạn</span>
+                                    </div>
+                                    <div style={{ paddingLeft: 12 }}>
+                                      {gifts.map(renderGift)}
+                                    </div>
+                                  </>
+                                )}
+                              </>
+                            );
+                          })()
+                        )}
                       </div>
                       <div className="d-flex flex-align flex-between">
                         <div className="gap-12 flex-align">
@@ -698,6 +1014,17 @@ export default function OrdersPage() {
                       <div className="d-flex flex-align flex-between">
                         <div className="gap-12 flex-align">
                           <div className="gap-12 flex-align">
+                            {/* Nếu đơn đang ở trạng thái chờ thanh toán -> hiển thị Quay lại thanh toán */}
+                            {getFilterKey(order.trangthai) === "pending" && (
+                              <button
+                                type="button"
+                                onClick={() => retryPayment(order.id,"dbt")}
+                                className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
+                              >
+                                <i className="ph-bold ph-credit-card" /> Quay lại thanh toán
+                              </button>
+                            )}
+                            
                             {isReviewableStatus(order.trangthai) ? (
                               <Link href={`/danh-gia?order_id=${order.id}`} className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
                                 <i className="ph ph-star" /> Đánh giá
@@ -708,12 +1035,36 @@ export default function OrdersPage() {
                                 disabled={!isCancellable(order.trangthai)}
                                 className={`gap-8 px-8 py-4 text-sm border fw-medium rounded-4 transition-1 flex-align ${isCancellable(order.trangthai)
                                   ? "text-danger-600 border-danger-600 hover-bg-danger-600 hover-text-white cursor-pointer"
-                                  : "text-gray-400 border-gray-200 bg-gray-50 cursor-not-allowed opacity-50"
+                                    : "text-gray-400 border-gray-200 bg-gray-50 cursor-not-allowed opacity-50"
                                   }`}
                               >
                                 <i className="ph-bold ph-trash" /> Hủy đơn
                               </button>
                             )}
+                            
+
+                            {/* Mua lại cho đơn đã giao / hoàn tất */}
+                            {isReviewableStatus(order.trangthai) && (
+                              <button
+                                type="button"
+                                onClick={() => handleReorder(order.id)}
+                                className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
+                              >
+                                <i className="ph ph-shopping-cart" /> Mua lại
+                              </button>
+                            )}
+
+                            {/* Thanh toán lại cho đơn đã hủy */}
+                            {getFilterKey(order.trangthai) === "cancelled" && (
+                              <button
+                                type="button"
+                                onClick={() => handleRetryPaymentFromCancelled(order.id)}
+                                className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
+                              >
+                                <i className="ph-bold ph-credit-card" /> Thanh toán lại
+                              </button>
+                            )}
+
                             <button
                               type="button"
                               onClick={() => openDetail(order.id)}
@@ -724,7 +1075,7 @@ export default function OrdersPage() {
                           </div>
                         </div>
                         <div className="gap-12 flex-align">
-                          <span className="text-lg fw-bold text-main-600">{fmtMoney(order.thanhtien)}</span>
+                          <span className="text-lg fw-bold text-main-600">{formatPrice(order.thanhtien)}</span>
                         </div>
                       </div>
                     </div>
@@ -736,11 +1087,60 @@ export default function OrdersPage() {
         </section>
         )}
 
+        
+        
         {totalPages > 1 && (
           <div className="gap-8 mt-24 d-flex justify-content-center">
             <button className="btn btn-sm btn-black" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Trước</button>
             <span className="px-3 py-1 fw-bold flex-align">{page} / {totalPages}</span>
             <button className="btn btn-sm btn-black" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Sau</button>
+          </div>
+        )}
+        
+        {/* Payment method choice modal */}
+        {paymentModalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ background: "rgba(0,0,0,0.4)" }}
+            onMouseDown={(e) => {
+              // nếu click ngoài dialog (backdrop) thì đóng
+              if (e.target === e.currentTarget) closePaymentModal();
+            }}
+          >
+            <div
+              ref={modalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="payment-modal-title"
+              className="w-full max-w-md p-20 bg-white rounded-8"
+              onMouseDown={(e) => e.stopPropagation()} // tránh bubble backdrop khi click trong dialog
+            >
+              <h5 id="payment-modal-title" className="mb-6 fw-semibold">Chọn phương thức thanh toán</h5>
+              <p className="mb-6 text-sm text-gray-600">Chọn phương thức để tiếp tục {paymentModalAction === "reorder" ? "mua lại" : "thanh toán lại"}.</p>
+              <div className="gap-8 mb-6 d-flex flex-column">
+                <button
+                  ref={primaryBtnRef}
+                  disabled={paymentProcessing}
+                  onClick={() => processPaymentChoice("dbt")}
+                  className="gap-6 px-12 py-8 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-6"
+                >
+                  Thanh toán VNPay
+                </button>
+                <button
+                  disabled={paymentProcessing}
+                  onClick={() => processPaymentChoice("cod")}
+                  className="gap-6 px-12 py-8 text-sm border fw-medium rounded-6"
+                >
+                  Thanh toán khi nhận hàng
+                </button>
+                {/* <button disabled={paymentProcessing} onClick={() => processPaymentChoice("cp")} className="gap-6 px-12 py-8 text-sm border fw-medium rounded-6">
+                  Thanh toán trực tiếp (cp)
+                </button> */}
+              </div>
+              <div className="text-end">
+                <button disabled={paymentProcessing} onClick={closePaymentModal} className="px-12 py-8 text-sm border rounded-6">Hủy</button>
+              </div>
+            </div>
           </div>
         )}
       </AccountShell>
@@ -750,7 +1150,7 @@ export default function OrdersPage() {
 
 const STATUS_OPTIONS: { key: FilterStatus; label: string; icon?: string }[] = [
   { key: "pending", label: "Chờ xử lý", icon: "ph-wallet" },
-  { key: "confirmed", label: "Đã xác nhận", icon: "ph-clock-countdown" },
+  { key: "confirmed", label: "Đang xử lý", icon: "ph-clock-countdown" },
   { key: "processing", label: "Đang chuẩn bị hàng", icon: "ph-package" },
   { key: "shipping", label: "Đang giao hàng", icon: "ph-truck" },
   { key: "completed", label: "Đã giao hàng", icon: "ph-check-fat" },

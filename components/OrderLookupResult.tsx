@@ -57,9 +57,9 @@ export default function OrderLookupResult() {
         const token = Cookies.get("access_token");
         
         // Gọi API Public
-        // const res = await fetch(`${API}/api/toi/theodoi-donhang?madon=${encodeURIComponent(code)}`, {
+        // const res = await fetch(`${API}/api/web/tracuu-donhang?madon=${encodeURIComponent(code)}`, {
           // comment token bearer va mo headers: { "Accept": "application/json" }, neu khong dung auth
-        const res = await fetch(`${API}/toi/theodoi-donhang?madon=${encodeURIComponent(code)}`, {
+        const res = await fetch(`${API}/web/tracuu-donhang?madon=${encodeURIComponent(code)}`, {
             headers: { "Accept": "application/json" },
             // headers: {
             //     "Authorization": `Bearer ${token}`,

@@ -28,6 +28,8 @@ export default function ReviewsPage() {
     diem: 5,
     noidung: "",
   });
+  const [orders, setOrders] = useState<any[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState<string>("");
 
   // Fetch reviews
   const fetchReviews = async () => {
@@ -75,21 +77,43 @@ export default function ReviewsPage() {
         const s = (status || "").toString().toLowerCase();
         return s.includes("đã giao") || s.includes("đã giao hàng") || s.includes("thành công") || s.includes("delivered");
       };
-      const map = new Map<number, string>();
-      orders.forEach((o: any) => {
-        // only include items from completed/delivered orders
-        if (!isOrderCompleted(o.trangthai)) return;
-        (o.chitietdonhang || []).forEach((it: any) => {
-          const sp = it.bienthe?.sanpham || {};
-          const id = sp.id ?? it.id ?? null;
-          const name = sp.ten ?? it.name ?? "Sản phẩm";
-          if (id) map.set(Number(id), name);
+      const completedOrders = orders
+        .filter((o: any) => isOrderCompleted(o.trangthai))
+        .map((o: any) => {
+          const items: ProductOption[] = (o.chitietdonhang || []).map((it: any) => {
+            const sp = it.bienthe?.sanpham || {};
+            const id = sp.id ?? it.id ?? null;
+            const name = sp.ten ?? it.name ?? `#${id ?? "?"}`;
+            return id ? { id: Number(id), name } : null;
+          }).filter(Boolean) as ProductOption[];
+          return { raw: o, id: String(o.id ?? o.madon ?? ""), madon: o.madon, created_at: o.created_at, items };
         });
-      });
-      const list = Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-      setProducts(list);
-      // default select first product if available and none selected
-      if (list.length > 0 && form.id_sanpham === 0) setForm(f => ({ ...f, id_sanpham: list[0].id }));
+
+      setOrders(completedOrders);
+      // select first order by default (if any)
+      if (completedOrders.length > 0) {
+        const firstOrderId = completedOrders[0].id;
+        setSelectedOrderId(firstOrderId);
+        setProducts(completedOrders[0].items);
+        // default product selection = first product of that order
+        if (completedOrders[0].items.length > 0) {
+          setForm(f => ({ ...f, id_sanpham: completedOrders[0].items[0].id }));
+        }
+      } else {
+        // fallback: aggregated unique products from all orders (previous behavior)
+        const map = new Map<number, string>();
+        orders.forEach((o: any) => {
+          (o.chitietdonhang || []).forEach((it: any) => {
+            const sp = it.bienthe?.sanpham || {};
+            const id = sp.id ?? it.id ?? null;
+            const name = sp.ten ?? it.name ?? "Sản phẩm";
+            if (id) map.set(Number(id), name);
+          });
+        });
+        const list = Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+        setProducts(list);
+        if (list.length > 0) setForm(f => ({ ...f, id_sanpham: list[0].id }));
+      }
     } catch (e) {
       console.error("fetchProductsFromOrders error", e);
     }
@@ -103,7 +127,22 @@ export default function ReviewsPage() {
 
   const startCreate = () => {
     setEditing(null);
-    setForm(f => ({ ...f, diem: 5,  noidung: "", id_sanpham: products[0]?.id ?? 0 }));
+    const selectedOrder = orders.find(o => o.id === selectedOrderId);
+    const defaultProductId = selectedOrder?.items?.[0]?.id ?? products[0]?.id ?? 0;
+    setForm(f => ({ ...f, diem: 5, noidung: "", id_sanpham: defaultProductId }));
+  };
+
+  const onSelectOrder = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    const order = orders.find(o => o.id === orderId);
+    if (order && Array.isArray(order.items) && order.items.length > 0) {
+      setProducts(order.items);
+      setForm(f => ({ ...f, id_sanpham: order.items[0].id }));
+    } else {
+      // no items -> clear product list
+      setProducts([]);
+      setForm(f => ({ ...f, id_sanpham: 0 }));
+    }
   };
 
   const startEdit = (r: Review) => {
@@ -175,7 +214,7 @@ export default function ReviewsPage() {
 
   return (
     <AccountShell title="Đánh giá của tôi" current="reviews">
-      <div className="d-flex flex-column gap-12">
+      <div className="gap-12 d-flex flex-column">
         <div className="d-flex flex-between">
           <h3 className="mb-0">Đánh giá của tôi</h3>
           <div>
@@ -192,20 +231,20 @@ export default function ReviewsPage() {
             {reviews.length === 0 ? (
               <div className="p-12 border rounded-8">Bạn chưa có đánh giá nào.</div>
             ) : (
-              <div className="d-flex flex-column gap-8">
+              <div className="gap-8 d-flex flex-column">
                 {reviews.map(r => (
                   <div key={r.id} className="p-12 border rounded-8 d-flex flex-between">
                     <div style={{ maxWidth: "72%" }}>
                       {/* <div className="fw-semibold">{r.tieu_de || "(Không có tiêu đề)"}</div> */}
                       <div className="text-sm text-gray-600" style={{ whiteSpace: "pre-wrap" }}>{r.noi_dung}</div>
                       <div className="text-xs text-gray-400">{r.created_at}</div>
-                      <div className="text-sm mt-8">Sản phẩm: {products.find(p => p.id === (r.id_sanpham ?? 0))?.name ?? `#${r.id_sanpham ?? "?"}`}</div>
+                      <div className="mt-8 text-sm">Sản phẩm: {products.find(p => p.id === (r.id_sanpham ?? 0))?.name ?? `#${r.id_sanpham ?? "?"}`}</div>
                     </div>
 
-                    <div className="d-flex flex-column gap-8 align-items-end">
+                    <div className="gap-8 d-flex flex-column align-items-end">
                       <div className="text-sm">{r.diem} ⭐</div>
                       <div className="d-flex flex-column">
-                        <button type="button" onClick={() => startEdit(r)} className="px-10 py-8 btn border mb-8">Sửa</button>
+                        <button type="button" onClick={() => startEdit(r)} className="px-10 py-8 mb-8 border btn">Sửa</button>
                         <button type="button" onClick={() => handleDelete(r.id)} className="px-10 py-8 btn border-danger">Xóa</button>
                       </div>
                     </div>
@@ -216,17 +255,36 @@ export default function ReviewsPage() {
           </>
         )}
 
-        <div className="mt-12 p-12 border rounded-8">
+        <div className="p-12 mt-12 border rounded-8">
           <form onSubmit={handleSubmit}>
             <div className="mb-8">
               <label className="mb-4 d-block">Sản phẩm</label>
+              <label className="mb-2 d-block">Đơn hàng</label>
+              {orders.length === 0 ? (
+                <div className="mb-6 text-sm text-gray-500">Không tìm thấy đơn hàng hoàn thành.</div>
+              ) : (
+                <select
+                  value={selectedOrderId}
+                  onChange={e => onSelectOrder(e.target.value)}
+                  className="px-8 py-6 mb-4 border w-100 rounded-6"
+                >
+                  <option value="">-- Chọn đơn hàng --</option>
+                  {orders.map(o => (
+                    <option key={o.id} value={o.id}>
+                      {o.madon ?? `#${o.id}`} {o.created_at ? `— ${String(o.created_at).slice(0, 16)}` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {/* Product select filtered by order */}
               {products.length === 0 ? (
-                <div className="text-sm text-gray-500">Không tìm thấy sản phẩm đã mua để đánh giá.</div>
+                <div className="text-sm text-gray-500">Không tìm thấy sản phẩm để đánh giá.</div>
               ) : (
                 <select
                   value={form.id_sanpham}
                   onChange={e => setForm(f => ({ ...f, id_sanpham: Number(e.target.value) }))}
-                  className="w-100 px-8 py-6 rounded-6 border mb-8"
+                  className="px-8 py-6 mb-8 border w-100 rounded-6"
                 >
                   <option value={0}>-- Chọn sản phẩm --</option>
                   {products.map(p => (
@@ -238,19 +296,19 @@ export default function ReviewsPage() {
 
             <div className="mb-8 d-flex flex-column">
               <label className="mb-4">Số sao</label>
-              <select value={form.diem} onChange={e => setForm(f => ({ ...f, diem: Number(e.target.value) }))} className="px-8 py-6 rounded-6 border">
+              <select value={form.diem} onChange={e => setForm(f => ({ ...f, diem: Number(e.target.value) }))} className="px-8 py-6 border rounded-6">
                 {[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n} sao</option>)}
               </select>
             </div>
 
             <div className="mb-8">
               <label className="mb-4 d-block">Nội dung</label>
-              <textarea value={form.noidung} onChange={e => setForm(f => ({ ...f, noidung: e.target.value }))} className="w-100 px-8 py-6 rounded-6 border" rows={6} />
+              <textarea value={form.noidung} onChange={e => setForm(f => ({ ...f, noidung: e.target.value }))} className="px-8 py-6 border w-100 rounded-6" rows={6} />
             </div>
 
-            <div className="d-flex gap-8">
+            <div className="gap-8 d-flex">
               <button type="submit" className="btn btn-main">{editing ? "Cập nhật" : "Lưu"}</button>
-              <button type="button" onClick={() => { setEditing(null); setForm({ id_sanpham: products[0]?.id ?? 0, diem: 5,  noidung: "" }); }} className="btn border">Hủy</button>
+              <button type="button" onClick={() => { setEditing(null); setForm({ id_sanpham: products[0]?.id ?? 0, diem: 5,  noidung: "" }); }} className="border btn">Hủy</button>
             </div>
           </form>
         </div>

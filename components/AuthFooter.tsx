@@ -26,7 +26,7 @@ export default function AuthFooter() {
               <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
                 <i className="ph-fill ph-envelope"></i>
               </span>
-              <a href="mailto:hotro@amban.vn" className="text-md text-gray-900 hover-text-main-600">hotro@amban.vn</a>
+              <a href="mailto:hotro@sieuthivina.com" className="text-md text-gray-900 hover-text-main-600">hotro@sieuthivina.com</a>
             </div>
             <div className="flex-align gap-12 mb-16">
               <span className="w-32 h-32 flex-center rounded-circle border border-gray-100 text-main-two-600 text-md flex-shrink-0">
