@@ -1,30 +1,35 @@
 export const getTrangThaiDonHang = (trang_thai: string | undefined | null): string => {
   if (!trang_thai) return 'Chưa rõ';
   const s = trang_thai.toString().trim().toLowerCase();
-  // Map theo yêu cầu:
-  if (s.includes("chờ xử lý") || s.includes("chờ thanh toán") || s.includes("pending") || s.includes("chờ duyệt")) {
+
+  if (s.includes("chờ thanh toán") || s.includes("pending") && s.includes("pay")) {
     return "Chờ thanh toán";
   }
+  if (s.includes("chờ xử lý")) {
+    return "Đang xử lý";
+  }
   if (s.includes("đã xác nhận") || s.includes("xác nhận")) {
-    return "Đang xác nhận";
+    return "Đang xử lý";
   }
   if (s.includes("đang chuẩn bị") || s.includes("đang chuẩn bị hàng") || s.includes("đóng gói") || s.includes("preparing")) {
-    return "Đang đóng gói";
+    return "Đang xử lý";
   }
-  if (s.includes("đang giao") || s.includes("shipping")) {
-    return "Đang giao hàng";
+  if (s.includes("đang giao") || s.includes("đang giao hàng") || s.includes("shipping")) {
+    return "Đang vận chuyển";
   }
-  if (s.includes("đã giao") || s.includes("delivered")) {
+  if (s.includes("đã giao") || s.includes("đã giao hàng") || s.includes("delivered")) {
     return "Đã giao";
   }
-  if (s.includes("đã hủy") || s.includes("cancel") || s.includes("cancelled")) {
+  if (s.includes("thành công") || s === "completed" || s === "success") {
+    return "Đã hoàn thành";
+  }
+  if (s.includes("đã hủy") || s.includes("hủy") || s.includes("cancel")) {
     return "Đã hủy";
   }
-  // Fallback: nếu gặp 'đã thanh toán' vẫn có thể coi là 'Đã xác nhận'
-  if (s.includes("đã thanh toán") || s === "paid") return "Đang xác nhận";
+
+  // fallback
   return "Chưa rõ";
 };
-
 /**
  * Ánh xạ phương thức thanh toán (Sử dụng tên trường Việt)
  */
@@ -46,12 +51,12 @@ export const getPhuongThucThanhToan = (id_phuongthuc: number | undefined | null)
 // Trả về key trạng thái dùng cho filter / badge (optional)
 export const getStatusKey = (status?: string): string => {
   const s = (status || "").toString().toLowerCase();
-  if (s.includes("chờ xử lý") || s.includes("chờ thanh toán") || s.includes("pending") || s.includes("chờ duyệt")) return "pending";
-  if (s.includes("đã xác nhận") || s.includes("xác nhận") || s.includes("đã thanh toán")) return "confirmed";
-  if (s.includes("đang chuẩn bị") || s.includes("đang chuẩn bị hàng") || s.includes("đóng gói") || s.includes("preparing")) return "processing";
+  if (s.includes("chờ thanh toán")) return "pending";
+  if (s.includes("chờ xử lý") || s.includes("đã xác nhận") || s.includes("đang chuẩn bị") || s.includes("preparing")) return "processing";
   if (s.includes("đang giao") || s.includes("shipping")) return "shipping";
-  if (s.includes("đã giao") || s.includes("delivered") || s.includes("thành công")) return "completed";
-  if (s.includes("đã hủy") || s.includes("hủy") || s.includes("cancel")) return "cancelled";
+  if (s.includes("đã giao") || s.includes("delivered")) return "delivered";
+  if (s.includes("thành công") || s.includes("completed") || s.includes("success")) return "completed";
+  if (s.includes("đã hủy") || s.includes("cancel")) return "cancelled";
   return "all";
 };
 

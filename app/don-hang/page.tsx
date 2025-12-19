@@ -76,7 +76,7 @@ type DetailedOrder = Order & {
 
 
 // Type cho Filter
-type FilterStatus = "all" | "pending" | "confirmed" | "processing" | "shipping" | "completed" | "cancelled";
+type FilterStatus = "all" | "pending" | "processing" | "shipping" | "delivered" | "completed" | "cancelled";
 
 // Map mã phương thức thanh toán (ma_phuongthuc) sang label hiển thị
 const formatPaymentMethod = (ph?: DetailedOrder["phuongthuc"]) => {
@@ -109,11 +109,8 @@ export default function OrdersPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const displayStatusLabel = (status?: string) => {
-    const s = (status || "").toString().toLowerCase();
-    if (s.includes("đã giao") || s.includes("đã giao hàng") || s.includes("delivered")) return "Đã giao";
-    const label = getTrangThaiDonHang(status);
-    if (label && label !== "Chưa rõ") return label;
-    return status || "Chưa rõ";
+  const label = getTrangThaiDonHang(status);
+    return label && label !== "Chưa rõ" ? label : (status || "Chưa rõ");
   };
 
   // --- FETCH DATA ---
@@ -515,15 +512,15 @@ export default function OrdersPage() {
   // --- LOGIC FILTER ---
   // Helper map trạng thái từ API sang key filter
   const getFilterKey = (status?: string): FilterStatus => {
-    const s = (status || "").toLowerCase();
-    if (s.includes("chờ xử lý") || s.includes("chờ thanh toán") || s.includes("pending")) return "pending";
-    if (s.includes("đã xác nhận") || s.includes("chờ xác nhận") || s.includes("xác nhận")) return "confirmed";
-    if (s.includes("đang chuẩn bị") || s.includes("đang đóng gói") || s.includes("đóng gói") || s.includes("preparing")) return "processing";
-    if (s.includes("đang giao") || s.includes("shipping")) return "shipping";
-    if (s.includes("đã giao") || s.includes("đã giao hàng") || s.includes("delivered") || s.includes("thành công")) return "completed";
-    if (s.includes("đã hủy") || s.includes("hủy") || s.includes("cancel")) return "cancelled";
-    return "all";
-  };
+  const s = (status || "").toLowerCase();
+  if (s.includes("chờ thanh toán")) return "pending";
+  if (s.includes("chờ xử lý") || s.includes("đã xác nhận") || s.includes("đang chuẩn bị") || s.includes("preparing")) return "processing";
+  if (s.includes("đang giao") || s.includes("shipping")) return "shipping";
+  if (s.includes("đã giao") || s.includes("delivered")) return "delivered";
+  if (s.includes("thành công") || s.includes("completed") || s.includes("success")) return "completed";
+  if (s.includes("đã hủy") || s.includes("cancel")) return "cancelled";
+  return "all";
+};
 
   const filteredOrders = useMemo(() => {
     if (filterStatus === "all") return orders;
@@ -532,7 +529,13 @@ export default function OrdersPage() {
 
   const countsByFilter = useMemo(() => {
   const map: Record<FilterStatus, number> = {
-    all: 0, pending: 0, confirmed: 0, processing: 0, shipping: 0, completed: 0, cancelled: 0
+    all: 0,
+    pending: 0,
+    processing: 0,
+    shipping: 0,
+    delivered: 0,
+    completed: 0,
+    cancelled: 0,
   };
   map.all = orders.length;
   for (const o of orders) {
@@ -592,7 +595,7 @@ export default function OrdersPage() {
             <div className="flex-wrap gap-16 mb-20 flex-between">
               <h6 className="gap-12 mb-0 text-gray-600 text-md fw-medium flex-align">
                 Mã đơn: #{detailOrder.madon}
-                <span className="p-4 text-sm bg-warning-200 text-warning-900 fw-semibold rounded-4 ms-2">
+                <span className={statusBadgeClass(detailOrder.trangthai)}>
                   {detailOrder.trangthai ?? "Chờ xác nhận"}
                 </span>
               </h6>
@@ -1055,7 +1058,7 @@ export default function OrdersPage() {
                             )}
 
                             {/* Thanh toán lại cho đơn đã hủy */}
-                            {getFilterKey(order.trangthai) === "cancelled" && (
+                            {/* {getFilterKey(order.trangthai) === "cancelled" && (
                               <button
                                 type="button"
                                 onClick={() => handleRetryPaymentFromCancelled(order.id)}
@@ -1063,7 +1066,7 @@ export default function OrdersPage() {
                               >
                                 <i className="ph-bold ph-credit-card" /> Thanh toán lại
                               </button>
-                            )}
+                            )} */}
 
                             <button
                               type="button"
@@ -1149,10 +1152,11 @@ export default function OrdersPage() {
 }
 
 const STATUS_OPTIONS: { key: FilterStatus; label: string; icon?: string }[] = [
-  { key: "pending", label: "Chờ xử lý", icon: "ph-wallet" },
-  { key: "confirmed", label: "Đang xử lý", icon: "ph-clock-countdown" },
-  { key: "processing", label: "Đang chuẩn bị hàng", icon: "ph-package" },
-  { key: "shipping", label: "Đang giao hàng", icon: "ph-truck" },
-  { key: "completed", label: "Đã giao hàng", icon: "ph-check-fat" },
-  { key: "cancelled", label: "Đã hủy", icon: "ph-prohibit" },
+  // { key: "all", label: "Tất cả", icon: "ph-list" },
+  { key: "pending", label: "Chờ thanh toán", icon: "ph-clock" },
+  { key: "processing", label: "Đang xử lý", icon: "ph-package" },
+  { key: "shipping", label: "Đang vận chuyển", icon: "ph-truck" },
+  { key: "delivered", label: "Đã giao", icon: "ph-check-circle" },
+  { key: "completed", label: "Đã hoàn thành", icon: "ph-check-fat" },
+  { key: "cancelled", label: "Đã hủy", icon: "ph-x-circle" },
 ];
