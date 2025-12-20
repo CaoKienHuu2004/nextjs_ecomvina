@@ -245,6 +245,21 @@ export async function fetchBlogPosts(): Promise<BlogPost[]> {
   }
 }
 
+// Bài viết nổi bật (exported)
+export interface HomeFeaturedPost {
+  id: number;
+  tieude: string;
+  slug: string;
+  noidung: string;
+  luotxem: number;
+  hinhanh: string;
+  created_at: string;
+  nguoidung?: {
+    hoten: string;
+    avatar: string;
+  };
+}
+
 // ===== Main Response =====
 export interface HomePageResponse {
   status: boolean;
@@ -262,8 +277,173 @@ export interface HomePageResponse {
     most_watched: HomeHotSaleProduct[];
     new_coupon?: Coupon[];
     posts_to_explore?: BlogPost[];
+    featured_posts?: HomeFeaturedPost[]; // Bài viết nổi bật
   };
 }
+
+// ===== Types cho API mới /api/v1/trang-chu =====
+type V1BannerItem = {
+  id: number;
+  vitri: string;
+  hinhanh: string; // Full URL từ API
+  lienket: string;
+  mota: string;
+  trangthai: string;
+};
+
+type V1ProductImage = { id: number; url: string };
+
+type V1ProductBrand = {
+  id: number;
+  ten: string;
+  logo: string;
+};
+
+type V1ProductCategory = {
+  id: number;
+  ten: string;
+  slug: string;
+  logo: string;
+};
+
+type V1Product = {
+  id: number;
+  tensanpham: string;
+  slug: string;
+  giamgia: number;
+  mota: string;
+  luotxem: number;
+  trangthai: string;
+  hinhanh: V1ProductImage[];
+  thuonghieu: V1ProductBrand;
+  danhmuc: V1ProductCategory[];
+  gia: {
+    giagoc: number;
+    giadagiam: number;
+    formatted_giagoc: string;
+    formatted_giadagiam: string;
+  };
+  tong_luotban: number;
+  bienthe?: any[]; // Mảng biến thể nếu có
+};
+
+type V1Category = {
+  id: number;
+  ten: string;
+  slug: string;
+  logo: string; // Full URL từ API
+  parent: number | null;
+  sapxep: number;
+  trangthai: string;
+};
+
+type V1Gift = {
+  id: number;
+  id_chuongtrinh: number | null;
+  dieukiensoluong: string;
+  dieukiengiatri: number;
+  tieude: string;
+  slug: string;
+  thongtin: string;
+  hinhanh: string; // Filename, cần build URL
+  luotxem: number;
+  ngaybatdau: string;
+  ngayketthuc: string;
+  trangthai: string;
+  deleted_at: string | null;
+};
+
+type V1TopCategoryProducts = {
+  category: {
+    id: number;
+    ten: string;
+    slug: string;
+    logo: string;
+    parent: number | null;
+    sapxep: number;
+    trangthai: string;
+  };
+  products: V1Product[];
+};
+
+// Cấu trúc mới của danhmuchangdau từ API
+type V1DanhMucHangDauCategory = {
+  id: number;
+  ten: string;
+  slug: string;
+  logo: string;
+  parent: number | null;
+  sapxep: number;
+  trangthai: string;
+};
+
+type V1DanhMucHangDauProduct = {
+  id: number;
+  ten: string;
+  slug: string;
+  mota: string;
+  giamgia: number;
+  luotxem: number;
+  trangthai: string;
+  product_total_sales: string;
+  giadagiam: number;
+  hinhanhsanpham: { id: number; hinhanh: string; trangthai: string }[];
+  thuonghieu: { id: number; ten: string; slug: string; logo: string };
+  danhmuc: { id: number; ten: string; slug: string; logo: string }[];
+  bienthe_display?: {
+    giagoc: number;
+    giadagiam: number;
+  };
+};
+
+type V1DanhMucHangDau = {
+  danhsachdmhangdau: V1DanhMucHangDauCategory[];
+  sanphamthuocdanhmuc: Record<string, V1DanhMucHangDauProduct[]>;
+};
+
+type V1Brand = {
+  id: number;
+  ten: string;
+  slug: string;
+  logo: string; // Full URL từ API
+  trangthai: string;
+  sanpham_count: number;
+};
+
+// Bài viết nổi bật
+type V1BaiVietNoiBat = {
+  id: number;
+  id_nguoidung: number;
+  tieude: string;
+  slug: string;
+  noidung: string;
+  luotxem: number;
+  hinhanh: string;
+  trangthai: string;
+  created_at: string;
+  updated_at: string;
+  nguoidung?: {
+    id: number;
+    username: string;
+    hoten: string;
+    avatar: string;
+  };
+};
+
+type V1TrangChuResponse = {
+  status: number;
+  banners: Record<string, V1BannerItem[]>;
+  tatcadanhmuc: V1Category[];
+  top_deals: V1Product[];
+  chuongtrinhuudaiquatang: V1Gift[];
+  danhmuchangdau: V1DanhMucHangDau | V1TopCategoryProducts[];
+  top_brands: V1Brand[];
+  hangmoichaosan?: V1Product[]; // Hàng mới chào sân - "Sản phẩm mới nhất"
+  duocquantamnhieunhat: V1Product[];
+  thuonghieuhangdau?: V1Brand[]; // Thương hiệu hàng đầu
+  sanphamhangdau?: V1Product[]; // Sản phẩm hàng đầu (best sellers)
+  baivietnoibat?: V1BaiVietNoiBat[]; // Bài viết nổi bật
+};
 
 /**
  * Fetch homepage data from the API server
@@ -306,6 +486,78 @@ async function fetchWithRetry<T>(
   throw lastError;
 }
 
+// Build URL cho gift image (chỉ còn dùng cho gift vì API trả filename)
+function buildGiftImageUrl(filename: string): string {
+  if (!filename) return "";
+  if (/^https?:\/\//i.test(filename) || filename.startsWith("/")) return filename;
+  return `https://sieuthivina.com/assets/client/images/bg/${filename}`;
+}
+
+function formatRemainingTime(endAt: string): string {
+  const end = new Date(endAt.replace(" ", "T"));
+  const now = new Date();
+  const diff = end.getTime() - now.getTime();
+  if (!Number.isFinite(diff) || diff <= 0) return "0 ngày";
+
+  const totalMinutes = Math.floor(diff / 60000);
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) return `${days} ngày`;
+  if (hours > 0) return `${hours} giờ`;
+  return `${minutes} phút`;
+}
+
+// Map V1Product -> HomeHotSaleProduct (API mới đã trả full URL cho ảnh)
+function mapV1ProductToHomeProduct(p: V1Product): HomeHotSaleProduct {
+  // API mới trả hinhanh[].url là full URL
+  const firstImg = Array.isArray(p.hinhanh) && p.hinhanh.length > 0 ? p.hinhanh[0]?.url : "";
+  const current = p.gia?.giadagiam ?? 0;
+  const before = p.gia?.giagoc ?? current;
+  const discountPercent = p.giamgia ?? (before > 0 ? Math.max(0, Math.round(((before - current) / before) * 100)) : 0);
+
+  return {
+    id: p.id,
+    slug: p.slug,
+    ten: p.tensanpham,
+    hinh_anh: firstImg,
+    thuonghieu: p.thuonghieu?.ten ?? "",
+    rating: {
+      average: 0,
+      count: 0,
+    },
+    sold_count: String(p.tong_luotban ?? 0),
+    gia: {
+      current,
+      before_discount: before,
+      discount_percent: discountPercent,
+    },
+    have_gift: false,
+  };
+}
+
+// Map V1Gift -> GiftEvent (gift.hinhanh là filename, cần build URL)
+function mapV1GiftToGiftEvent(g: V1Gift): GiftEvent {
+  return {
+    id: g.id,
+    tieude: g.tieude,
+    slug: g.slug,
+    dieukien: g.thongtin || `Mua ${g.dieukiensoluong} sản phẩm`,
+    thongtin: g.thongtin,
+    hinhanh: buildGiftImageUrl(g.hinhanh),
+    luotxem: g.luotxem,
+    ngaybatdau: g.ngaybatdau,
+    ngayketthuc: g.ngayketthuc,
+    thoigian_conlai: formatRemainingTime(g.ngayketthuc),
+    chuongtrinh: {
+      id: g.id_chuongtrinh ?? 0,
+      tieude: "",
+      hinhanh: "",
+    },
+  };
+}
+
 export async function fetchHomePage(headers?: Record<string, string>, perPage: number = 6): Promise<HomePageResponse> {
   // Kiểm tra cache
   const now = Date.now();
@@ -314,10 +566,10 @@ export async function fetchHomePage(headers?: Record<string, string>, perPage: n
     return homePageCache.data;
   }
 
-  const HOME_API_URL = "https://sieuthivina.cloud";
-  const url = `${HOME_API_URL}/api/trang-chu${perPage !== 6 ? `?per_page=${perPage}` : ''}`;
+  const HOME_API_URL = "https://sieuthivina.com";
+  const url = `${HOME_API_URL}/api/v1/trang-chu`;
 
-  const result = await fetchWithRetry(async () => {
+  const raw = await fetchWithRetry(async () => {
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -331,12 +583,149 @@ export async function fetchHomePage(headers?: Record<string, string>, perPage: n
       throw new Error(`Home API error: ${response.status}`);
     }
 
-    return response.json() as Promise<HomePageResponse>;
+    return response.json() as Promise<V1TrangChuResponse>;
   }, 3, 1000);
 
-  // Lưu vào cache
-  homePageCache = { data: result, timestamp: now };
+  // Banners - API mới trả full URL cho hinhanh
+  const newBanners: HomeBanner[] = Object.values(raw?.banners ?? {})
+    .flatMap((arr) => (Array.isArray(arr) ? arr : []))
+    .map((b) => ({
+      id: b.id,
+      vitri: b.vitri,
+      hinhanh: b.hinhanh, // Full URL từ API
+      lienket: b.lienket,
+      mota: b.mota,
+      trangthai: b.trangthai,
+    }));
 
+  // Products - dùng đúng key từ API mới (thêm Array.isArray check)
+  const topDealsRaw = raw?.top_deals;
+  const topDeals = (Array.isArray(topDealsRaw) ? topDealsRaw : []).map(mapV1ProductToHomeProduct);
+  // Hàng mới chào sân - fallback sang top_deals nếu không có
+  const newArrivalsRaw = raw?.hangmoichaosan ?? raw?.top_deals;
+  const newArrivals = (Array.isArray(newArrivalsRaw) ? newArrivalsRaw : []).map(mapV1ProductToHomeProduct);
+  const mostWatchedRaw = raw?.duocquantamnhieunhat;
+  const mostWatched = (Array.isArray(mostWatchedRaw) ? mostWatchedRaw : []).map(mapV1ProductToHomeProduct);
+
+  // Top categories with products - dùng danhmuchangdau (cấu trúc mới)
+  const topCategoriesRaw = raw?.danhmuchangdau;
+  console.log("🔍 danhmuchangdau raw:", topCategoriesRaw);
+
+  let topCategories: HomeTopCategoryWithProducts[] = [];
+
+  // Kiểm tra cấu trúc mới: { danhsachdmhangdau: [...], sanphamthuocdanhmuc: {...} }
+  if (topCategoriesRaw && typeof topCategoriesRaw === 'object' && !Array.isArray(topCategoriesRaw) && 'danhsachdmhangdau' in topCategoriesRaw) {
+    const dmhd = topCategoriesRaw as V1DanhMucHangDau;
+    const categories = dmhd.danhsachdmhangdau || [];
+    const productsByCategory = dmhd.sanphamthuocdanhmuc || {};
+
+    topCategories = categories.map((cat) => {
+      const categoryProducts = productsByCategory[String(cat.id)] || [];
+      return {
+        id: cat.id,
+        ten: cat.ten,
+        slug: cat.slug,
+        total_sold: 0,
+        sanpham: categoryProducts.map((p) => ({
+          id: p.id,
+          ten: p.ten,
+          slug: p.slug,
+          hinh_anh: p.hinhanhsanpham?.[0]?.hinhanh || "",
+          mediaurl: p.hinhanhsanpham?.[0]?.hinhanh || "",
+          thuonghieu: p.thuonghieu?.ten || "",
+          shop_name: p.thuonghieu?.ten || "Siêu Thị Vina",
+          gia: {
+            current: p.bienthe_display?.giadagiam ?? p.giadagiam ?? 0,
+            before_discount: p.bienthe_display?.giagoc ?? p.giadagiam ?? 0,
+            discount_percent: p.giamgia ?? 0,
+          },
+          rating: { average: 0, count: 0 },
+          sold_count: p.product_total_sales || "0",
+          have_gift: false,
+        })),
+      };
+    });
+  } else if (Array.isArray(topCategoriesRaw)) {
+    // Cấu trúc cũ: [{ category: {...}, products: [...] }]
+    topCategories = topCategoriesRaw.map((x) => ({
+      id: x.category.id,
+      ten: x.category.ten,
+      slug: x.category.slug,
+      total_sold: 0,
+      sanpham: (Array.isArray(x.products) ? x.products : []).map(mapV1ProductToHomeProduct),
+    }));
+  }
+
+  console.log("📊 topCategories mapped:", topCategories.length, topCategories.map(c => ({ id: c.id, ten: c.ten, sanpham: c.sanpham.length })));
+
+  // All categories - dùng tatcadanhmuc, API trả full URL cho logo
+  const hotCategoriesRaw = raw?.tatcadanhmuc;
+  const hotCategories: HotCategory[] = (Array.isArray(hotCategoriesRaw) ? hotCategoriesRaw : []).map((c) => ({
+    id: c.id,
+    ten: c.ten,
+    slug: c.slug,
+    logo: c.logo, // Full URL từ API
+    total_luotban: "0",
+    lienket: `/shop?category=${encodeURIComponent(c.slug)}`,
+  }));
+
+  // Top brands - ưu tiên thuonghieuhangdau, fallback sang top_brands
+  // API thuonghieuhangdau trả logo dạng filename, cần build full URL
+  const brandSourceRaw = raw?.thuonghieuhangdau ?? raw?.top_brands;
+  const brandSource = Array.isArray(brandSourceRaw) ? brandSourceRaw : [];
+  const topBrands: TopBrand[] = brandSource.map((b) => ({
+    id: b.id,
+    ten: b.ten,
+    slug: b.slug,
+    logo: b.logo?.startsWith('http') ? b.logo : `https://sieuthivina.com/assets/client/images/brands/${b.logo}`,
+    mota: "",
+    total_sold: b.sanpham_count ?? 0,
+  }));
+
+  // Best products - ưu tiên sanphamhangdau (sản phẩm bán chạy nhất), fallback sang top_deals
+  const bestProductsRaw = raw?.sanphamhangdau ?? raw?.top_deals;
+  const bestProducts = (Array.isArray(bestProductsRaw) ? bestProductsRaw : []).map(mapV1ProductToHomeProduct);
+  // Gifts - dùng chuongtrinhuudaiquatang
+  const hotGiftsRaw = raw?.chuongtrinhuudaiquatang;
+  const hotGifts: GiftEvent[] = (Array.isArray(hotGiftsRaw) ? hotGiftsRaw : []).map(mapV1GiftToGiftEvent);
+
+  // Bài viết nổi bật - dùng baivietnoibat
+  const featuredPostsRaw = raw?.baivietnoibat;
+  const featuredPosts: HomeFeaturedPost[] = (Array.isArray(featuredPostsRaw) ? featuredPostsRaw : []).map((post) => ({
+    id: post.id,
+    tieude: post.tieude,
+    slug: post.slug,
+    noidung: post.noidung,
+    luotxem: post.luotxem,
+    hinhanh: post.hinhanh,
+    created_at: post.created_at,
+    nguoidung: post.nguoidung ? {
+      hoten: post.nguoidung.hoten,
+      avatar: post.nguoidung.avatar,
+    } : undefined,
+  }));
+
+  const result: HomePageResponse = {
+    status: raw?.status === 200,
+    message: "",
+    data: {
+      hot_keywords: [],
+      new_banners: newBanners,
+      hot_categories: hotCategories,
+      hot_sales: topDeals,
+      hot_gift: hotGifts,
+      top_categories: topCategories,
+      top_brands: topBrands,
+      best_products: bestProducts, // Dùng sanphamhangdau cho best_products
+      new_launch: newArrivals,
+      most_watched: mostWatched,
+      new_coupon: [],
+      posts_to_explore: [],
+      featured_posts: featuredPosts, // Bài viết nổi bật
+    },
+  };
+
+  homePageCache = { data: result, timestamp: now };
   return result;
 }
 
@@ -371,8 +760,10 @@ export interface ProductVariant {
 // Ảnh sản phẩm
 export interface ProductImage {
   id: number;
+  id_sanpham?: number;
   hinhanh: string;
   trangthai: string;
+  deleted_at?: string | null;
 }
 
 // Đánh giá chi tiết
@@ -384,6 +775,14 @@ export interface ProductRatingDetail {
   sao_3: number;
   sao_2: number;
   sao_1: number;
+}
+
+// Một đánh giá từ khách hàng
+export interface ProductReview {
+  id: number;
+  diem: number;
+  noidung: string;
+  hoten: string;
 }
 
 // Sản phẩm tương tự
@@ -453,7 +852,7 @@ export interface ProductDetail {
   loai_bien_the?: ProductVariantType[];
   bienthe_khichon_loaibienthe_themvaogio?: ProductVariant[];
   anh_san_pham?: ProductImage[];
-  danh_gia?: unknown[];
+  danh_gia?: ProductReview[];
   variants?: unknown[];
   category?: string;
   tags?: string[];
@@ -471,19 +870,30 @@ export interface ProductDetailResponse {
   sanpham_tuongtu?: SimilarProduct[];
 }
 
+// ============================================
+// V1 Product Detail API Response Type
+// (Uses existing V1Product, V1ProductImage, V1ProductBrand, V1ProductCategory types defined above)
+// ============================================
+
+export interface V1ProductDetailResponse {
+  status: string;
+  data: V1Product;
+  related: V1Product[];
+}
+
 /**
- * Fetch product detail by slug from the API server
- * Uses /api/sanphams-all/{slug} endpoint
+ * Fetch product detail by slug from the V1 API server
+ * Uses https://sieuthivina.com/api/v1/san-pham/{slug} endpoint
  * @param slug - Product slug
- * @returns Promise with product detail data
+ * @returns Promise with product detail data (converted to legacy format)
  */
 export async function fetchProductDetail(slug: string): Promise<ProductDetailResponse> {
-  const HOME_API_URL = "https://sieuthivina.cloud";
+  const V1_API_URL = "https://sieuthivina.com";
   // Encode slug để xử lý các ký tự đặc biệt
   const encodedSlug = encodeURIComponent(slug);
-  const url = `${HOME_API_URL}/api/sanphams-all/${encodedSlug}`;
+  const url = `${V1_API_URL}/api/v1/san-pham/${encodedSlug}`;
 
-  console.log(`🔍 Fetching product from: ${url}`);
+  console.log(`🔍 Fetching product from V1 API: ${url}`);
 
   const response = await fetch(url, {
     method: "GET",
@@ -498,7 +908,98 @@ export async function fetchProductDetail(slug: string): Promise<ProductDetailRes
     throw new Error(`Product detail API error: ${response.status}`);
   }
 
-  return response.json() as Promise<ProductDetailResponse>;
+  const v1Response = await response.json() as V1ProductDetailResponse;
+
+  // Convert V1 API response to legacy ProductDetailResponse format
+  return convertV1ToLegacyProductDetail(v1Response);
+}
+
+/**
+ * Convert V1 API response to legacy ProductDetailResponse format
+ * This ensures backward compatibility with existing components
+ */
+function convertV1ToLegacyProductDetail(v1Response: V1ProductDetailResponse): ProductDetailResponse {
+  const v1Data = v1Response.data;
+
+  // Convert main product data
+  const productDetail: ProductDetail = {
+    id: v1Data.id,
+    slug: v1Data.slug,
+    ten: v1Data.tensanpham,
+    hinh_anh: v1Data.hinhanh?.[0]?.url || '',
+    images: v1Data.hinhanh?.map(img => img.url) || [],
+    anh_san_pham: v1Data.hinhanh?.map(img => ({
+      id: img.id,
+      id_sanpham: v1Data.id,
+      hinhanh: img.url,
+      trangthai: 'active',
+      deleted_at: null
+    })) || [],
+    thuonghieu: v1Data.thuonghieu?.ten || '',
+    nhacungcap: {
+      ten: v1Data.thuonghieu?.ten || '',
+      slug: v1Data.thuonghieu?.ten?.toLowerCase().replace(/\s+/g, '-') || '',
+      logo: v1Data.thuonghieu?.logo || ''
+    },
+    mota: v1Data.mota || '',
+    danhmuc: v1Data.danhmuc?.map(cat => ({
+      id_danhmuc: cat.id,
+      ten: cat.ten,
+      slug: cat.slug
+    })) || [],
+    gia: {
+      current: v1Data.gia?.giadagiam || v1Data.gia?.giagoc || 0,
+      before_discount: v1Data.gia?.giagoc || 0,
+      discount_percent: v1Data.giamgia || 0
+    },
+    luotxem: v1Data.luotxem || 0,
+    sold: {
+      total_sold: v1Data.tong_luotban || 0,
+      total_quantity: 0
+    },
+    sold_count: String(v1Data.tong_luotban || 0),
+    rating: {
+      average: 0,
+      count: 0
+    },
+    trangthai: {
+      active: v1Data.trangthai || 'Công khai',
+      in_stock: true
+    }
+  };
+
+  // Convert related products
+  const similarProducts: SimilarProduct[] = (v1Response.related || []).map(related => ({
+    id: related.id,
+    ten: related.tensanpham,
+    slug: related.slug,
+    hinh_anh: related.hinhanh?.[0]?.url || '',
+    have_gift: false,
+    gia: {
+      current: related.gia?.giadagiam || related.gia?.giagoc || 0,
+      before_discount: related.gia?.giagoc || 0,
+      discount_percent: related.giamgia || 0
+    },
+    rating: {
+      average: 0,
+      count: 0
+    },
+    luotxem: related.luotxem || 0,
+    sold: {
+      total_sold: related.tong_luotban || 0,
+      total_quantity: 0
+    },
+    trangthai: {
+      active: related.trangthai || 'Công khai',
+      in_stock: true
+    }
+  }));
+
+  return {
+    status: v1Response.status === 'success',
+    data: productDetail,
+    sanpham_tuongtu: similarProducts
+  };
 }
 
 // ============================================
@@ -524,6 +1025,8 @@ export interface SearchProduct {
   };
   sold?: number;
   sold_count?: string;
+  has_variant?: boolean; // Trường kiểm tra có biến thể hay không
+  bienthe?: any[]; // Mảng biến thể nếu API trả về chi tiết
 }
 
 export interface SearchProductsResponse {
@@ -682,8 +1185,89 @@ export interface ShopProductsResponse {
   data: ShopProductItem[];
 }
 
+// ============ API V1 SAN PHAM (sieuthivina.com/api/v1/san-pham) ============
+
+// Cấu trúc sản phẩm từ API v1/san-pham
+export interface V1ShopProduct {
+  id: number;
+  tensanpham: string;
+  slug: string;
+  giamgia: number;
+  mota: string;
+  luotxem: number;
+  trangthai: string;
+  hinhanh: { id: number; url: string }[];
+  thuonghieu: { id: number; ten: string; logo: string };
+  danhmuc: { id: number; ten: string; slug: string; logo: string }[];
+  gia: {
+    giagoc: number;
+    giadagiam: number;
+    formatted_giagoc: string;
+    formatted_giadagiam: string;
+  };
+  tong_luotban: number;
+}
+
+// Cấu trúc filter category từ API v1
+export interface V1ShopCategory {
+  id: number;
+  ten: string;
+  slug: string;
+}
+
+// Cấu trúc filter brand từ API v1
+export interface V1ShopBrand {
+  id: number;
+  ten: string;
+  slug: string;
+}
+
+// Cấu trúc banner từ API v1
+export interface V1ShopBanner {
+  id: number;
+  vitri: string;
+  hinhanh: string;
+  lienket: string;
+  mota: string;
+  trangthai: string;
+}
+
+// Cấu trúc pagination meta
+export interface V1PaginationMeta {
+  current_page: number;
+  from: number;
+  last_page: number;
+  path: string;
+  per_page: number;
+  to: number;
+  total: number;
+}
+
+// Cấu trúc pagination links
+export interface V1PaginationLinks {
+  first: string;
+  last: string;
+  prev: string | null;
+  next: string | null;
+}
+
+// Response từ API v1/san-pham
+export interface V1ShopProductsResponse {
+  status: string;
+  data: {
+    data: V1ShopProduct[];
+    links: V1PaginationLinks;
+    meta: V1PaginationMeta;
+  };
+  filters: {
+    categories: V1ShopCategory[];
+    brands: V1ShopBrand[];
+    banners: V1ShopBanner[];
+  };
+}
+
 /**
- * Fetch all products from shop API with filters
+ * Fetch all products from shop API with filters (API cũ - sieuthivina.cloud)
  * @param params - Optional query parameters for filtering
  * @returns Promise with shop products and filter options
  */
@@ -728,4 +1312,45 @@ export async function fetchShopProducts(params?: {
   }
 
   return response.json() as Promise<ShopProductsResponse>;
+}
+
+/**
+ * Fetch products from new V1 Shop API (sieuthivina.com/api/v1/san-pham)
+ * API này có pagination, filters (categories, brands) và banners
+ * @param params - Optional query parameters for filtering and pagination
+ * @returns Promise with V1 shop products response
+ */
+export async function fetchV1ShopProducts(params?: {
+  danhmuc?: string;
+  thuonghieu?: string;
+  page?: number;
+  per_page?: number;
+}): Promise<V1ShopProductsResponse> {
+  const V1_API_URL = "https://sieuthivina.com";
+
+  // Build query string from params
+  const queryParams = new URLSearchParams();
+  if (params?.danhmuc) queryParams.append('danhmuc', params.danhmuc);
+  if (params?.thuonghieu) queryParams.append('thuonghieu', params.thuonghieu);
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+
+  const queryString = queryParams.toString();
+  const url = `${V1_API_URL}/api/v1/san-pham${queryString ? `?${queryString}` : ''}`;
+
+  console.log('🛒 Fetching V1 shop products from:', url);
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`V1 Shop API error: ${response.status}`);
+  }
+
+  return response.json() as Promise<V1ShopProductsResponse>;
 }

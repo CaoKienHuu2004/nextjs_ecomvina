@@ -3,11 +3,15 @@ import React from 'react';
 import Link from 'next/link';
 import { useHomeData } from '@/hooks/useHomeData';
 
-const API_URL = 'https://sieuthivina.cloud';
+const API_URL = 'https://sieuthivina.com';
 
 export default function BlogSection() {
     const { data: homeData, loading } = useHomeData();
-    const posts = homeData?.data?.posts_to_explore || [];
+
+    // Ưu tiên dùng featured_posts từ API V1 (baivietnoibat), fallback sang posts_to_explore
+    const featuredPosts = homeData?.data?.featured_posts || [];
+    const oldPosts = homeData?.data?.posts_to_explore || [];
+    const posts = featuredPosts.length > 0 ? featuredPosts : oldPosts;
 
     if (!loading && posts.length === 0) {
         return null;
@@ -16,11 +20,12 @@ export default function BlogSection() {
     // Limit to 4 posts
     const displayPosts = posts.slice(0, 4);
 
-    // Helper to get full image URL
+    // Helper to get full image URL - hỗ trợ cả API cũ và mới
     const getImageUrl = (hinhanh: string | undefined) => {
         if (!hinhanh) return '/assets/images/thumbs/placeholder.png';
         if (hinhanh.startsWith('http')) return hinhanh;
-        return `${API_URL}${hinhanh}`;
+        // API V1 mới: ảnh lưu trong storage/baiviet
+        return `${API_URL}/storage/baiviet/${hinhanh}`;
     };
 
     return (

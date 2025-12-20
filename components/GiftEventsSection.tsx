@@ -1,50 +1,140 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { type GiftEvent } from "@/lib/api";
-import { useHomeData } from "@/hooks/useHomeData";
 
-// Hàm tạo slug từ tiêu đề
-function createSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Bỏ dấu tiếng Việt
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .replace(/[^a-z0-9\s-]/g, "") // Bỏ ký tự đặc biệt
-    .replace(/\s+/g, "-") // Thay khoảng trắng bằng -
-    .replace(/-+/g, "-") // Bỏ - lặp
-    .trim();
+// Interface cho API quà tặng mới
+interface SanPhamDuocTang {
+  id: number;
+  id_loaibienthe: number;
+  id_sanpham: number;
+  giagoc: number;
+  soluong: number;
+  luottang: number;
+  luotban: number;
+  trangthai: string;
+  deleted_at: string | null;
+  giadagiam: number;
+  pivot: {
+    id_quatang: number;
+    id_bienthe: number;
+    soluongtang: number;
+  };
+  sanpham: {
+    id: number;
+    id_thuonghieu: number;
+    ten: string;
+    slug: string;
+    mota: string;
+    xuatxu: string;
+    sanxuat: string;
+    trangthai: string;
+    giamgia: number;
+    luotxem: number;
+    deleted_at: string | null;
+    thuonghieu: {
+      id: number;
+      ten: string;
+      slug: string;
+      logo: string;
+      trangthai: string;
+    };
+    hinhanhsanpham: Array<{
+      id: number;
+      id_sanpham: number;
+      hinhanh: string;
+      trangthai: string;
+      deleted_at: string | null;
+    }>;
+  };
+  loaibienthe: {
+    id: number;
+    ten: string;
+    trangthai: string;
+  };
+}
+
+interface GiftEventAPI {
+  id: number;
+  id_chuongtrinh: number | null;
+  dieukiensoluong: string;
+  dieukiengiatri: number;
+  tieude: string;
+  slug: string;
+  thongtin: string;
+  hinhanh: string;
+  luotxem: number;
+  ngaybatdau: string;
+  ngayketthuc: string;
+  trangthai: string;
+  deleted_at: string | null;
+  sanphamduoctang: SanPhamDuocTang[];
+}
+
+interface GiftEventResponse {
+  status: number;
+  data: {
+    current_page: number;
+    data: GiftEventAPI[];
+    last_page: number;
+    total: number;
+  };
+}
+
+// Hàm tính thời gian còn lại
+function calculateTimeLeft(endDate: string): string {
+  const now = new Date();
+  const end = new Date(endDate);
+  const diff = end.getTime() - now.getTime();
+
+  if (diff <= 0) return "Đã kết thúc";
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+  if (days > 0) return `${days} ngày ${hours} giờ`;
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  return `${hours} giờ ${minutes} phút`;
 }
 
 export default function GiftEventsSection() {
-  const { data: homeData } = useHomeData();
-  const [gifts, setGifts] = useState<GiftEvent[]>([]);
+  const [gifts, setGifts] = useState<GiftEventAPI[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const itemsPerPage = 4;
+  const itemsPerPage = 5;
 
   useEffect(() => {
-    if (!homeData) return;
-
     let alive = true;
-    try {
-      if (!alive) return;
-      const hotGifts = homeData.data?.hot_gift || [];
-      console.log("✅ Quà tặng từ API:", hotGifts.length, "items");
-      console.log("Hiển thị:", itemsPerPage, "items");
-      console.log("Có mũi tên?", hotGifts.length > itemsPerPage);
-      setGifts(hotGifts);
-    } catch (error) {
-      console.error("Error fetching gift events:", error);
-    } finally {
-      if (alive) setLoading(false);
+
+    async function fetchGiftEvents() {
+      try {
+        const response = await fetch("https://sieuthivina.com/api/v1/qua-tang");
+        const result: GiftEventResponse = await response.json();
+
+        if (!alive) return;
+
+        if (result.status === 200 && result.data?.data) {
+          // Lọc chỉ lấy các quà tặng đang hiển thị và chưa hết hạn
+          const activeGifts = result.data.data.filter((gift) => {
+            const now = new Date();
+            const endDate = new Date(gift.ngayketthuc);
+            return gift.trangthai === "Hiển thị" && endDate > now;
+          });
+          console.log("✅ Quà tặng từ API mới:", activeGifts.length, "items");
+          setGifts(activeGifts);
+        }
+      } catch (error) {
+        console.error("Error fetching gift events:", error);
+      } finally {
+        if (alive) setLoading(false);
+      }
     }
+
+    fetchGiftEvents();
+
     return () => {
       alive = false;
     };
-  }, [homeData]);
+  }, []);
 
   if (loading) {
     return (
@@ -138,12 +228,11 @@ export default function GiftEventsSection() {
           <div className="gift-event-slider arrow-style-two">
             <div className="d-flex flex-wrap justify-content-center" style={{ gap: "12px", marginLeft: "-20px" }}>
               {displayedGifts.map((gift) => {
-                // Tạo slug từ tieude nếu không có sẵn
-                const giftSlug = gift.slug || createSlug(gift.tieude);
+                const timeLeft = calculateTimeLeft(gift.ngayketthuc);
                 return (
                   <div key={gift.id} style={{ width: "244px", display: "inline-block" }}>
                     <div className="product-card p-card border border-gray-100 rounded-16 position-relative transition-2" style={{ height: "340px" }}>
-                      <Link href={`/chi-tiet-qt?slug=${giftSlug}`}>
+                      <Link href={`/chi-tiet-qt?slug=${gift.slug}`}>
                         <div
                           className="rounded-16"
                           style={{
@@ -174,13 +263,69 @@ export default function GiftEventsSection() {
                         </div>
                       </Link>
 
+                      {/* Badge hiển thị số lượng sản phẩm được tặng */}
+                      {gift.sanphamduoctang && gift.sanphamduoctang.length > 0 && (
+                        <div
+                          className="position-absolute d-flex align-items-center gap-4 bg-warning-600 text-white px-8 py-4 rounded-8"
+                          style={{ top: "10px", left: "10px", zIndex: 3 }}
+                        >
+                          <i className="ph-fill ph-gift text-sm"></i>
+                          <span className="text-xs fw-semibold">
+                            x{gift.sanphamduoctang.reduce((sum, sp) => sum + (sp.pivot?.soluongtang || 1), 0)}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Hiển thị ảnh sản phẩm được tặng */}
+                      {gift.sanphamduoctang && gift.sanphamduoctang.length > 0 && (
+                        <div
+                          className="position-absolute d-flex gap-4"
+                          style={{ top: "10px", right: "10px", zIndex: 3 }}
+                        >
+                          {gift.sanphamduoctang.slice(0, 2).map((sp, idx) => {
+                            const productImage = sp.sanpham?.hinhanhsanpham?.[0]?.hinhanh;
+                            const imageUrl = productImage
+                              ? `https://sieuthivina.com/assets/client/images/products/${productImage}`
+                              : gift.hinhanh;
+                            return (
+                              <div
+                                key={sp.id || idx}
+                                className="bg-white rounded-circle border border-2 border-white shadow-sm"
+                                style={{ width: "36px", height: "36px", overflow: "hidden" }}
+                                title={sp.sanpham?.ten || "Sản phẩm tặng"}
+                              >
+                                <img
+                                  src={imageUrl}
+                                  alt={sp.sanpham?.ten || "Sản phẩm tặng"}
+                                  className="w-100 h-100"
+                                  style={{ objectFit: "cover" }}
+                                  onError={(e) => {
+                                    const img = e.currentTarget;
+                                    img.onerror = null;
+                                    img.src = gift.hinhanh;
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+                          {gift.sanphamduoctang.length > 2 && (
+                            <div
+                              className="bg-gray-700 text-white rounded-circle d-flex align-items-center justify-content-center text-xs fw-semibold"
+                              style={{ width: "36px", height: "36px" }}
+                            >
+                              +{gift.sanphamduoctang.length - 2}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div
                         className="card-content p-14 w-100 position-absolute d-flex flex-column align-items-center"
                         style={{ bottom: 0, left: 0, zIndex: 2 }}
                       >
                         <div className="title text-lg fw-semibold mt-5 mb-5 text-center w-100">
                           <Link
-                            href={`/chi-tiet-qt?slug=${giftSlug}`}
+                            href={`/chi-tiet-qt?slug=${gift.slug}`}
                             className="link text-line-2"
                             style={{ color: "white", display: "block" }}
                           >
@@ -193,7 +338,7 @@ export default function GiftEventsSection() {
                             <i className="ph-bold ph-timer"></i>
                           </span>
                           <span className="text-gray-500 text-xs">
-                            Còn lại <strong>{gift.thoigian_conlai}</strong>
+                            Còn lại <strong>{timeLeft}</strong>
                           </span>
                         </div>
                       </div>

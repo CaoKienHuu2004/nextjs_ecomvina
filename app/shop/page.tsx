@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { fetchShopProducts, fetchHomePage, fetchSearchProducts, type ShopCategory, type ShopBrand, type ShopPriceRange, type HomeHotSaleProduct } from "@/lib/api";
+import { fetchShopProducts, fetchHomePage, fetchSearchProducts, fetchV1ShopProducts, type ShopCategory, type ShopBrand, type ShopPriceRange, type HomeHotSaleProduct, type V1ShopProduct, type V1ShopCategory, type V1ShopBrand } from "@/lib/api";
 import type { TopBrand } from "@/lib/api";
 import FullHeader from "@/components/FullHeader";
 
@@ -213,6 +213,14 @@ export default function ShopPage() {
   const [apiBrands, setApiBrands] = useState<ShopBrand[]>([]);
   const [apiPriceRanges, setApiPriceRanges] = useState<ShopPriceRange[]>([]);
 
+  // State cho V1 API filters
+  const [v1Categories, setV1Categories] = useState<V1ShopCategory[]>([]);
+  const [v1Brands, setV1Brands] = useState<V1ShopBrand[]>([]);
+
+  // State cho pagination từ V1 API
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   // Helper function để lấy min/max price từ locgia value (dùng fallback, không phụ thuộc apiPriceRanges để tránh loop)
   const getPriceRangeStatic = useCallback((locgia: string): { min?: number; max?: number } => {
     // Chỉ dùng fallback logic để tránh infinite loop
@@ -343,81 +351,141 @@ export default function ShopPage() {
                 };
               });
 
+            console.log(`📊 Shop - Loaded ${products.length} search results`);
+
           } catch (err) {
             console.error("Home API error:", err);
             products = [];
           }
-        } else {
-          // Nếu có searchQuery → dùng fetchSearchProducts (giống gợi ý tìm kiếm)
-          // Nếu không → dùng fetchShopProducts với category filter
-          if (searchQuery.trim()) {
-            // === TÌM KIẾM: Dùng fetchSearchProducts ===
-            try {
-              console.log('🔍 Shop - Searching with fetchSearchProducts:', searchQuery);
+        } else if (searchQuery.trim()) {
+          // === TÌM KIẾM: Dùng fetchSearchProducts ===
+          try {
+            console.log('🔍 Shop - Searching with fetchSearchProducts:', searchQuery);
 
-              const searchResults = await fetchSearchProducts(searchQuery.trim());
+            const searchResults = await fetchSearchProducts(searchQuery.trim());
 
-              console.log(`✅ Shop - Search found ${searchResults.length} products`);
+            console.log(`✅ Shop - Search found ${searchResults.length} products`);
 
-              // Chuyển đổi từ SearchProduct sang Product format
-              products = searchResults
-                .filter((item) => item.hinh_anh && item.hinh_anh.trim() !== "")
-                .map((item) => {
-                  const ratingValue = item.rating?.average || 0;
-                  const currentPrice = item.gia?.current || 0;
-                  const beforeDiscount = item.gia?.before_discount || 0;
-                  const discountPercent = item.gia?.discount_percent || 0;
+            products = searchResults
+              .filter((item) => item.hinh_anh && item.hinh_anh.trim() !== "")
+              .map((item) => {
+                const ratingValue = item.rating?.average || 0;
+                const currentPrice = item.gia?.current || 0;
+                const beforeDiscount = item.gia?.before_discount || 0;
+                const discountPercent = item.gia?.discount_percent || 0;
 
-                  let imageUrl = item.hinh_anh || "/assets/images/thumbs/default-product.png";
-                  if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/assets/')) {
-                    imageUrl = `/assets/images/thumbs/${imageUrl}`;
-                  }
+                let imageUrl = item.hinh_anh || "/assets/images/thumbs/default-product.png";
+                if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/assets/')) {
+                  imageUrl = `/assets/images/thumbs/${imageUrl}`;
+                }
 
-                  const brandName = item.thuonghieu || "Không rõ";
+                const brandName = item.thuonghieu || "Không rõ";
 
-                  return {
-                    id: item.id,
-                    name: item.ten,
-                    slug: item.slug,
-                    category: "",
-                    brand: brandName,
-                    brandSlug: slugify(brandName || ""),
-                    price: currentPrice,
-                    rating: ratingValue,
-                    image: imageUrl,
-                    discount: discountPercent,
-                    originalPrice: beforeDiscount,
-                    sold: item.sold || 0,
-                  };
-                });
-
-              console.log(`📊 Shop - Loaded ${products.length} search results`);
-
-            } catch (err) {
-              console.error("Search API error:", err);
-              products = [];
-            }
-          } else {
-            // === KHÔNG TÌM KIẾM: Dùng fetchShopProducts với danh mục (giá + thương hiệu lọc client-side) ===
-            try {
-              console.log('🛒 Shop - Fetching from /api/sanphams-all');
-              console.log('🏷️ Shop - Category:', filters.danhmuc || categoryParam);
-
-              const shopData = await fetchShopProducts({
-                danhmuc: filters.danhmuc || categoryParam || undefined,
+                return {
+                  id: item.id,
+                  name: item.ten,
+                  slug: item.slug,
+                  category: "",
+                  brand: brandName,
+                  brandSlug: slugify(brandName || ""),
+                  price: currentPrice,
+                  rating: ratingValue,
+                  image: imageUrl,
+                  discount: discountPercent,
+                  originalPrice: beforeDiscount,
+                  sold: item.sold || 0,
+                };
               });
 
-              console.log('✅ Shop - API Response:', shopData);
-              console.log(`📊 Shop - Total products from API: ${shopData.data?.length || 0}`);
+            console.log(`📊 Shop - Loaded ${products.length} search results`);
 
-              // Lưu filters từ API
+          } catch (err) {
+            console.error("Search API error:", err);
+            products = [];
+          }
+        } else {
+          // === KHÔNG TÌM KIẾM: Dùng fetchV1ShopProducts (API mới từ sieuthivina.com) ===
+          try {
+            console.log('🛒 Shop - Fetching from V1 API: /api/v1/san-pham');
+            console.log('🏷️ Shop - Category:', filters.danhmuc || categoryParam);
+            console.log('🏪 Shop - Brand:', filters.thuonghieu);
+            console.log('📄 Shop - Page:', currentPage);
+
+            const v1ShopData = await fetchV1ShopProducts({
+              danhmuc: filters.danhmuc || categoryParam || undefined,
+              thuonghieu: filters.thuonghieu || undefined,
+              page: currentPage,
+              per_page: productsPerPage,
+            });
+
+            console.log('✅ Shop - V1 API Response:', v1ShopData);
+            console.log(`📊 Shop - Total products from V1 API: ${v1ShopData.data?.data?.length || 0}`);
+            console.log(`📊 Shop - Pagination: Page ${v1ShopData.data?.meta?.current_page}/${v1ShopData.data?.meta?.last_page}, Total: ${v1ShopData.data?.meta?.total}`);
+
+            // Lưu filters từ V1 API
+            if (v1ShopData.filters) {
+              setV1Categories(v1ShopData.filters.categories || []);
+              setV1Brands(v1ShopData.filters.brands || []);
+            }
+
+            // Lưu pagination info
+            if (v1ShopData.data?.meta) {
+              setTotalProducts(v1ShopData.data.meta.total);
+              setTotalPages(v1ShopData.data.meta.last_page);
+            }
+
+            // Chuyển đổi dữ liệu từ V1 API sang format Product
+            products = (v1ShopData.data?.data || [])
+              .filter((item: V1ShopProduct) => item.hinhanh && item.hinhanh.length > 0)
+              .map((item: V1ShopProduct) => {
+                const currentPrice = item.gia?.giadagiam || 0;
+                const beforeDiscount = item.gia?.giagoc || 0;
+                const discountPercent = item.giamgia || 0;
+
+                // Lấy hình ảnh đầu tiên
+                const imageUrl = item.hinhanh?.[0]?.url || "/assets/images/thumbs/default-product.png";
+
+                // Lấy category slug từ danhmuc
+                const categorySlug = item.danhmuc?.[0]?.slug || categoryParam || "";
+
+                // Lấy brand name
+                const brandName = item.thuonghieu?.ten || "Không rõ";
+                const brandSlugValue = slugify(brandName);
+
+                return {
+                  id: item.id,
+                  name: item.tensanpham,
+                  slug: item.slug,
+                  category: categorySlug,
+                  brand: brandName,
+                  brandSlug: brandSlugValue,
+                  price: currentPrice,
+                  rating: 0, // V1 API không có rating
+                  image: imageUrl,
+                  discount: discountPercent,
+                  originalPrice: beforeDiscount,
+                  sold: item.tong_luotban || 0,
+                };
+              });
+
+            console.log(`📊 Shop - Loaded ${products.length} products from V1 API`);
+
+          } catch (err) {
+            console.error("V1 Shop API error:", err);
+            // Fallback to old API if V1 fails
+            console.log('⚠️ Falling back to old API...');
+            try {
+              const shopData = await fetchShopProducts({
+                danhmuc: filters.danhmuc || categoryParam || undefined,
+                thuonghieu: filters.thuonghieu || undefined,
+              });
+
               if (shopData.filters) {
                 setApiCategories(shopData.filters.danhmucs || []);
                 setApiBrands(shopData.filters.thuonghieus || []);
                 setApiPriceRanges(shopData.filters.price_ranges || []);
               }
 
-              // Chuyển đổi dữ liệu từ API sang format Product
               products = (shopData.data || [])
                 .filter((item) => item.hinh_anh && item.hinh_anh.trim() !== "")
                 .map((item) => {
@@ -431,15 +499,12 @@ export default function ShopPage() {
                     imageUrl = `/assets/images/thumbs/${imageUrl}`;
                   }
 
-                  // Lấy category từ categoryParam nếu có
-                  const categorySlug = categoryParam || "";
-
                   return {
                     id: item.id,
                     name: item.ten,
                     slug: item.slug,
-                    category: categorySlug,
-                    brand: "Không rõ", // API không trả về brand trong data
+                    category: categoryParam || "",
+                    brand: "Không rõ",
                     brandSlug: "",
                     price: currentPrice,
                     rating: ratingValue,
@@ -449,11 +514,8 @@ export default function ShopPage() {
                     sold: item.sold?.total_sold || 0,
                   };
                 });
-
-              console.log(`📊 Shop - Loaded ${products.length} products from API`);
-
-            } catch (err) {
-              console.error("Shop API error:", err);
+            } catch (fallbackErr) {
+              console.error("Fallback API also failed:", fallbackErr);
               products = [];
             }
           }
@@ -471,10 +533,21 @@ export default function ShopPage() {
 
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, sourceParam, categoryParam, filters.danhmuc]); // Chỉ fetch lại khi search/source/category thay đổi, giá và thương hiệu lọc client-side
+  }, [searchQuery, sourceParam, categoryParam, filters.danhmuc, filters.thuonghieu]); // Fetch lại khi search/source/category/brand thay đổi, giá lọc client-side
 
-  // Tạo category options từ API
+  // Tạo category options từ API (ưu tiên V1 API)
   const dynamicCategoryOptions = useMemo(() => {
+    // Ưu tiên V1 API categories
+    if (v1Categories.length > 0) {
+      return [
+        { value: "", label: "Tất cả" },
+        ...v1Categories.map(cat => ({
+          value: cat.slug,
+          label: cat.ten
+        }))
+      ];
+    }
+    // Fallback sang old API categories
     if (apiCategories.length > 0) {
       return [
         { value: "", label: "Tất cả" },
@@ -486,9 +559,9 @@ export default function ShopPage() {
       ];
     }
     return CATEGORY_OPTIONS;
-  }, [apiCategories]);
+  }, [v1Categories, apiCategories]);
 
-  // Tạo brand options từ API (ưu tiên danh sách mẫu, loại trùng)
+  // Tạo brand options từ API (ưu tiên V1 API, sau đó danh sách mẫu, loại trùng)
   const dynamicBrandOptions = useMemo(() => {
     const preferredBrands = [
       { value: "stv-trading", label: "STV Trading" },
@@ -506,7 +579,14 @@ export default function ShopPage() {
     // Ưu tiên danh sách mẫu
     preferredBrands.forEach((b) => map.set(b.value, b));
 
-    // Thêm từ API (loại trùng)
+    // Thêm từ V1 API brands (loại trùng)
+    v1Brands.forEach((brand) => {
+      if (!map.has(brand.slug)) {
+        map.set(brand.slug, { value: brand.slug, label: brand.ten });
+      }
+    });
+
+    // Thêm từ old API (loại trùng)
     apiBrands.forEach((brand) => {
       if (!map.has(brand.slug)) {
         map.set(brand.slug, { value: brand.slug, label: brand.ten });
@@ -526,7 +606,7 @@ export default function ShopPage() {
     });
 
     return [{ value: "", label: "Tất cả" }, ...merged];
-  }, [apiBrands]);
+  }, [v1Brands, apiBrands]);
 
   // Tạo price range options từ API
   const dynamicPriceOptions = useMemo(() => {

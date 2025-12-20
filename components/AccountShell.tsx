@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth"; 
+import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
 
 export type AccountShellProps = {
@@ -18,7 +18,7 @@ export default function AccountShell({
   children,
 }: AccountShellProps) {
   const router = useRouter();
-  
+
   // 2. Lấy thông tin user và hàm logout từ AuthContext toàn cục
   // Dữ liệu này đã được đồng bộ từ Server (layout.tsx) nên sẽ có ngay lập tức
   const { user, logout } = useAuth();
@@ -28,10 +28,10 @@ export default function AccountShell({
   const getAvatarUrl = (path?: string) => {
     const defaultAvatar = "/assets/images/default-avatar.png";
     if (!path) return defaultAvatar;
-    
+
     // Nếu ảnh đã là link tuyệt đối (google, facebook...) thì giữ nguyên
     if (path.startsWith("http")) return path;
-    
+
     // Nếu ảnh từ server Laravel (tương đối), nối thêm domain
     // Bạn có thể thay hardcode IP bằng process.env.NEXT_PUBLIC_SERVER_API
     return `https://sieuthivina.cloud${path.startsWith('/') ? '' : '/'}${path}`;
@@ -129,12 +129,12 @@ export default function AccountShell({
                 </div>
               </div>
             </aside>
-            
+
 
             <main className="col-lg-9">
-              
-                {children}
-              
+
+              {children}
+
             </main>
           </div>
         </div>

@@ -4,20 +4,64 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import FullHeader from '@/components/FullHeader';
 
-const API_URL = process.env.NEXT_PUBLIC_SERVER_API || 'https://sieuthivina.cloud';
+const API_URL = 'https://sieuthivina.com';
+
+// Interface cho sản phẩm được tặng
+interface SanPhamDuocTang {
+    id: number;
+    id_loaibienthe: number;
+    id_sanpham: number;
+    giagoc: number;
+    soluong: number;
+    luottang: number;
+    luotban: number;
+    trangthai: string;
+    deleted_at: string | null;
+    giadagiam: number;
+    pivot: {
+        id_quatang: number;
+        id_bienthe: number;
+        soluongtang: number;
+    };
+    sanpham: {
+        id: number;
+        id_thuonghieu: number;
+        ten: string;
+        slug: string;
+        mota: string;
+        xuatxu: string;
+        sanxuat: string;
+        trangthai: string;
+        giamgia: number;
+        luotxem: number;
+        deleted_at: string | null;
+        thuonghieu: {
+            id: number;
+            ten: string;
+            slug: string;
+            logo: string;
+            trangthai: string;
+        };
+        hinhanhsanpham: Array<{
+            id: number;
+            id_sanpham: number;
+            hinhanh: string;
+            trangthai: string;
+            deleted_at: string | null;
+        }>;
+    };
+    loaibienthe: {
+        id: number;
+        ten: string;
+        trangthai: string;
+    };
+}
 
 // Interface cho dữ liệu quà tặng từ API mới
 interface QuaTang {
     id: number;
-    id_bienthe: number;
-    id_chuongtrinh: number;
-    thongtin_thuonghieu: {
-        id_thuonghieu: number;
-        ten_thuonghieu: string;
-        slug_thuonghieu: string;
-        logo_thuonghieu: string;
-    };
-    dieukiensoluong: number;
+    id_chuongtrinh: number | null;
+    dieukiensoluong: string;
     dieukiengiatri: number;
     tieude: string;
     slug: string;
@@ -25,16 +69,18 @@ interface QuaTang {
     hinhanh: string;
     luotxem: number;
     ngaybatdau: string;
-    thoigian_conlai: number;
     ngayketthuc: string;
     trangthai: string;
+    deleted_at: string | null;
+    sanphamduoctang: SanPhamDuocTang[];
 }
 
-interface QuaTangFilters {
-    popular: { label: string; param: string; value: string };
-    newest: { label: string; param: string; value: string };
-    expiring: { label: string; param: string; value: string };
-    thuonghieus: { id: number; ten: string }[];
+interface Provider {
+    id: number;
+    ten: string;
+    slug: string;
+    logo: string;
+    trangthai: string;
 }
 
 interface QuaTangPagination {
@@ -44,22 +90,34 @@ interface QuaTangPagination {
     total: number;
 }
 
-// API trả về object: {data: [...], filters: {...}, pagination: {...}}
+// API trả về object từ /api/v1/qua-tang
 interface QuaTangResponse {
-    data: QuaTang[];
-    filters: QuaTangFilters;
-    pagination: QuaTangPagination;
+    status: number;
+    data: {
+        current_page: number;
+        data: QuaTang[];
+        last_page: number;
+        per_page: number;
+        total: number;
+    };
+    providers: Provider[];
+}
+
+// Hàm tính thời gian còn lại
+function calculateDaysLeft(endDate: string): number {
+    const now = new Date();
+    const end = new Date(endDate);
+    const diff = end.getTime() - now.getTime();
+    if (diff <= 0) return 0;
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
 // Hàm fetch quà tặng từ API mới
-async function fetchQuaTangs(params?: { sort?: string; thuonghieu?: number; page?: number }): Promise<QuaTangResponse> {
-    const url = new URL(`${API_URL}/api/quatangs-all`);
+async function fetchQuaTangs(params?: { page?: number }): Promise<QuaTangResponse> {
+    let url = `${API_URL}/api/v1/qua-tang`;
+    if (params?.page) url += `?page=${params.page}`;
 
-    if (params?.sort) url.searchParams.append('sort', params.sort);
-    if (params?.thuonghieu) url.searchParams.append('thuonghieu', params.thuonghieu.toString());
-    if (params?.page) url.searchParams.append('page', params.page.toString());
-
-    const response = await fetch(url.toString(), {
+    const response = await fetch(url, {
         method: 'GET',
         headers: {
             Accept: 'application/json',
@@ -76,11 +134,10 @@ async function fetchQuaTangs(params?: { sort?: string; thuonghieu?: number; page
 
 export default function GiftPromotionPage() {
     const [gifts, setGifts] = useState<QuaTang[]>([]);
-    const [filters, setFilters] = useState<QuaTangFilters | null>(null);
+    const [providers, setProviders] = useState<Provider[]>([]);
     const [pagination, setPagination] = useState<QuaTangPagination | null>(null);
     const [loading, setLoading] = useState(true);
-    const [sortType, setSortType] = useState<string>('popular');
-    const [selectedThuongHieu, setSelectedThuongHieu] = useState<number | null>(null);
+    const [selectedProvider, setSelectedProvider] = useState<number | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -90,14 +147,35 @@ export default function GiftPromotionPage() {
             try {
                 setLoading(true);
                 const response = await fetchQuaTangs({
-                    sort: sortType,
-                    thuonghieu: selectedThuongHieu || undefined,
                     page: currentPage,
                 });
-                // API trả về object: {data, filters, pagination}
-                setGifts(response.data || []);
-                setFilters(response.filters || null);
-                setPagination(response.pagination || null);
+
+                if (response.status === 200 && response.data?.data) {
+                    // Lọc chỉ lấy các quà tặng đang hiển thị và chưa hết hạn
+                    let activeGifts = response.data.data.filter((gift) => {
+                        const now = new Date();
+                        const endDate = new Date(gift.ngayketthuc);
+                        return gift.trangthai === 'Hiển thị' && endDate > now;
+                    });
+
+                    // Lọc theo provider nếu có
+                    if (selectedProvider !== null) {
+                        activeGifts = activeGifts.filter((gift) => {
+                            return gift.sanphamduoctang?.some(
+                                (sp) => sp.sanpham?.thuonghieu?.id === selectedProvider
+                            );
+                        });
+                    }
+
+                    setGifts(activeGifts);
+                    setProviders(response.providers || []);
+                    setPagination({
+                        current_page: response.data.current_page,
+                        last_page: response.data.last_page,
+                        per_page: response.data.per_page,
+                        total: response.data.total,
+                    });
+                }
             } catch (error) {
                 console.error('Error loading gifts:', error);
                 setGifts([]);
@@ -106,22 +184,15 @@ export default function GiftPromotionPage() {
             }
         };
         loadGifts();
-    }, [sortType, selectedThuongHieu, currentPage]);
+    }, [currentPage, selectedProvider]);
 
-    // Reset page khi thay đổi filter
-    const handleSortChange = (value: string) => {
-        setSortType(value);
-        setCurrentPage(1);
-    };
-
-    const handleThuongHieuChange = (id: number | null) => {
-        setSelectedThuongHieu(id);
+    const handleProviderChange = (id: number | null) => {
+        setSelectedProvider(id);
         setCurrentPage(1);
     };
 
     const handleClearFilter = () => {
-        setSortType('popular');
-        setSelectedThuongHieu(null);
+        setSelectedProvider(null);
         setCurrentPage(1);
     };
 
@@ -171,37 +242,8 @@ export default function GiftPromotionPage() {
                                     <i className="ph ph-x"></i>
                                 </button>
 
-                                {/* Sắp xếp */}
-                                <div className="shop-sidebar__box border border-gray-100 rounded-8 p-26 pb-0 mb-32">
-                                    <h6 className="text-xl border-bottom border-gray-100 pb-16 mb-16">Sắp xếp ưu đãi</h6>
-                                    <ul className="max-h-540 overflow-y-auto scroll-sm">
-                                        {[
-                                            { value: 'popular', label: filters?.popular?.label || 'Phổ biến' },
-                                            { value: 'newest', label: filters?.newest?.label || 'Mới nhất' },
-                                            { value: 'expiring', label: filters?.expiring?.label || 'Sắp hết hạn' }
-                                        ].map(item => (
-                                            <li className="mb-20" key={item.value}>
-                                                <div className="form-check common-check common-radio">
-                                                    <input
-                                                        className="form-check-input"
-                                                        type="radio"
-                                                        name="sort"
-                                                        id={item.value}
-                                                        value={item.value}
-                                                        checked={sortType === item.value}
-                                                        onChange={() => handleSortChange(item.value)}
-                                                    />
-                                                    <label className="form-check-label" htmlFor={item.value}>
-                                                        {item.label}
-                                                    </label>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-
                                 {/* Nhà cung cấp */}
-                                {filters?.thuonghieus && filters.thuonghieus.length > 0 && (
+                                {providers && providers.length > 0 && (
                                     <div className="shop-sidebar__box border border-gray-100 rounded-8 p-26 pb-0 mb-32">
                                         <h6 className="text-xl border-bottom border-gray-100 pb-16 mb-24">Nhà cung cấp</h6>
                                         <ul className="max-h-540 overflow-y-auto scroll-sm">
@@ -210,29 +252,40 @@ export default function GiftPromotionPage() {
                                                     <input
                                                         className="form-check-input"
                                                         type="radio"
-                                                        name="thuonghieu"
-                                                        id="thuonghieu-all"
-                                                        checked={selectedThuongHieu === null}
-                                                        onChange={() => handleThuongHieuChange(null)}
+                                                        name="provider"
+                                                        id="provider-all"
+                                                        checked={selectedProvider === null}
+                                                        onChange={() => handleProviderChange(null)}
                                                     />
-                                                    <label className="form-check-label" htmlFor="thuonghieu-all">
+                                                    <label className="form-check-label" htmlFor="provider-all">
                                                         Tất cả
                                                     </label>
                                                 </div>
                                             </li>
-                                            {filters.thuonghieus.map(th => (
-                                                <li className="mb-16" key={th.id}>
+                                            {providers.map(provider => (
+                                                <li className="mb-16" key={provider.id}>
                                                     <div className="form-check common-check common-radio">
                                                         <input
                                                             className="form-check-input"
                                                             type="radio"
-                                                            name="thuonghieu"
-                                                            id={`thuonghieu-${th.id}`}
-                                                            checked={selectedThuongHieu === th.id}
-                                                            onChange={() => handleThuongHieuChange(th.id)}
+                                                            name="provider"
+                                                            id={`provider-${provider.id}`}
+                                                            checked={selectedProvider === provider.id}
+                                                            onChange={() => handleProviderChange(provider.id)}
                                                         />
-                                                        <label className="form-check-label" htmlFor={`thuonghieu-${th.id}`}>
-                                                            {th.ten}
+                                                        <label className="form-check-label flex-align gap-8" htmlFor={`provider-${provider.id}`}>
+                                                            <img
+                                                                src={`${API_URL}/assets/client/images/brands/${provider.logo}`}
+                                                                alt={provider.ten}
+                                                                className="rounded-circle"
+                                                                style={{ width: '24px', height: '24px', objectFit: 'cover' }}
+                                                                onError={(e) => {
+                                                                    const img = e.currentTarget;
+                                                                    img.onerror = null;
+                                                                    img.src = '/assets/images/thumbs/placeholder.png';
+                                                                }}
+                                                            />
+                                                            {provider.ten}
                                                         </label>
                                                     </div>
                                                 </li>
@@ -285,88 +338,149 @@ export default function GiftPromotionPage() {
                             {!loading && (
                                 <>
                                     <div className="row g-12">
-                                        {gifts.map((gift) => (
-                                            <div key={gift.id} className="col-xxl-6 col-xl-6 col-lg-6 col-sm-12 col-md-6 col-xs-12">
-                                                <div className="flex-align gap-4 border border-gray-100 hover-border-main-600 rounded-6 transition-2" style={{ height: '180px' }}>
-                                                    <Link
-                                                        href={`/chi-tiet-qt?slug=${gift.slug}`}
-                                                        className="rounded-8 bg-gray-50 h-100"
-                                                        style={{ width: '70%' }}
-                                                    >
-                                                        <img
-                                                            src={gift.hinhanh?.startsWith('http') ? gift.hinhanh : `${API_URL}${gift.hinhanh}`}
-                                                            alt={gift.tieude}
-                                                            className="rounded-start-2 h-100 w-100"
-                                                            style={{ objectFit: 'cover' }}
-                                                            onError={(e) => {
-                                                                const img = e.currentTarget;
-                                                                img.onerror = null;
-                                                                img.src = '/assets/images/thumbs/placeholder.png';
-                                                            }}
-                                                        />
-                                                    </Link>
-                                                    <div className="w-100 h-100 align-items-stretch flex-column justify-content-between d-flex px-10 py-10" style={{ height: '180px' }}>
-                                                        {/* Thương hiệu */}
-                                                        {gift.thongtin_thuonghieu && (
-                                                            <div className="flex-align gap-4">
-                                                                <span
-                                                                    className="bg-white text-main-600 border border-1 border-gray-100 rounded-circle flex-center text-xl flex-shrink-0"
-                                                                    style={{ width: '30px', height: '30px' }}
-                                                                >
-                                                                    <img
-                                                                        src={gift.thongtin_thuonghieu.logo_thuonghieu?.startsWith('http')
-                                                                            ? gift.thongtin_thuonghieu.logo_thuonghieu
-                                                                            : `${API_URL}${gift.thongtin_thuonghieu.logo_thuonghieu}`}
-                                                                        alt={gift.thongtin_thuonghieu.ten_thuonghieu}
-                                                                        className="w-100"
-                                                                        onError={(e) => {
-                                                                            const img = e.currentTarget;
-                                                                            img.onerror = null;
-                                                                            img.src = '/assets/images/thumbs/placeholder.png';
-                                                                        }}
-                                                                    />
-                                                                </span>
-                                                                <Link
-                                                                    href={`/san-pham?thuonghieu=${gift.thongtin_thuonghieu.slug_thuonghieu}`}
-                                                                    className="text-sm fw-medium text-gray-600"
-                                                                >
-                                                                    {gift.thongtin_thuonghieu.ten_thuonghieu}
-                                                                </Link>
+                                        {gifts.map((gift) => {
+                                            const daysLeft = calculateDaysLeft(gift.ngayketthuc);
+                                            const totalGiftQuantity = gift.sanphamduoctang?.reduce(
+                                                (sum, sp) => sum + (sp.pivot?.soluongtang || 1), 0
+                                            ) || 0;
+                                            const firstProduct = gift.sanphamduoctang?.[0];
+                                            const brandInfo = firstProduct?.sanpham?.thuonghieu;
+
+                                            return (
+                                                <div key={gift.id} className="col-xxl-6 col-xl-6 col-lg-6 col-sm-12 col-md-6 col-xs-12">
+                                                    <div className="flex-align gap-4 border border-gray-100 hover-border-main-600 rounded-6 transition-2 position-relative" style={{ height: '180px' }}>
+                                                        {/* Badge số lượng quà tặng */}
+                                                        {totalGiftQuantity > 0 && (
+                                                            <div
+                                                                className="position-absolute d-flex align-items-center gap-4 bg-warning-600 text-white px-8 py-4 rounded-8"
+                                                                style={{ top: '8px', left: '8px', zIndex: 3 }}
+                                                            >
+                                                                <i className="ph-fill ph-gift text-sm"></i>
+                                                                <span className="text-xs fw-semibold">x{totalGiftQuantity}</span>
                                                             </div>
                                                         )}
 
-                                                        {/* Tiêu đề */}
-                                                        <h6 className="title text-lg fw-semibold mt-2 mb-2">
-                                                            <Link
-                                                                href={`/chi-tiet-qt?slug=${gift.slug}`}
-                                                                className="link text-line-2"
-                                                                tabIndex={0}
-                                                            >
-                                                                {gift.tieude}
-                                                            </Link>
-                                                        </h6>
+                                                        <Link
+                                                            href={`/chi-tiet-qt?slug=${gift.slug}`}
+                                                            className="rounded-8 bg-gray-50 h-100 position-relative"
+                                                            style={{ width: '70%' }}
+                                                        >
+                                                            <img
+                                                                src={gift.hinhanh}
+                                                                alt={gift.tieude}
+                                                                className="rounded-start-2 h-100 w-100"
+                                                                style={{ objectFit: 'cover' }}
+                                                                onError={(e) => {
+                                                                    const img = e.currentTarget;
+                                                                    img.onerror = null;
+                                                                    img.src = '/assets/images/thumbs/placeholder.png';
+                                                                }}
+                                                            />
 
-                                                        {/* Mô tả */}
-                                                        <span className="fw-normal fst-italic text-gray-600 text-sm mt-4 text-line-2">
-                                                            {gift.thongtin || 'Không có thông tin'}
-                                                        </span>
+                                                            {/* Hiển thị ảnh sản phẩm được tặng */}
+                                                            {gift.sanphamduoctang && gift.sanphamduoctang.length > 0 && (
+                                                                <div
+                                                                    className="position-absolute d-flex gap-4"
+                                                                    style={{ bottom: '8px', right: '8px', zIndex: 3 }}
+                                                                >
+                                                                    {gift.sanphamduoctang.slice(0, 2).map((sp, idx) => {
+                                                                        const productImage = sp.sanpham?.hinhanhsanpham?.[0]?.hinhanh;
+                                                                        const imageUrl = productImage
+                                                                            ? `${API_URL}/assets/client/images/products/${productImage}`
+                                                                            : gift.hinhanh;
+                                                                        return (
+                                                                            <div
+                                                                                key={sp.id || idx}
+                                                                                className="bg-white rounded-circle border border-2 border-white shadow-sm"
+                                                                                style={{ width: '32px', height: '32px', overflow: 'hidden' }}
+                                                                                title={sp.sanpham?.ten || 'Sản phẩm tặng'}
+                                                                            >
+                                                                                <img
+                                                                                    src={imageUrl}
+                                                                                    alt={sp.sanpham?.ten || 'Sản phẩm tặng'}
+                                                                                    className="w-100 h-100"
+                                                                                    style={{ objectFit: 'cover' }}
+                                                                                    onError={(e) => {
+                                                                                        const img = e.currentTarget;
+                                                                                        img.onerror = null;
+                                                                                        img.src = gift.hinhanh;
+                                                                                    }}
+                                                                                />
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                    {gift.sanphamduoctang.length > 2 && (
+                                                                        <div
+                                                                            className="bg-gray-700 text-white rounded-circle d-flex align-items-center justify-content-center text-xs fw-semibold"
+                                                                            style={{ width: '32px', height: '32px' }}
+                                                                        >
+                                                                            +{gift.sanphamduoctang.length - 2}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </Link>
+                                                        <div className="w-100 h-100 align-items-stretch flex-column justify-content-between d-flex px-10 py-10" style={{ height: '180px' }}>
+                                                            {/* Thương hiệu */}
+                                                            {brandInfo && (
+                                                                <div className="flex-align gap-4">
+                                                                    <span
+                                                                        className="bg-white text-main-600 border border-1 border-gray-100 rounded-circle flex-center text-xl flex-shrink-0"
+                                                                        style={{ width: '30px', height: '30px' }}
+                                                                    >
+                                                                        <img
+                                                                            src={`${API_URL}/assets/client/images/brands/${brandInfo.logo}`}
+                                                                            alt={brandInfo.ten}
+                                                                            className="w-100 rounded-circle"
+                                                                            onError={(e) => {
+                                                                                const img = e.currentTarget;
+                                                                                img.onerror = null;
+                                                                                img.src = '/assets/images/thumbs/placeholder.png';
+                                                                            }}
+                                                                        />
+                                                                    </span>
+                                                                    <Link
+                                                                        href={`/san-pham?thuonghieu=${brandInfo.slug}`}
+                                                                        className="text-sm fw-medium text-gray-600"
+                                                                    >
+                                                                        {brandInfo.ten}
+                                                                    </Link>
+                                                                </div>
+                                                            )}
 
-                                                        {/* Thời gian còn lại */}
-                                                        <div className="flex-align gap-8 p-4 bg-gray-50 rounded-6">
-                                                            <span className="text-main-600 text-md d-flex">
-                                                                <i className="ph-bold ph-timer"></i>
+                                                            {/* Tiêu đề */}
+                                                            <h6 className="title text-lg fw-semibold mt-2 mb-2">
+                                                                <Link
+                                                                    href={`/chi-tiet-qt?slug=${gift.slug}`}
+                                                                    className="link text-line-2"
+                                                                    tabIndex={0}
+                                                                >
+                                                                    {gift.tieude}
+                                                                </Link>
+                                                            </h6>
+
+                                                            {/* Mô tả */}
+                                                            <span className="fw-normal fst-italic text-gray-600 text-sm mt-4 text-line-2">
+                                                                {gift.thongtin || 'Không có thông tin'}
                                                             </span>
-                                                            <span className="text-gray-500 text-sm">
-                                                                {gift.thoigian_conlai > 0
-                                                                    ? <>Còn <strong>{gift.thoigian_conlai} ngày</strong></>
-                                                                    : <span className="text-danger-600">Đã hết hạn</span>
-                                                                }
-                                                            </span>
+
+                                                            {/* Thời gian còn lại */}
+                                                            <div className="flex-align gap-8 p-4 bg-gray-50 rounded-6">
+                                                                <span className="text-main-600 text-md d-flex">
+                                                                    <i className="ph-bold ph-timer"></i>
+                                                                </span>
+                                                                <span className="text-gray-500 text-sm">
+                                                                    {daysLeft > 0
+                                                                        ? <>Còn <strong>{daysLeft} ngày</strong></>
+                                                                        : <span className="text-danger-600">Đã hết hạn</span>
+                                                                    }
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
 
                                         {/* Empty state */}
                                         {gifts.length === 0 && !loading && (

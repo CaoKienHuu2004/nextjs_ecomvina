@@ -186,7 +186,7 @@ export default function TopDealsSection({
 
   return (
     <>
-      <section className="pt-24 mt-16 overflow-hidden">
+      <section className="pt-0 mt-0 overflow-hidden">
         <div className="container container-lg">
           <div
             className="p-16 pr-20 border border-gray-100 rounded-10 bg-hotsales position-relative"

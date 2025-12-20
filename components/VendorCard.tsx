@@ -13,6 +13,7 @@ export default function VendorCard({
   productsText?: string;
   cover?: string;
 }) {
+
   return (
     <div className="border border-gray-100 rounded-12 p-16 h-100 d-flex flex-column">
       <Link href={href} className="d-block rounded-8 overflow-hidden border border-gray-100">

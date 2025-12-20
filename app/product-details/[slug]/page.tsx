@@ -301,25 +301,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
             <FullHeader showClassicTopBar={true} showTopNav={false} />
 
             {/* Breadcrumb */}
-            <section className="mb-0 breadcrumb py-26 bg-main-two-50">
-                <div className="container container-lg">
-                    <div className="flex-wrap gap-16 breadcrumb-wrapper flex-between">
-                        <h6 className="mb-0">Chi tiết sản phẩm</h6>
-                        <ul className="flex-wrap gap-8 flex-align">
-                            <li className="text-sm">
-                                <Link href="/" className="gap-8 text-gray-900 flex-align hover-text-main-600">
-                                    <i className="ph ph-house"></i>
-                                    Trang chủ
-                                </Link>
-                            </li>
-                            <li className="flex-align">
-                                <i className="ph ph-caret-right"></i>
-                            </li>
-                            <li className="text-sm text-main-600">Chi tiết sản phẩm</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
+
 
             {/* Product Details */}
             <section className="product-details pt-40 fix-scale-40">
@@ -475,7 +457,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                         </div>
 
 
-                                        <span className="mt-32 pt-30 text-gray-700 border-top border-gray-100 d-block"></span>
+                                        <span class="mt-32 pt-30 text-gray-700 border-top border-gray-100 d-block"></span>
 
                                         <div className="">
                                             <h6 className="mb-16">Loại sản phẩm</h6>
@@ -546,14 +528,15 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                             className="w-32 px-16 text-center border border-gray-100 quantity__input flex-grow-1"
                                             value={quantity}
                                             min={1}
-                                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+
+                                            onChange={(e) => setQuantity(Math.max(10, parseInt(e.target.value) || 1))}
                                             title="Số lượng sản phẩm"
                                             aria-label="Số lượng sản phẩm"
                                         />
                                         <button
                                             type="button"
                                             className="flex-shrink-0 w-48 h-48 quantity__plus text-neutral-600 bg-gray-50 flex-center hover-bg-main-600 hover-text-white"
-                                            onClick={() => setQuantity(quantity + 1)}
+                                            onClick={() => setQuantity(Math.min(10, quantity + 1))}
                                             title="Tăng số lượng"
                                             aria-label="Tăng số lượng"
                                         >
@@ -563,7 +546,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                 </div>
 
                                 <div className="flex-wrap gap-8 pb-16 mb-24 border-gray-100 flex-between border-bottom">
-                                    <span className="text-gray-500">Tổng giá</span>
+                                    <span className="text-gray-500">Đơn Giá</span>
                                     <h6 className="mb-0 text-lg">
                                         {(displayPrice * quantity).toLocaleString('vi-VN')} đ
                                     </h6>
@@ -692,9 +675,14 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                         <div className="p-24 product-dContent__box">
                             <div className="tab-content">
                                 <div className="tab-pane fade show active">
-                                    <p className="text-gray-700">
-                                        Nước Yến Sào cao cấp NEST100 được sản xuất từ yến sào, chứa nhiều acid amin và nguyên tố vi lượng cần thiết giúp Giải khát và làm mát cơ thể an toàn. Tăng cường sức khỏe, giảm căng thẳng, mệt mỏi.
-                                    </p>
+                                    {product?.mota ? (
+                                        <div
+                                            className="text-gray-700 product-description"
+                                            dangerouslySetInnerHTML={{ __html: product.mota }}
+                                        />
+                                    ) : (
+                                        <p className="text-gray-500">Chưa có mô tả cho sản phẩm này.</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -704,141 +692,88 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                         <div className="row g-4 justify-content-center">
                             <div className="col-lg-6">
                                 <h6 className="mb-24 title">Đánh giá về sản phẩm</h6>
-                                <div className="gap-24 border-gray-100 d-flex align-items-start pb-44 border-bottom mb-44">
-                                    <img src="https://amban.vn/assets/client/images/thumbs/comment-img1.png" alt="" className="flex-shrink-0 w-52 h-52 object-fit-cover rounded-circle" />
-                                    <div className="flex-grow-1">
-                                        <div className="gap-8 flex-between align-items-start">
-                                            <div>
-                                                <h6 className="mb-12 text-md">Nicolas cage</h6>
-                                                <div className="gap-8 flex-align">
-                                                    <span className="text-md fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-md fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-md fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-md fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-md fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
+                                {product?.danh_gia && product.danh_gia.length > 0 ? (
+                                    product.danh_gia.map((review) => (
+                                        <div key={review.id} className="gap-24 border-gray-100 d-flex align-items-start pb-44 border-bottom mb-44">
+                                            <div className="flex-shrink-0 w-52 h-52 bg-main-100 rounded-circle flex-center">
+                                                <span className="text-main-600 fw-bold text-lg">
+                                                    {review.hoten?.charAt(0)?.toUpperCase() || 'K'}
+                                                </span>
+                                            </div>
+                                            <div className="flex-grow-1">
+                                                <div className="gap-8 flex-between align-items-start">
+                                                    <div>
+                                                        <h6 className="mb-12 text-md">{review.hoten || 'Khách hàng'}</h6>
+                                                        <div className="gap-8 flex-align">
+                                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                                <span
+                                                                    key={star}
+                                                                    className={`text-md fw-medium d-flex ${star <= review.diem ? 'text-warning-600' : 'text-gray-400'}`}
+                                                                >
+                                                                    <i className="ph-fill ph-star"></i>
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
                                                 </div>
+                                                <p className="mt-10 text-gray-700">{review.noidung}</p>
                                             </div>
-                                            <span className="text-sm text-gray-800">3 ngày trước</span>
                                         </div>
-                                        <p className="mt-10 text-gray-700">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour</p>
-                                        <div className="gap-20 mt-10 flex-align">
-                                            <button className="gap-12 text-gray-700 flex-align hover-text-main-600">
-                                                <i className="ph-bold ph-thumbs-up"></i>
-                                                Hữu ích
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="mt-56">
-                                    <div>
-                                        <h6 className="mb-24">Viết bài đánh giá</h6>
-                                        <span className="mb-8 text-heading">Bạn có hài lòng với sản phẩm này không?</span>
-                                        <div className="gap-8 flex-align">
-                                            <span className="text-2xl fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                            <span className="text-2xl fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                            <span className="text-2xl fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                            <span className="text-2xl fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                            <span className="text-2xl fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                        </div>
-                                    </div>
-                                    <div className="mt-32">
-                                        <form action="#">
-                                            <div className="mb-10">
-                                                <label htmlFor="desc" className="mb-8 text-neutral-600">Nội dung</label>
-                                                <textarea className="common-input rounded-8" id="desc" placeholder="Nhập những dòng suy nghĩ của bạn..."></textarea>
-                                            </div>
-                                            <button type="submit" className="mt-20 btn btn-main rounded-pill">Đăng tải</button>
-                                        </form>
-                                    </div>
-                                </div>
+                                    ))
+                                ) : (
+                                    <p className="text-gray-500">Chưa có đánh giá nào cho sản phẩm này.</p>
+                                )}
                             </div>
                             <div className="col-lg-6">
                                 <div className="ms-xxl-5">
                                     <h6 className="mb-24 text-center">Đánh giá từ khách hàng</h6>
                                     <div className="flex-wrap d-flex gap-44 justify-content-center">
                                         <div className="flex-shrink-0 px-40 text-center border border-gray-100 rounded-8 py-52 flex-center flex-column">
-                                            <h2 className="mb-6 text-main-600">4.8</h2>
+                                            <h2 className="mb-6 text-main-600">
+                                                {(product?.rating && 'average' in product.rating) ? product.rating.average.toFixed(1) : '0.0'}
+                                            </h2>
                                             <div className="gap-8 flex-center">
-                                                <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
+                                                {[1, 2, 3, 4, 5].map((star) => {
+                                                    const avg = (product?.rating && 'average' in product.rating) ? product.rating.average : 0;
+                                                    return (
+                                                        <span
+                                                            key={star}
+                                                            className={`text-xs fw-medium d-flex ${star <= Math.round(avg) ? 'text-warning-600' : 'text-gray-400'}`}
+                                                        >
+                                                            <i className="ph-fill ph-star"></i>
+                                                        </span>
+                                                    );
+                                                })}
                                             </div>
                                             <span className="mt-16 text-gray-500">Điểm đánh giá trung bình</span>
                                         </div>
                                         <div className="px-24 py-40 border border-gray-100 rounded-8 flex-grow-1">
-                                            <div className="gap-8 mb-20 flex-align">
-                                                <span className="flex-shrink-0 text-gray-900">5</span>
-                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-label="5 sao" {...{ 'aria-valuenow': 70, 'aria-valuemin': 0, 'aria-valuemax': 100 }}>
-                                                    <div className="progress-bar bg-main-600 rounded-pill" style={{ width: '70%' }}></div>
-                                                </div>
-                                                <div className="gap-4 flex-align">
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                </div>
-                                                <span className="flex-shrink-0 text-gray-900">124</span>
-                                            </div>
-                                            <div className="gap-8 mb-20 flex-align">
-                                                <span className="flex-shrink-0 text-gray-900">4</span>
-                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-label="4 sao" {...{ 'aria-valuenow': 50, 'aria-valuemin': 0, 'aria-valuemax': 100 }}>
-                                                    <div className="progress-bar bg-main-600 rounded-pill" style={{ width: '50%' }}></div>
-                                                </div>
-                                                <div className="gap-4 flex-align">
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs text-gray-400 fw-medium d-flex"><i className="ph-fill ph-star"></i></span>
-                                                </div>
-                                                <span className="flex-shrink-0 text-gray-900">52</span>
-                                            </div>
-                                            <div className="gap-8 mb-20 flex-align">
-                                                <span className="flex-shrink-0 text-gray-900">3</span>
-                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-label="3 sao" {...{ 'aria-valuenow': 35, 'aria-valuemin': 0, 'aria-valuemax': 100 }}>
-                                                    <div className="progress-bar bg-main-600 rounded-pill" style={{ width: '35%' }}></div>
-                                                </div>
-                                                <div className="gap-4 flex-align">
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs text-gray-400 fw-medium d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs text-gray-400 fw-medium d-flex"><i className="ph-fill ph-star"></i></span>
-                                                </div>
-                                                <span className="flex-shrink-0 text-gray-900">12</span>
-                                            </div>
-                                            <div className="gap-8 mb-20 flex-align">
-                                                <span className="flex-shrink-0 text-gray-900">2</span>
-                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-label="2 sao" {...{ 'aria-valuenow': 20, 'aria-valuemin': 0, 'aria-valuemax': 100 }}>
-                                                    <div className="progress-bar bg-main-600 rounded-pill" style={{ width: '20%' }}></div>
-                                                </div>
-                                                <div className="gap-4 flex-align">
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs text-gray-400 fw-medium d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs text-gray-400 fw-medium d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs text-gray-400 fw-medium d-flex"><i className="ph-fill ph-star"></i></span>
-                                                </div>
-                                                <span className="flex-shrink-0 text-gray-900">5</span>
-                                            </div>
-                                            <div className="gap-8 mb-0 flex-align">
-                                                <span className="flex-shrink-0 text-gray-900">1</span>
-                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-label="1 sao" {...{ 'aria-valuenow': 5, 'aria-valuemin': 0, 'aria-valuemax': 100 }}>
-                                                    <div className="progress-bar bg-main-600 rounded-pill" style={{ width: '5%' }}></div>
-                                                </div>
-                                                <div className="gap-4 flex-align">
-                                                    <span className="text-xs fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs text-gray-400 fw-medium d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs text-gray-400 fw-medium d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs text-gray-400 fw-medium d-flex"><i className="ph-fill ph-star"></i></span>
-                                                    <span className="text-xs text-gray-400 fw-medium d-flex"><i className="ph-fill ph-star"></i></span>
-                                                </div>
-                                                <span className="flex-shrink-0 text-gray-900">2</span>
-                                            </div>
+                                            {[5, 4, 3, 2, 1].map((starLevel) => {
+                                                const ratingData = product?.rating && 'sao_5' in product.rating ? product.rating : null;
+                                                const count = ratingData ? ratingData[`sao_${starLevel}` as keyof typeof ratingData] as number : 0;
+                                                const total = ratingData ? ratingData.count : 0;
+                                                const percentage = total > 0 ? (count / total) * 100 : 0;
+
+                                                return (
+                                                    <div key={starLevel} className={`gap-8 flex-align ${starLevel > 1 ? 'mb-20' : 'mb-0'}`}>
+                                                        <span className="flex-shrink-0 text-gray-900">{starLevel}</span>
+                                                        <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-label={`${starLevel} sao`}>
+                                                            <div className="progress-bar bg-main-600 rounded-pill" style={{ width: `${percentage}%` }}></div>
+                                                        </div>
+                                                        <div className="gap-4 flex-align">
+                                                            {[1, 2, 3, 4, 5].map((s) => (
+                                                                <span
+                                                                    key={s}
+                                                                    className={`text-xs fw-medium d-flex ${s <= starLevel ? 'text-warning-600' : 'text-gray-400'}`}
+                                                                >
+                                                                    <i className="ph-fill ph-star"></i>
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                        <span className="flex-shrink-0 text-gray-900">{count}</span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 </div>

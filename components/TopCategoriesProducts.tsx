@@ -18,28 +18,22 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
     const { data: homeData } = useHomeData();
 
     useEffect(() => {
-        if (!homeData) return;
-
+        if (!homeData) {
+            setLoading(true);
+            return;
+        }
         setLoading(true);
         try {
             const topCategories = homeData.data?.top_categories || [];
 
-            // Chỉ hiển thị 5 danh mục cụ thể (theo thứ tự API trả về)
-            const allowedCategories = ["Bách hóa", "Thực phẩm - đồ ăn", "Làm đẹp", "Thiết bị y tế", "Thực phẩm chức năng"];
-
+            // Hiển thị tất cả danh mục từ API danhmuchangdau (Sức khỏe, Làm đẹp, Thiết bị y tế, Bách hoá, Khu ăn uống)
+            // Không filter - lấy tất cả danh mục từ API
             const filteredCategories = topCategories
-                .filter((cat: HomeTopCategoryWithProducts) => allowedCategories.includes(cat.ten))
                 .map((cat: HomeTopCategoryWithProducts) => ({
                     ...cat,
                     // Giới hạn tối đa 12 sản phẩm mỗi category
                     sanpham: cat.sanpham.slice(0, 12)
                 }));
-
-            console.log("📊 Filtered Categories:", filteredCategories.length);
-            filteredCategories.forEach((cat: HomeTopCategoryWithProducts) => {
-                console.log(`\n🏷️ ${cat.ten}: ${cat.sanpham.length} sản phẩm`);
-                console.log("   Danh sách sản phẩm:", cat.sanpham.map(p => ({ id: p.id, ten: p.ten })));
-            });
 
             setCategories(filteredCategories);
 
@@ -55,8 +49,11 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
         } finally {
             setLoading(false);
         }
-    }, [homeData]); if (loading) return <div>Đang tải danh mục...</div>;
+    }, [homeData]);
+
+    if (loading && categories.length === 0) return <div>Đang tải danh mục...</div>;
     if (error) return <div className="text-red-500">Lỗi: {error}</div>;
+    if (categories.length === 0) return <div className="text-gray-500">Không có danh mục nào</div>;
 
     return (
         <div className="top-categories-section">
@@ -69,7 +66,7 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
                         {categories.map((cat, idx) => (
                             <li key={cat.id} className="nav-item" role="presentation">
                                 <button
-                                    className={`nav-link fw-medium text-sm border${activeTab === idx ? " active" : ""}`}
+                                    className={`nav-link fw-medium border${activeTab === idx ? " active" : ""}`}
                                     id={`tab-${cat.id}`}
                                     type="button"
                                     role="tab"
@@ -81,7 +78,8 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
                                         borderColor: "#009999",
                                         color: activeTab === idx ? "#fff" : "#009999",
                                         backgroundColor: activeTab === idx ? "#009999" : "#fff",
-                                        padding: "8px 18px",
+                                        padding: "14px 30px",
+                                        fontSize: "14px",
                                         transition: "all 0.2s ease"
                                     }}
                                 >

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { flyToCart } from "@/utils/flyToCart";
@@ -33,6 +33,7 @@ type Props = {
   thuonghieu?: string;  // Thương hiệu
   slug?: string;        // Slug sản phẩm
   uiStyle?: "default" | "shop";
+  hasVariant?: boolean;
 };
 
 const colorMap: Record<BadgeColor, string> = {
@@ -90,6 +91,7 @@ export default function ProductCardV2(props: Props) {
     id_chuongtrinh,
     slug,
     uiStyle = "default",
+    hasVariant,
   } = props;
 
   // UI variants
@@ -107,6 +109,8 @@ export default function ProductCardV2(props: Props) {
   const oldPriceClass = isShopStyle ? "text-gray-400 text-sm fw-semibold text-decoration-line-through" : "text-gray-400 text-md fw-semibold text-decoration-line-through";
 
   const dest = href || "/product-details";
+  const canQuickAdd = hasVariant ?? Boolean(variantId);
+  const [isThumbHovered, setIsThumbHovered] = useState(false);
   const priceText = fmtVND(price) || "";
   const oldText = fmtVND(oldPrice);
   const ratingText =
@@ -149,12 +153,76 @@ export default function ProductCardV2(props: Props) {
         slug: slug || href?.split('/').pop() || "",
       };
 
-      await addToCart(productInput, 1,props.id_chuongtrinh);
+      await addToCart(productInput, 1, props.id_chuongtrinh);
       const el = thumbRef.current;
       if (el) flyToCart(el);
     } catch (err) {
       console.error("❌ ProductCardV2: Error:", err);
     }
+  };
+
+  const thumbImage = (
+    <Image
+      src={img}
+      alt={title}
+      width={220}
+      height={180}
+      className="w-auto"
+      unoptimized={/^https?:\/\//.test(img)}
+    />
+  );
+
+  const renderThumb = () => {
+    if (canQuickAdd) {
+      return (
+        <div
+          className="product-card__thumb-wrapper position-relative"
+          onMouseEnter={() => setIsThumbHovered(true)}
+          onMouseLeave={() => setIsThumbHovered(false)}
+        >
+          <div
+            ref={thumbRef}
+            className="overflow-hidden product-card__thumb flex-center rounded-8 bg-gray-50 position-relative"
+          >
+            {thumbImage}
+          </div>
+          <div
+            className="product-card__overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+            style={{
+              background: "rgba(0,0,0,0.45)",
+              borderRadius: "8px",
+              opacity: isThumbHovered ? 1 : 0,
+              pointerEvents: isThumbHovered ? "auto" : "none",
+              transition: "opacity 0.25s ease",
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="btn bg-main-600 text-white px-20 py-12 rounded-8 fw-semibold d-flex align-items-center gap-2 hover-bg-main-700 transition-2"
+              style={{
+                boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
+                transform: isThumbHovered ? "translateY(0)" : "translateY(8px)",
+                transition: "transform 0.25s ease",
+              }}
+            >
+              <i className="ph ph-shopping-cart text-lg" />
+              Thêm vào giỏ
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        href={dest}
+        ref={thumbRef}
+        className="overflow-hidden product-card__thumb flex-center rounded-8 bg-gray-50 position-relative"
+      >
+        {thumbImage}
+      </Link>
+    );
   };
 
   return (
@@ -200,20 +268,7 @@ export default function ProductCardV2(props: Props) {
 
 
       {/* === THUMBNAIL === */}
-      <Link
-        href={dest}
-        ref={thumbRef}
-        className="overflow-hidden product-card__thumb flex-center rounded-8 bg-gray-50 position-relative"
-      >
-        <Image
-          src={img}
-          alt={title}
-          width={220}
-          height={180}
-          className="w-auto"
-          unoptimized={/^https?:\/\//.test(img)}
-        />
-      </Link>
+      {renderThumb()}
 
       {/* === CONTENT === */}
       <div className={contentClass}>

@@ -19,9 +19,14 @@ export default function Header() {
               className="w-full rounded-full bg-neutral-100 py-2.5 pl-4 pr-12 outline-none"
               placeholder="Tìm kiếm sản phẩm, danh mục hoặc cửa hàng..."
             />
-            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-main-600">
+
+            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600"
+              aria-label="Tìm kiếm"
+            >
+
               <i className="ph-bold ph-magnifying-glass"></i>
             </button>
+
           </form>
           <div className="flex items-center gap-3 text-sm">
             <Link href="/yeu-thich" className="inline-flex items-center gap-2">

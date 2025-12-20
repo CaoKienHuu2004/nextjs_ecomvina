@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import Image from "next/image";
 import LatestProductsSection from "@/components/LatestProductsSection";
 import MostInterestedSection from "@/components/MostInterestedSection";
 import TopBrandsStaticSection from "@/components/TopBrandsStaticSection";
@@ -15,8 +14,10 @@ import TopDealsSection from "@/components/TopDealsSection";
 import GiftEventsSection from "@/components/GiftEventsSection";
 import TopCategoriesProducts from "@/components/TopCategoriesProducts";
 import BlogSection from "@/components/BlogSection";
+
 import { HomeDataProvider } from "@/hooks/useHomeData";
 import FullHeader from "@/components/FullHeader";
+import DynamicBanners from "@/components/DynamicBanners";
 
 // types for jQuery-like object (minimal)
 // Loại bỏ các kiểu tạm cho jQuery slick (đã chuyển sang Swiper)
@@ -95,56 +96,8 @@ export default function Home() {
         <GiftEventsSection />
         {/* ========================= QUÀ TẶNG End ================================ */}
 
-        {/* ========================= 3 Small Banners ============================== */}
-        <div className="container px-0 mt-10 container-lg mb-70">
-          <div className="row">
-            <div className="col-lg-4">
-              <div className="rounded-5">
-                <a href="#" className="p-0 m-0">
-                  <Image
-                    src="/assets/images/bg/banner3_hopquatang.webp"
-                    alt="Banner 1"
-                    width={600}
-                    height={260}
-                    quality={100}
-                    className="mb-10 banner-img w-100 object-fit-cover rounded-10"
-                    style={{ height: '130px', objectFit: 'cover' }}
-                  />
-                </a>
-              </div>
-            </div>
-            <div className="col-lg-4">
-              <div className="rounded-5">
-                <a href="#" className="p-0 m-0">
-                  <Image
-                    src="/assets/images/bg/banner3_vienuonggiairuou.webp"
-                    alt="Banner 2"
-                    width={600}
-                    height={260}
-                    quality={100}
-                    className="mb-10 banner-img w-100 object-fit-cover rounded-10"
-                    style={{ height: '130px', objectFit: 'cover' }}
-                  />
-                </a>
-              </div>
-            </div>
-            <div className="col-lg-4">
-              <div className="rounded-5">
-                <a href="#" className="p-0 m-0">
-                  <Image
-                    src="/assets/images/bg/banner3_yensam.webp"
-                    alt="Banner 3"
-                    width={600}
-                    height={260}
-                    quality={100}
-                    className="mb-10 banner-img w-100 object-fit-cover rounded-10"
-                    style={{ height: '130px', objectFit: 'cover' }}
-                  />
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* ========================= 3 Small Banners (Dynamic) ============================== */}
+        <DynamicBanners bannerType="promotion" />
 
         {/* ========================= DANH MỤC HÀNG ĐẦU ================================ */}
         <section className="mt-10 overflow-hidden trending-productss fix-scale-80" style={{ marginBottom: 0 }}>
@@ -159,20 +112,8 @@ export default function Home() {
         </section>
         {/* ========================= DANH MỤC HÀNG ĐẦU End ================================ */}
 
-        {/* ========================= Banner Image ============================== */}
-        <div className="container mt-0 mb-24 container-lg" style={{ marginTop: -220 }}>
-          <div className="text-center">
-            <a href="#" className="p-0 m-0 w-100 d-block">
-              <Image
-                src="/assets/images/bg/banner5.webp"
-                alt="Banner"
-                width={1920}
-                height={600}
-                className="h-auto banner-img w-100 object-fit-cover rounded-10"
-              />
-            </a>
-          </div>
-        </div>
+        {/* ========================= Banner Image (Dynamic) ============================== */}
+        <DynamicBanners bannerType="ads" />
         {/* ========================= Banner Image End ============================== */}
         {/* ========================= THƯƠNG HIỆU HÀNG ĐẦU (HTML section) ================================ */}
         <TopBrandsStaticSection />
@@ -187,7 +128,7 @@ export default function Home() {
         {/* Được quan tâm nhiều nhất */}
         <MostInterestedSection />
 
-        {/* Bài viết khám phá */}
+        {/* Bài viết khám phá (đã tích hợp baivietnoibat từ API V1) */}
         <BlogSection />
       </main>
     </HomeDataProvider >

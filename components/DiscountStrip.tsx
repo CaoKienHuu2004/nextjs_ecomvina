@@ -47,15 +47,15 @@ export default function DiscountStrip() {
                 alignItems: "center",
                 gap: 10,
               }}
-              onClick={() => navigator.clipboard?.writeText("FREE25BAC").catch(() => {})}
+              onClick={() => navigator.clipboard?.writeText("FREE25BAC").catch(() => { })}
               aria-label="Copy discount code"
               title="Copy discount code"
             >
               FREE25BAC
               {/* small clipboard icon */}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                <path d="M9 6h6a2 2 0 012 2v10a2 2 0 01-2 2H9a2 2 0 01-2-2V8a2 2 0 012-2z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M9 4h6v2H9V4z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 6h6a2 2 0 012 2v10a2 2 0 01-2 2H9a2 2 0 01-2-2V8a2 2 0 012-2z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M9 4h6v2H9V4z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
 
