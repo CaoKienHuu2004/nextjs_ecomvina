@@ -72,13 +72,28 @@ export default function Page() {
     const validate = (): string | null => {
         if (!form.hoten.trim()) return "Vui lòng nhập họ tên";
         if (!form.username.trim()) return "Vui lòng nhập tên đăng nhập";
+
+        // Email
         if (!form.email.trim()) return "Vui lòng nhập email";
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "Email không hợp lệ";
+        // Cấu trúc email cơ bản
+        if (!/^[^\s@]+@[^\s@]+$/.test(form.email)) return "Email không hợp lệ";
+        // Kiểm tra domain cho phép
+        const allowedDomains = ["fpt.edu.vn", "gmail.com"];
+        const emailParts = form.email.trim().toLowerCase().split("@");
+        if (emailParts.length !== 2) return "Email không hợp lệ";
+        const domain = emailParts[1];
+        if (!allowedDomains.includes(domain)) return `Email phải thuộc một trong các domain: ${allowedDomains.join(", ")}`;
+
+        // Số điện thoại: bắt buộc, 10 chữ số và bắt đầu bằng 0
         if (!form.sodienthoai.trim()) return "Vui lòng nhập số điện thoại";
-        if (!/^\d{9,12}$/.test(form.sodienthoai)) return "Số điện thoại không hợp lệ";
+        if (!/^0\d{9}$/.test(form.sodienthoai)) return "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 0";
+
+        // Mật khẩu: ít nhất 8 ký tự, có chữ hoa, chữ thường, chữ số và ký tự đặc biệt
         if (!form.password) return "Vui lòng nhập mật khẩu";
-        if (form.password.length < 6) return "Mật khẩu tối thiểu 6 ký tự";
+        const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+        if (!pwdRegex.test(form.password)) return "Mật khẩu phải có tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt";
         if (form.password !== form.password_confirmation) return "Hai mật khẩu không trùng khớp";
+
         return null;
     };
 
@@ -155,13 +170,13 @@ export default function Page() {
 
             {/* Main Content */}
             <div className="page">
-                <section className="account pt-20">
+                <section className="pt-20 account">
                     <div className="container container-lg">
                         <div className="row gy-4 justify-content-center">
                             {/* Register Card */}
                             <div className="col-xl-5">
-                                <div className="border border-gray-100 rounded-16 px-24 py-40">
-                                    <h6 className="text-xl mb-32">Đăng ký tài khoản</h6>
+                                <div className="px-24 py-40 border border-gray-100 rounded-16">
+                                    <h6 className="mb-32 text-xl">Đăng ký tài khoản</h6>
 
                                     {/* Message */}
                                     {message && (
@@ -178,13 +193,13 @@ export default function Page() {
                                     <form onSubmit={handleSubmit}>
                                         {/* Họ và tên */}
                                         <div className="row">
-                                            <div className="col-md-12 mb-24">
-                                                <label htmlFor="hoten" className="text-neutral-900 text-md mb-8 fw-medium">
+                                            <div className="mb-24 col-md-12">
+                                                <label htmlFor="hoten" className="mb-8 text-neutral-900 text-md fw-medium">
                                                     Họ và tên <span className="text-danger">*</span>
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    className="py-14 px-18 text-sm common-input"
+                                                    className="text-sm py-14 px-18 common-input"
                                                     id="hoten"
                                                     name="hoten"
                                                     placeholder="Nhập họ và tên"
@@ -196,13 +211,13 @@ export default function Page() {
 
                                         {/* Tên đăng nhập */}
                                         <div className="row">
-                                            <div className="col-md-12 mb-24">
-                                                <label htmlFor="username" className="text-neutral-900 text-md mb-8 fw-medium">
+                                            <div className="mb-24 col-md-12">
+                                                <label htmlFor="username" className="mb-8 text-neutral-900 text-md fw-medium">
                                                     Tên đăng nhập <span className="text-danger">*</span>
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    className="py-14 px-18 text-sm common-input"
+                                                    className="text-sm py-14 px-18 common-input"
                                                     id="username"
                                                     name="username"
                                                     placeholder="Nhập tên đăng nhập"
@@ -214,13 +229,13 @@ export default function Page() {
 
                                         {/* Email và Số điện thoại */}
                                         <div className="row">
-                                            <div className="col-md-6 mb-24">
-                                                <label htmlFor="email" className="text-neutral-900 text-md mb-8 fw-medium">
+                                            <div className="mb-24 col-md-6">
+                                                <label htmlFor="email" className="mb-8 text-neutral-900 text-md fw-medium">
                                                     Email <span className="text-danger">*</span>
                                                 </label>
                                                 <input
                                                     type="email"
-                                                    className="py-14 px-18 text-sm common-input"
+                                                    className="text-sm py-14 px-18 common-input"
                                                     id="email"
                                                     name="email"
                                                     placeholder="Nhập email"
@@ -228,13 +243,13 @@ export default function Page() {
                                                     onChange={handleChange}
                                                 />
                                             </div>
-                                            <div className="col-md-6 mb-24">
-                                                <label htmlFor="sodienthoai" className="text-neutral-900 text-md mb-8 fw-medium">
+                                            <div className="mb-24 col-md-6">
+                                                <label htmlFor="sodienthoai" className="mb-8 text-neutral-900 text-md fw-medium">
                                                     Số điện thoại <span className="text-danger">*</span>
                                                 </label>
                                                 <input
                                                     type="tel"
-                                                    className="py-14 px-18 text-sm common-input"
+                                                    className="text-sm py-14 px-18 common-input"
                                                     id="sodienthoai"
                                                     name="sodienthoai"
                                                     placeholder="Nhập số điện thoại"
@@ -246,14 +261,14 @@ export default function Page() {
 
                                         {/* Mật khẩu */}
                                         <div className="row">
-                                            <div className="col-md-6 mb-24">
-                                                <label htmlFor="password" className="text-neutral-900 text-md mb-8 fw-medium">
+                                            <div className="mb-24 col-md-6">
+                                                <label htmlFor="password" className="mb-8 text-neutral-900 text-md fw-medium">
                                                     Mật khẩu <span className="text-danger">*</span>
                                                 </label>
                                                 <div className="position-relative">
                                                     <input
                                                         type={showPassword ? "text" : "password"}
-                                                        className="py-14 px-18 text-sm common-input"
+                                                        className="text-sm py-14 px-18 common-input"
                                                         id="password"
                                                         name="password"
                                                         placeholder="Nhập mật khẩu"
@@ -267,14 +282,14 @@ export default function Page() {
                                                     ></span>
                                                 </div>
                                             </div>
-                                            <div className="col-md-6 mb-24">
-                                                <label htmlFor="password_confirmation" className="text-neutral-900 text-md mb-8 fw-medium">
+                                            <div className="mb-24 col-md-6">
+                                                <label htmlFor="password_confirmation" className="mb-8 text-neutral-900 text-md fw-medium">
                                                     Xác nhận mật khẩu <span className="text-danger">*</span>
                                                 </label>
                                                 <div className="position-relative">
                                                     <input
                                                         type={showConfirmPassword ? "text" : "password"}
-                                                        className="py-14 px-18 text-sm common-input"
+                                                        className="text-sm py-14 px-18 common-input"
                                                         id="password_confirmation"
                                                         name="password_confirmation"
                                                         placeholder="Nhập lại mật khẩu"
@@ -303,8 +318,8 @@ export default function Page() {
 
                                         {/* Nút đăng ký */}
                                         <div className="mt-20">
-                                            <div className="d-flex gap-3">
-                                                <button type="submit" className="btn btn-main py-14 px-40" disabled={loading}>
+                                            <div className="gap-3 d-flex">
+                                                <button type="submit" className="px-40 btn btn-main py-14" disabled={loading}>
                                                     {loading ? "Đang xử lý..." : "Đăng ký"}
                                                 </button>
                                             </div>
@@ -312,10 +327,10 @@ export default function Page() {
 
                                         {/* Link đăng nhập */}
                                         <div className="mt-20">
-                                            <div className="d-flex gap-3">
-                                                <span className="text-gray-900 text-sm fw-normal">
+                                            <div className="gap-3 d-flex">
+                                                <span className="text-sm text-gray-900 fw-normal">
                                                     Bạn đã là thành viên ?{" "}
-                                                    <Link href="/dang-nhap" className="text-main-600 hover-text-decoration-underline text-sm fw-semibold">
+                                                    <Link href="/dang-nhap" className="text-sm text-main-600 hover-text-decoration-underline fw-semibold">
                                                         Đăng nhập ngay
                                                     </Link>
                                                 </span>

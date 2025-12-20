@@ -41,7 +41,9 @@ type OrderItem = {
   tensanpham?: string;
   tenloaibienthe?: string;
   soluong: number;
-  dongia: number;
+  dongia?: number;
+  thanhtien: number;
+  tamtinh?: number;
   // Cấu trúc nested từ API
   id_donhang?: number;
   bienthe?: VariantInfo;
@@ -217,40 +219,40 @@ export default function HoanTatThanhToanPage() {
         <section className="mt-20 mb-10">
           <div className="container container-lg">
 
-            <div className="text-center mb-20">
+            <div className="mb-20 text-center">
               <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" fill="#2ABC79" viewBox="0 0 256 256" className="d-inline-block">
                 <path d="M176.49,95.51a12,12,0,0,1,0,17l-56,56a12,12,0,0,1-17,0l-24-24a12,12,0,1,1,17-17L112,143l47.51-47.52A12,12,0,0,1,176.49,95.51ZM236,128A108,108,0,1,1,128,20,108.12,108.12,0,0,1,236,128Zm-24,0a84,84,0,1,0-84,84A84.09,84.09,0,0,0,212,128Z"></path>
               </svg>
               <h6 className="mt-10 mb-6">Bạn đã đặt hàng thành công !</h6>
-              <div className="text-md text-gray-700">
-                <i className="ph-bold ph-smiley-wink text-2xl text-warning-600"></i>
+              <div className="text-gray-700 text-md">
+                <i className="text-2xl ph-bold ph-smiley-wink text-warning-600"></i>
                 <span className="mx-2">Siêu Thị Vina đã nhận được đơn hàng của bạn và sớm giao hàng đến tận tay bạn</span>
-                <i className="ph-bold ph-smiley-wink text-2xl text-warning-600"></i>
+                <i className="text-2xl ph-bold ph-smiley-wink text-warning-600"></i>
               </div>
             </div>
 
 
             <div className="row flex-align-center justify-content-center">
               <div className="col-lg-9">
-                <div className="border border-gray-200 p-20 rounded-8 bg-white">
-                  <div className="row border-bottom border-gray-200 pb-16 mb-16">
-                    <div className="col-lg-4 text-sm text-start">
-                      <span className="fw-semibold text-sm text-gray-600">Mã đơn hàng:</span>
+                <div className="p-20 bg-white border border-gray-200 rounded-8">
+                  <div className="pb-16 mb-16 border-gray-200 row border-bottom">
+                    <div className="text-sm col-lg-4 text-start">
+                      <span className="text-sm text-gray-600 fw-semibold">Mã đơn hàng:</span>
                       <span className="fst-italic fw-semibold"> {order ? `#${orderCode}` : orderId ? `#${orderId}` : "#UNKNOWN"}</span>
                     </div>
-                    <div className="col-lg-4 text-sm text-center">
-                      <span className="fw-semibold text-sm text-gray-600">Trạng thái thanh toán:</span>
+                    <div className="text-sm text-center col-lg-4">
+                      <span className="text-sm text-gray-600 fw-semibold">Trạng thái thanh toán:</span>
                       <div className={`fst-italic ${paymentText?.includes("Đã") ? "text-success-600" : "text-warning-600"}`}>{paymentText}</div>
                     </div>
-                    <div className="col-lg-4 text-sm text-end">
-                      <span className="fw-semibold text-sm text-gray-600">Ngày đặt:</span>
+                    <div className="text-sm col-lg-4 text-end">
+                      <span className="text-sm text-gray-600 fw-semibold">Ngày đặt:</span>
                       <span className="fst-italic"> {order?.created_at ? new Date(order.created_at).toLocaleString("vi-VN") : orderDate}</span>
                     </div>
                   </div>
 
 
-                  <div className="flex-align gap-8 flex-between mb-10">
-                    <span className="text-md text-gray-900 fw-semibold flex-align gap-8"><i className="ph-bold ph-shopping-cart text-main-600 text-lg"></i> Chi tiết đơn hàng</span>
+                  <div className="gap-8 mb-10 flex-align flex-between">
+                    <span className="gap-8 text-gray-900 text-md fw-semibold flex-align"><i className="text-lg ph-bold ph-shopping-cart text-main-600"></i> Chi tiết đơn hàng</span>
                     <Link
                       href="/don-hang"
                       onClick={() => {
@@ -258,69 +260,89 @@ export default function HoanTatThanhToanPage() {
                           try { sessionStorage.setItem("openOrderId", String(order.id)); } catch {}
                         }
                       }}
-                      className="fw-semibold text-sm text-gray-600 hover-text-main-600 transition-1 flex-align gap-4 mb-0 pb-0"
+                      className="gap-4 pb-0 mb-0 text-sm text-gray-600 fw-semibold hover-text-main-600 transition-1 flex-align"
                     >
                       <i className="ph-bold ph-notepad"></i> Xem chi tiết
                     </Link>
                   </div>
 
 
-                  <div className="py-6 px-5">
+                  <div className="px-5 py-6">
                     {order?.chitietdonhang && order.chitietdonhang.length > 0 ? (
-                      order.chitietdonhang.map((item, idx) => {
+                    (() => {
+                      // tách chính / quà tặng
+                      const raw = order.chitietdonhang!;
+                      const gifts = raw.filter(i => Number(i.thanhtien ?? i.tamtinh ?? i.dongia ?? NaN) === 0);
+                      const mains = raw.filter(i => !gifts.includes(i));
+                      const renderRow = (item: any, idx: number, isGift = false) => {
                         const tenSP = item.tensanpham ?? item.bienthe?.sanpham?.ten ?? item.name ?? "Sản phẩm";
                         const imgRaw = item.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh ?? item.bienthe?.sanpham?.hinhanh ?? item.hinhanh ?? "/assets/images/thumbs/placeholder.png";
                         const anhSP = String(imgRaw).startsWith("http") ? String(imgRaw) : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${String(imgRaw)}`;
                         const qty = item.soluong ?? item.quantity ?? 0;
-                        const price = item.dongia ?? item.price ?? 0;
+                        const price = isGift ? 0 : (item.dongia ?? item.price ?? item.thanhtien ?? 0);
                         const productHref = item.bienthe?.sanpham?.slug ? `/san-pham/${item.bienthe.sanpham.slug}` : "#";
 
-
                         return (
-                          <div key={item.id ?? idx} className="d-flex align-items-center gap-12 mb-12">
+                          <div key={item.id ?? idx} className="gap-12 mb-12 d-flex align-items-center">
                             <Link href={productHref} className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: 90, maxHeight: 90, width: "100%", height: "100%" }}>
-                              <Image src={anhSP} alt={tenSP} width={90} height={90} className="w-100 rounded-8 object-cover" unoptimized />
+                              <Image src={anhSP} alt={tenSP} width={90} height={90} className="object-cover w-100 rounded-8" unoptimized />
                             </Link>
                             <div className="text-start w-100">
-                              <h6 className="title text-md fw-semibold mb-0">
+                              <h6 className="mb-0 title text-md fw-semibold">
                                 <Link href={productHref} className="link text-line-2" title={tenSP} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: 350, display: "inline-block" }}>
                                   {tenSP}
                                 </Link>
                               </h6>
-                              <div className="flex-align gap-16 mb-6">
-                                <div className="btn bg-gray-50 text-heading text-xs py-4 px-6 rounded-8 flex-center gap-8 fw-medium">{item.tenloaibienthe ?? item.bienthe?.tenloaibienthe ?? ""}</div>
+                              <div className="gap-16 mb-6 flex-align">
+                                <div className="gap-8 px-6 py-4 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">{item.tenloaibienthe ?? item.bienthe?.tenloaibienthe ?? ""}</div>
                               </div>
-                              <div className="product-card__price mb-6">
-                                <div className="flex-align gap-24">
-                                  <span className="text-heading text-sm fw-medium">Số lượng: {qty}</span>
+                              <div className="mb-6 product-card__price">
+                                <div className="gap-24 flex-align">
+                                  <span className="text-sm text-heading fw-medium">Số lượng: {qty}</span>
                                   <span className="text-main-600 text-md fw-semibold">{fmtMoney(price)}</span>
                                 </div>
                               </div>
                             </div>
                           </div>
                         );
-                      })
-                    ) : (
-                      <div className="text-center py-10 text-gray-600">Không có sản phẩm để hiển thị</div>
-                    )}
+                      };
+
+                      return (
+                        <>
+                          {mains.map((it, i) => renderRow(it, i, false))}
+                          {gifts.length > 0 && (
+                            <>
+                              <div className="gap-8 mb-12 flex-align">
+                                <i className="text-lg ph-bold ph-gift text-main-600 pe-6"></i>
+                                <h6 className="m-0 text-md fw-semibold">Quà tặng nhận được</h6>
+                              </div>
+                              {gifts.map((it, i) => renderRow(it, i, true))}
+                            </>
+                          )}
+                        </>
+                      );
+                    })()
+                  ) : (
+                    <div className="py-10 text-center text-gray-600">Không có sản phẩm để hiển thị</div>
+                  )}
                   </div>
 
-                  <div className="row border-top border-gray-200 pt-16 mt-16">
-                    <div className="col-lg-4 text-sm text-start">
-                      <div className="fw-semibold text-sm text-gray-600"><span className="pe-10">Phương thức vận chuyển:</span></div>
-                      <span className="fw-medium text-gray-900 text-sm">{shippingMethod}</span>
+                  <div className="pt-16 mt-16 border-gray-200 row border-top">
+                    <div className="text-sm col-lg-4 text-start">
+                      <div className="text-sm text-gray-600 fw-semibold"><span className="pe-10">Phương thức vận chuyển:</span></div>
+                      <span className="text-sm text-gray-900 fw-medium">{shippingMethod}</span>
                     </div>
-                    <div className="col-lg-4 text-sm text-center"></div>
-                    <div className="col-lg-4 text-sm text-end">
-                      <div className="fw-semibold text-sm text-gray-600">Tổng giá trị đơn hàng:</div>
-                      <span className="fw-semibold text-main-600 text-lg">{totalAmount}</span>
+                    <div className="text-sm text-center col-lg-4"></div>
+                    <div className="text-sm col-lg-4 text-end">
+                      <div className="text-sm text-gray-600 fw-semibold">Tổng giá trị đơn hàng:</div>
+                      <span className="text-lg fw-semibold text-main-600">{totalAmount}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex-align flex-between gap-12 mb-20 mt-16">
-                  <Link href="/shop" className="text-main-600 hover-text-gray-900 text-md fw-medium flex-align gap-8 mt-10"><i className="ph-bold ph-arrow-fat-lines-left text-md"></i> Tiếp tục mua sắm</Link>
-                  <Link href="/don-hang" className="text-main-600 hover-text-gray-900 text-md fw-medium flex-align gap-8 mt-10">Xem đơn hàng của tôi <i className="ph-bold ph-arrow-fat-lines-right text-md"></i></Link>
+                <div className="gap-12 mt-16 mb-20 flex-align flex-between">
+                  <Link href="/shop" className="gap-8 mt-10 text-main-600 hover-text-gray-900 text-md fw-medium flex-align"><i className="ph-bold ph-arrow-fat-lines-left text-md"></i> Tiếp tục mua sắm</Link>
+                  <Link href="/don-hang" className="gap-8 mt-10 text-main-600 hover-text-gray-900 text-md fw-medium flex-align">Xem đơn hàng của tôi <i className="ph-bold ph-arrow-fat-lines-right text-md"></i></Link>
                 </div>
               </div>
             </div>

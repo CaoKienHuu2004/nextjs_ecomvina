@@ -347,6 +347,9 @@ function CartPageContent() {
                     style={{
                       maxHeight: items.length > 5 ? '750px' : 'none',
                       overflowY: items.length > 5 ? 'auto' : 'visible',
+                      opacity: loading ? 0.45 : 1,
+                      pointerEvents: loading ? 'none' : 'auto',
+                      transition: 'opacity 180ms linear',
                     }}
                   >
                     <table className="table style-three">
@@ -363,15 +366,7 @@ function CartPageContent() {
                         </tr>
                       </thead>
                       <tbody>
-                        {loading ? (
-                          <tr>
-                            <td colSpan={4} className="py-20 text-center">
-                              <div className="spinner-border text-main-600" role="status">
-                                <span className="visually-hidden">Đang tải...</span>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : items.length === 0 ? (
+                        {items.length === 0 ? (
                           <tr>
                             <td colSpan={4} className="py-20 text-center">
                               Giỏ hàng không có sản phẩm nào.
