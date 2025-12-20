@@ -109,8 +109,8 @@ export default function Page() {
         try {
             const payload = {
                 hoten: form.hoten,
-                email: form.email,
                 username: form.username,
+                email: form.email,
                 sodienthoai: form.sodienthoai,
                 password: form.password,
                 password_confirmation: form.password_confirmation,
@@ -118,11 +118,12 @@ export default function Page() {
 
             console.debug("REGISTER payload:", payload);
 
+            await fetch("https://sieuthivina.com/sanctum/csrf-cookie");
             // Sử dụng fetch trực tiếp giống trang đăng nhập
-            const rawResp = await fetch("https://sieuthivina.cloud/api/auth/dang-ky", {
+            const rawResp = await fetch("https://sieuthivina.com/api/v1/dang-ky", {
                 method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
+                // credentials: "include",
+                headers: { "Content-Type": "application/json", "Accept": "application/json" },
                 body: JSON.stringify(payload),
             });
 
@@ -133,7 +134,7 @@ export default function Page() {
 
             if (resp.success) {
                 setMessage({ type: "success", text: resp.message || "Đăng ký thành công!" });
-                setForm({ hoten: "", email: "", sodienthoai: "", username: "", password: "", password_confirmation: "" });
+                setForm({ hoten: "", username: "", email: "", sodienthoai: "", password: "", password_confirmation: "" });
                 return;
             }
 
