@@ -120,6 +120,8 @@ export default function ProductCardV2(props: Props) {
   const soldInfo = deriveSold(sold);
 
   const thumbRef = useRef<HTMLAnchorElement | null>(null);
+  const divThumbRef = useRef<HTMLDivElement | null>(null);
+  const linkThumbRef = useRef<HTMLAnchorElement | null>(null);
   const { addToCart } = useCart();
 
   const handleAdd = async (e: React.MouseEvent) => {
@@ -181,7 +183,7 @@ export default function ProductCardV2(props: Props) {
           onMouseLeave={() => setIsThumbHovered(false)}
         >
           <div
-            ref={thumbRef}
+            ref={divThumbRef}
             className="overflow-hidden product-card__thumb flex-center rounded-8 bg-gray-50 position-relative"
           >
             {thumbImage}
