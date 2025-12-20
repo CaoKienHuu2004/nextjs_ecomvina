@@ -87,7 +87,7 @@ export default function Page() {
   const [editingPhone, setEditingPhone] = useState(false);
   const [editingEmail, setEditingEmail] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
-  
+
   // Mirror FullHeader token detection -> set x-user-id cookie for mock server
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -197,10 +197,10 @@ export default function Page() {
     if (!isLoggedIn) return () => { alive = false; };
     (async () => {
       try {
-        const res = await fetch(`${API}/api/auth/thong-tin-nguoi-dung`, {
+        const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${token}`, 
+            "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           credentials: "include",
@@ -232,30 +232,30 @@ export default function Page() {
       try {
         if (tab === "wishlist") {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
-          const headers: Record<string,string> = { Accept: "application/json" };
+          const headers: Record<string, string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
           const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, { credentials: "include", headers });
           const data = await res.json();
           setWishlist(Array.isArray(data) ? (data as WishlistRow[]) : (data?.data ?? []));
         } else if (tab === "cart") {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
-          const headers: Record<string,string> = { Accept: "application/json" };
+          const headers: Record<string, string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
           const res = await fetch(`${API}/api/toi/giohang`, { credentials: "include", headers });
           const j = await res.json();
           setCart((j?.data as CartRow[]) ?? []);
         } else if (tab === "orders") {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
-          const headers: Record<string,string> = { Accept: "application/json" };
+          const headers: Record<string, string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
           const res = await fetch(`${API}/api/tai-khoan/donhangs`, { credentials: "include", headers });
           const j = await res.json();
           setOrders((j?.data as Order[]) ?? []);
         } else if (tab === "profile") {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
-          const headers: Record<string,string> = { Accept: "application/json" };
+          const headers: Record<string, string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(`${API}/api/auth/thong-tin-nguoi-dung`, { credentials: "include", headers });
+          const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, { credentials: "include", headers });
           const j = await res.json();
           setProfile((j?.data as AuthUser) ?? null);
         }
@@ -276,59 +276,59 @@ export default function Page() {
       const formData = new FormData(formEl);
       const fd = new FormData();
 
-    const hoten = String(formData.get("name") || "");
-    const sodienthoai = String(formData.get("phone") || formData.get("sodienthoai") || "");
-    const ngaysinh = String(formData.get("birthday") || formData.get("ngaysinh") ||"");
-    const gioitinh = String(formData.get("gender") || formData.get("gioitinh") || "");
-    const email = String(formData.get("email") || "");
-    const tinhthanh = String(formData.get("address_city") || formData.get("tinhthanh") || "");
-    const diachi = String(formData.get("address_street") || formData.get("address") || "");
-    const trangthai_diachi = String(formData.get("address_state") || formData.get("trangthai_diachi") || "Mặc định");
+      const hoten = String(formData.get("name") || "");
+      const sodienthoai = String(formData.get("phone") || formData.get("sodienthoai") || "");
+      const ngaysinh = String(formData.get("birthday") || formData.get("ngaysinh") || "");
+      const gioitinh = String(formData.get("gender") || formData.get("gioitinh") || "");
+      const email = String(formData.get("email") || "");
+      const tinhthanh = String(formData.get("address_city") || formData.get("tinhthanh") || "");
+      const diachi = String(formData.get("address_street") || formData.get("address") || "");
+      const trangthai_diachi = String(formData.get("address_state") || formData.get("trangthai_diachi") || "Mặc định");
 
-    fd.append("hoten", hoten);
-    if (sodienthoai) fd.append("sodienthoai", sodienthoai);
-    if (ngaysinh) fd.append("ngaysinh", ngaysinh);
-    if (gioitinh) fd.append("gioitinh", gioitinh);
-    if (email) fd.append("email", email);
-    if (tinhthanh) fd.append("tinhthanh", tinhthanh);
-    if (diachi) fd.append("diachi", diachi);
-    fd.append("trangthai_diachi", trangthai_diachi);
+      fd.append("hoten", hoten);
+      if (sodienthoai) fd.append("sodienthoai", sodienthoai);
+      if (ngaysinh) fd.append("ngaysinh", ngaysinh);
+      if (gioitinh) fd.append("gioitinh", gioitinh);
+      if (email) fd.append("email", email);
+      if (tinhthanh) fd.append("tinhthanh", tinhthanh);
+      if (diachi) fd.append("diachi", diachi);
+      fd.append("trangthai_diachi", trangthai_diachi);
 
-    // avatar file (if user selected one)
-    const fileInput = formEl.querySelector<HTMLInputElement>('input[type="file"][name="avatar"]');
-    const avatarFile = fileInput?.files?.[0];
-    if (avatarFile) fd.append("avatar", avatarFile);
+      // avatar file (if user selected one)
+      const fileInput = formEl.querySelector<HTMLInputElement>('input[type="file"][name="avatar"]');
+      const avatarFile = fileInput?.files?.[0];
+      if (avatarFile) fd.append("avatar", avatarFile);
 
-    // send as multipart/form-data (let browser set Content-Type)
-    const res = await fetch(`${API}/api/auth/cap-nhat-thong-tin`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,  // gửi token kèm header Authorization
-        // "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: fd,
-    });
+      // send as multipart/form-data (let browser set Content-Type)
+      const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,  // gửi token kèm header Authorization
+          // "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: fd,
+      });
 
-    if (!res.ok) throw new Error("Cập nhật thất bại");
-    const j = (await res.json().catch(() => null)) as unknown;
-    // normalize response safely without using `any`
-    const rawUser = isRecord(j) ? ((j.user ?? j.data ?? j) as unknown) : j;
-    const newProfile = (isRecord(rawUser) ? (rawUser as AuthUser) : null);
+      if (!res.ok) throw new Error("Cập nhật thất bại");
+      const j = (await res.json().catch(() => null)) as unknown;
+      // normalize response safely without using `any`
+      const rawUser = isRecord(j) ? ((j.user ?? j.data ?? j) as unknown) : j;
+      const newProfile = (isRecord(rawUser) ? (rawUser as AuthUser) : null);
       if (newProfile) setProfile(newProfile);
 
       // update avatar preview + persist for AccountShell/sidebar
       if (newProfile?.avatar && typeof newProfile.avatar === "string") {
         setAvatarPreview(String(newProfile.avatar));
-        try { localStorage.setItem("avatar", String(newProfile.avatar)); } catch {}
+        try { localStorage.setItem("avatar", String(newProfile.avatar)); } catch { }
       }
 
       // persist display name / username so sidebar shows immediately
       if (newProfile?.hoten && typeof newProfile.hoten === "string") {
-        try { localStorage.setItem("fullname", String(newProfile.hoten)); } catch {}
+        try { localStorage.setItem("fullname", String(newProfile.hoten)); } catch { }
       }
       if (newProfile?.username && typeof newProfile.username === "string") {
-        try { localStorage.setItem("username", String(newProfile.username)); } catch {}
+        try { localStorage.setItem("username", String(newProfile.username)); } catch { }
       }
 
       // if backend returns diachi array, remind user to add address if empty
@@ -351,7 +351,7 @@ export default function Page() {
     }
   };
 
-    const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const current_password = String(form.get("current_password") || "");
@@ -362,7 +362,7 @@ export default function Page() {
       const token = Cookies.get("access_token");
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${API}/api/auth/cap-nhat-mat-khau`, {
+      const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat-mat-khau`, {
         method: "PATCH",
         headers,
         credentials: "include",
@@ -399,12 +399,12 @@ export default function Page() {
           })
         )
       );
-    } catch {}
+    } catch { }
   };
 
-  
+
   const handleLogin: React.FormEventHandler<HTMLFormElement> = async (e) => {
-   e.preventDefault();
+    e.preventDefault();
     const form = new FormData(e.currentTarget);
     const username = String(form.get("username") || "").trim();
     const password = String(form.get("password") || "").trim();
@@ -447,7 +447,7 @@ export default function Page() {
       if (email) payload.email = email;
       if (sodienthoai) payload.sodienthoai = sodienthoai;
 
-      const res = await fetch(`${API}/api/auth/dang-ky`, {
+      const res = await fetch(`${API}/api/v1/dang-ky`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify(payload),
@@ -470,7 +470,7 @@ export default function Page() {
   const handleRemoveWish = async (productId: number) => {
     try {
       const token = Cookies.get("access_token") || Cookies.get("token") || null;
-      const headers: Record<string,string> = { Accept: "application/json" };
+      const headers: Record<string, string> = { Accept: "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
       await fetch(`${API}/api/tai-khoan/yeuthichs/${productId}`, {
         method: "PATCH",
@@ -480,7 +480,7 @@ export default function Page() {
       setWishlist((prev) =>
         prev.filter((w) => (w.product?.id ?? w.product_id) !== productId)
       );
-    } catch {}
+    } catch { }
   };
 
   return (
@@ -518,263 +518,263 @@ export default function Page() {
         {!isLoggedIn ? (
           <>
             <div className="gap-16 mb-16 d-flex">
-            <button
-              className={`btn ${tab === "login" ? "btn-main-two" : "btn-outline-main-two"}`}
-              onClick={() => setTab("login")}
-            >
-              Đăng nhập
-            </button>
-            <button
-              className={`btn ${tab === "register" ? "btn-main-two" : "btn-outline-main-two"}`}
-              onClick={() => setTab("register")}
-            >
-              Đăng ký
-            </button>
-          </div>
-
-          {notice && (
-            <div
-              className={`alert ${notice.type === "success" ? "alert-success" : "alert-danger"} py-10 px-12 mb-16`}
-            >
-              {notice.msg}
+              <button
+                className={`btn ${tab === "login" ? "btn-main-two" : "btn-outline-main-two"}`}
+                onClick={() => setTab("login")}
+              >
+                Đăng nhập
+              </button>
+              <button
+                className={`btn ${tab === "register" ? "btn-main-two" : "btn-outline-main-two"}`}
+                onClick={() => setTab("register")}
+              >
+                Đăng ký
+              </button>
             </div>
-          )}
 
-          {tab === "login" ? (
-            <form onSubmit={handleLogin}>
-              <div className="row gy-4">
-                <div className="col-12">
-                  <label htmlFor="login-username" className="text-sm text-gray-900 fw-medium">Email hoặc SĐT *</label>
-                  <input id="login-username" name="username" type="text" className="common-input" placeholder="tên đăng nhập / email / sđt" autoComplete="username" required />
-                </div>
-                <div className="col-12">
-                  <label htmlFor="login-password" className="text-sm text-gray-900 fw-medium">Mật khẩu</label>
-                  <input id="login-password" name="password" type="password" className="common-input" placeholder="••••••••" required />
-                </div>
-                <div className="col-12">
-                  <button disabled={loading} type="submit" className="btn btn-main-two">
-                    {loading ? "Đang xử lý..." : "Đăng nhập"}
-                  </button>
-                </div>
+            {notice && (
+              <div
+                className={`alert ${notice.type === "success" ? "alert-success" : "alert-danger"} py-10 px-12 mb-16`}
+              >
+                {notice.msg}
               </div>
-            </form>
-          ) : (
-            <form onSubmit={handleRegister}>
-              <div className="row gy-4">
-                <div className="col-12">
-                  <label htmlFor="reg-hoten" className="text-sm text-gray-900 fw-medium">Họ tên *</label>
-                  <input
-                  name="hoten"
-                  defaultValue={(profile?.hoten as string) || getUserString(user, "hoten") || ""}
-                  className="p-10 form-control"
-                  placeholder="Nhập họ và tên của bạn..."
-                  required
-                />
-                </div>
-                <div className="col-12">
-                  <label htmlFor="reg-username" className="text-sm text-gray-900 fw-medium">Tên tài khoản (username)</label>
-                  <input id="reg-username" name="username" type="text" autoComplete="username" className="common-input" placeholder="tùy chọn — để trống sẽ dùng họ tên" />
-                  <small className="text-xs text-muted">Bạn có thể đăng nhập bằng username, email hoặc số điện thoại.</small>
-                </div>
-                <div className="col-12">
-                  <label htmlFor="reg-email" className="text-sm text-gray-900 fw-medium">Email</label>
-                  <input id="reg-email" name="email" type="email" autoComplete="email" className="common-input" placeholder="you@example.com" />
-               </div>
-                <div className="col-12">
-                  <label htmlFor="reg-password" className="text-sm text-gray-900 fw-medium">Mật khẩu *</label>
-                  <input id="reg-password" name="password" type="password" autoComplete="new-password" className="common-input" placeholder="••••••••" required />
-                </div>
-                <div className="col-12">
-                  <label htmlFor="reg-password-confirm" className="text-sm text-gray-900 fw-medium">Xác nhận mật khẩu *</label>
-                  <input id="reg-password-confirm" name="password_confirmation" type="password" autoComplete="new-password" className="common-input" placeholder="Nhập lại mật khẩu" required />
-                </div>
-                <div className="col-12">
-                  <label htmlFor="reg-sodienthoai" className="text-sm text-gray-900 fw-medium">Số điện thoại</label>
-                  <input id="reg-sodienthoai" name="sodienthoai" type="tel" autoComplete="tel" className="common-input" placeholder="098xxxxxxx" />
-                </div>
-                <div className="col-12">
-                  <button disabled={loading} type="submit" className="btn btn-main-two">
-                    {loading ? "Đang xử lý..." : "Tạo tài khoản"}
-                  </button>
-                </div>
-              </div>
-            </form>
-          )}
-        </>
-      ) : (
-        <form key={String(profile?.id ?? "no-profile")} onSubmit={handleSaveProfile} className="row">
-          <div className="row g-12">
-            <div className="p-16 border border-gray-100 rounded-8 w-100">
-              <div className="row">
-                <div className="py-10 col-xl-8">
-                  <h6 className="mb-20 text-gray-700 fw-semibold text-md">Thông tin cá nhân</h6>
+            )}
 
-                  <div className="mb-20 row">
-                    <div className="flex-wrap gap-2 col-xl-3 flex-align flex-center">
-                      <div className="mx-16 mt-10 mb-0 avatar-container">
-                        <img
-                          id="avatarImage"
-                          src={avatarPreview || "/assets/images/default-avatar.png"}
-                          alt="Avatar"
-                          className="avatar-img"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/assets/images/default-avatar.png"; }}
-                          style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: '50%' }}
-                        />
-                        <input
-                          type="file"
-                          id="fileInput"
-                          name="avatar"
-                          accept="image/*"
-                          style={{ display: 'none' }}
-                          onChange={(ev) => {
-                            const f = (ev.target as HTMLInputElement).files?.[0];
-                            if (f) setAvatarPreview(URL.createObjectURL(f));
-                          }}
-                        />
+            {tab === "login" ? (
+              <form onSubmit={handleLogin}>
+                <div className="row gy-4">
+                  <div className="col-12">
+                    <label htmlFor="login-username" className="text-sm text-gray-900 fw-medium">Email hoặc SĐT *</label>
+                    <input id="login-username" name="username" type="text" className="common-input" placeholder="tên đăng nhập / email / sđt" autoComplete="username" required />
+                  </div>
+                  <div className="col-12">
+                    <label htmlFor="login-password" className="text-sm text-gray-900 fw-medium">Mật khẩu</label>
+                    <input id="login-password" name="password" type="password" className="common-input" placeholder="••••••••" required />
+                  </div>
+                  <div className="col-12">
+                    <button disabled={loading} type="submit" className="btn btn-main-two">
+                      {loading ? "Đang xử lý..." : "Đăng nhập"}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleRegister}>
+                <div className="row gy-4">
+                  <div className="col-12">
+                    <label htmlFor="reg-hoten" className="text-sm text-gray-900 fw-medium">Họ tên *</label>
+                    <input
+                      name="hoten"
+                      defaultValue={(profile?.hoten as string) || getUserString(user, "hoten") || ""}
+                      className="p-10 form-control"
+                      placeholder="Nhập họ và tên của bạn..."
+                      required
+                    />
+                  </div>
+                  <div className="col-12">
+                    <label htmlFor="reg-username" className="text-sm text-gray-900 fw-medium">Tên tài khoản (username)</label>
+                    <input id="reg-username" name="username" type="text" autoComplete="username" className="common-input" placeholder="tùy chọn — để trống sẽ dùng họ tên" />
+                    <small className="text-xs text-muted">Bạn có thể đăng nhập bằng username, email hoặc số điện thoại.</small>
+                  </div>
+                  <div className="col-12">
+                    <label htmlFor="reg-email" className="text-sm text-gray-900 fw-medium">Email</label>
+                    <input id="reg-email" name="email" type="email" autoComplete="email" className="common-input" placeholder="you@example.com" />
+                  </div>
+                  <div className="col-12">
+                    <label htmlFor="reg-password" className="text-sm text-gray-900 fw-medium">Mật khẩu *</label>
+                    <input id="reg-password" name="password" type="password" autoComplete="new-password" className="common-input" placeholder="••••••••" required />
+                  </div>
+                  <div className="col-12">
+                    <label htmlFor="reg-password-confirm" className="text-sm text-gray-900 fw-medium">Xác nhận mật khẩu *</label>
+                    <input id="reg-password-confirm" name="password_confirmation" type="password" autoComplete="new-password" className="common-input" placeholder="Nhập lại mật khẩu" required />
+                  </div>
+                  <div className="col-12">
+                    <label htmlFor="reg-sodienthoai" className="text-sm text-gray-900 fw-medium">Số điện thoại</label>
+                    <input id="reg-sodienthoai" name="sodienthoai" type="tel" autoComplete="tel" className="common-input" placeholder="098xxxxxxx" />
+                  </div>
+                  <div className="col-12">
+                    <button disabled={loading} type="submit" className="btn btn-main-two">
+                      {loading ? "Đang xử lý..." : "Tạo tài khoản"}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+          </>
+        ) : (
+          <form key={String(profile?.id ?? "no-profile")} onSubmit={handleSaveProfile} className="row">
+            <div className="row g-12">
+              <div className="p-16 border border-gray-100 rounded-8 w-100">
+                <div className="row">
+                  <div className="py-10 col-xl-8">
+                    <h6 className="mb-20 text-gray-700 fw-semibold text-md">Thông tin cá nhân</h6>
+
+                    <div className="mb-20 row">
+                      <div className="flex-wrap gap-2 col-xl-3 flex-align flex-center">
+                        <div className="mx-16 mt-10 mb-0 avatar-container">
+                          <img
+                            id="avatarImage"
+                            src={avatarPreview || "/assets/images/default-avatar.png"}
+                            alt="Avatar"
+                            className="avatar-img"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/assets/images/default-avatar.png"; }}
+                            style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: '50%' }}
+                          />
+                          <input
+                            type="file"
+                            id="fileInput"
+                            name="avatar"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={(ev) => {
+                              const f = (ev.target as HTMLInputElement).files?.[0];
+                              if (f) setAvatarPreview(URL.createObjectURL(f));
+                            }}
+                          />
+                        </div>
+                        <label className="text-xs text-gray-500 form-label fw-medium" htmlFor="fileInput" style={{ cursor: 'pointer' }}>
+                          <i className="ph-bold ph-pencil-simple" /> đổi ảnh
+                        </label>
                       </div>
-                      <label className="text-xs text-gray-500 form-label fw-medium" htmlFor="fileInput" style={{ cursor: 'pointer' }}>
-                        <i className="ph-bold ph-pencil-simple" /> đổi ảnh
-                      </label>
+
+                      <div className="col-xl-9">
+                        <div className="form-group">
+                          <label className="text-gray-900 form-label text-md">Tên người dùng:</label>
+                          <input
+                            type="text"
+                            id="username"
+                            className="p-10 form-control bg-gray-50 disabled"
+                            value={String(profile?.username ?? getUserString(user, "username") ?? "")}
+                            readOnly
+                          />
+                        </div>
+
+                        <div className="mt-10 form-group">
+                          <label className="text-gray-900 form-label text-md">Họ và tên:</label>
+                          <input
+                            name="hoten"
+                            defaultValue={(profile?.hoten as string) || getUserString(user, "hoten") || ""}
+                            className="p-10 form-control"
+                            placeholder="Nhập họ và tên của bạn..."
+                            required
+                          />
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="col-xl-9">
-                      <div className="form-group">
-                        <label className="text-gray-900 form-label text-md">Tên người dùng:</label>
-                        <input
-                          type="text"
-                          id="username"
-                          className="p-10 form-control bg-gray-50 disabled"
-                          value={String(profile?.username ?? getUserString(user, "username") ?? "")}
-                          readOnly
-                        />
+                    <div className="mb-20 row">
+                      <div className="col-xl-6">
+                        <div className="form-group">
+                          <label className="text-gray-900 form-label text-md" htmlFor="gioitinh">Giới tính:</label>
+                          <select
+                            name="gioitinh"
+                            id="gioitinh"
+                            defaultValue={(profile?.gioitinh as string) || ""}
+                            className="p-10 form-control"
+                            required
+                          >
+                            <option value="">Không xác định</option>
+                            <option value="Nam">Nam</option>
+                            <option value="Nữ">Nữ</option>
+                          </select>
+                        </div>
                       </div>
 
-                      <div className="mt-10 form-group">
-                        <label className="text-gray-900 form-label text-md">Họ và tên:</label>
-                        <input
-                          name="hoten"
-                          defaultValue={(profile?.hoten as string) || getUserString(user, "hoten") || ""}
-                          className="p-10 form-control"
-                          placeholder="Nhập họ và tên của bạn..."
-                          required
-                        />
+                      <div className="col-xl-6">
+                        <div className="form-group">
+                          <label className="text-gray-900 form-label text-md" htmlFor="ngaysinh">Ngày sinh:</label>
+                          <input
+                            type="date"
+                            id="ngaysinh"
+                            name="ngaysinh"
+                            defaultValue={(profile?.ngaysinh as string) || ""}
+                            className="p-10 form-control"
+                          />
+                        </div>
                       </div>
                     </div>
+
+                    <button
+                      title="Lưu thông tin cá nhân"
+                      disabled={loading}
+                      type="submit"
+                      className="gap-8 px-32 py-12 text-white btn bg-main-600 hover-bg-main-300 hover-text-main-600 rounded-8 w-100 flex-center flex-align"
+                    >
+                      <i className="ph-bold ph-floppy-disk" /> {loading ? 'Đang lưu...' : 'Lưu thông tin'}
+                    </button>
                   </div>
 
-                  <div className="mb-20 row">
-                    <div className="col-xl-6">
-                      <div className="form-group">
-                        <label className="text-gray-900 form-label text-md" htmlFor="gioitinh">Giới tính:</label>
-                        <select
-                          name="gioitinh"
-                          id="gioitinh"
-                          defaultValue={(profile?.gioitinh as string) || ""}
-                          className="p-10 form-control"
-                          required
+                  <div className="py-10 border-gray-200 col-xl-4 border-start">
+                    <h6 className="mb-20 text-gray-700 fw-semibold text-md">Thông tin liên hệ</h6>
+
+                    <div className="mb-10 form-group">
+                      <div className="flex-align flex-between">
+                        <label className="gap-8 text-gray-900 form-label text-md flex-align" htmlFor="sodienthoai">
+                          <i className="ph-bold ph-phone" /> Số điện thoại:
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => { setEditingPhone((v) => !v); if (!editingPhone) setTimeout(() => document.getElementById('sodienthoai')?.focus(), 0); }}
+                          className="gap-4 p-0 text-xs bg-transparent border-0 text-primary-700 flex-align fw-normal"
+                          style={{ cursor: 'pointer' }}
                         >
-                          <option value="">Không xác định</option>
-                          <option value="Nam">Nam</option>
-                          <option value="Nữ">Nữ</option>
-                        </select>
+                          <i className="ph-bold ph-pencil-simple" /> {editingPhone ? 'Hủy' : 'Chỉnh sửa'}
+                        </button>
                       </div>
+                      <input
+                        type="text"
+                        id="sodienthoai"
+                        name="sodienthoai"
+                        defaultValue={getUserString(profile, "sodienthoai") ?? getUserString(user, "sodienthoai") ?? ""}
+                        className={'form-control p-10 ' + (editingPhone ? '' : 'bg-gray-50 disabled')}
+                        readOnly={!editingPhone}
+                      />
                     </div>
 
-                    <div className="col-xl-6">
-                      <div className="form-group">
-                        <label className="text-gray-900 form-label text-md" htmlFor="ngaysinh">Ngày sinh:</label>
-                        <input
-                          type="date"
-                          id="ngaysinh"
-                          name="ngaysinh"
-                          defaultValue={(profile?.ngaysinh as string) || ""}
-                          className="p-10 form-control"
-                        />
+                    <div className="form-group">
+                      <div className="flex-align flex-between">
+                        <label className="gap-8 text-gray-900 form-label text-md flex-align" htmlFor="email">
+                          <i className="ph-bold ph-envelope" /> Email:
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => { setEditingEmail((v) => !v); if (!editingEmail) setTimeout(() => document.getElementById('email')?.focus(), 0); }}
+                          className="gap-4 p-0 text-xs bg-transparent border-0 text-primary-700 flex-align fw-normal"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <i className="ph-bold ph-pencil-simple" /> {editingEmail ? 'Hủy' : 'Chỉnh sửa'}
+                        </button>
                       </div>
+                      <input
+                        type="text"
+                        id="email"
+                        name="email"
+                        defaultValue={getUserString(profile, "email") ?? getUserString(user, "email") ?? ""}
+                        className={'form-control p-10 ' + (editingEmail ? '' : 'bg-gray-50 disabled')}
+                        readOnly={!editingEmail}
+                      />
                     </div>
-                  </div>
 
-                  <button
-                    title="Lưu thông tin cá nhân"
-                    disabled={loading}
-                    type="submit"
-                    className="gap-8 px-32 py-12 text-white btn bg-main-600 hover-bg-main-300 hover-text-main-600 rounded-8 w-100 flex-center flex-align"
-                  >
-                    <i className="ph-bold ph-floppy-disk" /> {loading ? 'Đang lưu...' : 'Lưu thông tin'}
-                  </button>
-                </div>
+                    <span className="pt-20 mt-20 text-gray-700 border-gray-100 border-top d-block" />
 
-                <div className="py-10 border-gray-200 col-xl-4 border-start">
-                  <h6 className="mb-20 text-gray-700 fw-semibold text-md">Thông tin liên hệ</h6>
-
-                  <div className="mb-10 form-group">
-                    <div className="flex-align flex-between">
-                      <label className="gap-8 text-gray-900 form-label text-md flex-align" htmlFor="sodienthoai">
-                        <i className="ph-bold ph-phone" /> Số điện thoại:
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => { setEditingPhone((v) => !v); if (!editingPhone) setTimeout(() => document.getElementById('sodienthoai')?.focus(), 0); }}
-                        className="gap-4 p-0 text-xs bg-transparent border-0 text-primary-700 flex-align fw-normal"
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <i className="ph-bold ph-pencil-simple" /> {editingPhone ? 'Hủy' : 'Chỉnh sửa'}
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      id="sodienthoai"
-                      name="sodienthoai"
-                      defaultValue={getUserString(profile, "sodienthoai") ?? getUserString(user, "sodienthoai") ?? ""}
-                      className={'form-control p-10 ' + (editingPhone ? '' : 'bg-gray-50 disabled')}
-                      readOnly={!editingPhone}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <div className="flex-align flex-between">
-                      <label className="gap-8 text-gray-900 form-label text-md flex-align" htmlFor="email">
-                        <i className="ph-bold ph-envelope" /> Email:
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => { setEditingEmail((v) => !v); if (!editingEmail) setTimeout(() => document.getElementById('email')?.focus(), 0); }}
-                        className="gap-4 p-0 text-xs bg-transparent border-0 text-primary-700 flex-align fw-normal"
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <i className="ph-bold ph-pencil-simple" /> {editingEmail ? 'Hủy' : 'Chỉnh sửa'}
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      id="email"
-                      name="email"
-                      defaultValue={getUserString(profile, "email") ?? getUserString(user, "email") ?? ""}
-                      className={'form-control p-10 ' + (editingEmail ? '' : 'bg-gray-50 disabled')}
-                      readOnly={!editingEmail}
-                    />
-                  </div>
-
-                  <span className="pt-20 mt-20 text-gray-700 border-gray-100 border-top d-block" />
-
-                  <h6 className="mb-20 text-gray-700 fw-semibold text-md">Thông tin bảo mật</h6>
-                  <div className="mb-10 form-group">
-                    <div className="flex-align flex-between">
-                      <label className="gap-8 m-0 text-gray-900 form-label text-md flex-align">
-                        <i className="ph-bold ph-lock" /> Đổi mật khẩu:
-                      </label>
-                      <button type="button" onClick={() => setShowChangePassword(true)} className="gap-4 p-0 text-sm bg-transparent border-0 text-primary-700 flex-align fw-normal" style={{ cursor: 'pointer' }}>
-                        <i className="ph-bold ph-pencil-simple"></i> Chỉnh sửa
-                      </button>
+                    <h6 className="mb-20 text-gray-700 fw-semibold text-md">Thông tin bảo mật</h6>
+                    <div className="mb-10 form-group">
+                      <div className="flex-align flex-between">
+                        <label className="gap-8 m-0 text-gray-900 form-label text-md flex-align">
+                          <i className="ph-bold ph-lock" /> Đổi mật khẩu:
+                        </label>
+                        <button type="button" onClick={() => setShowChangePassword(true)} className="gap-4 p-0 text-sm bg-transparent border-0 text-primary-700 flex-align fw-normal" style={{ cursor: 'pointer' }}>
+                          <i className="ph-bold ph-pencil-simple"></i> Chỉnh sửa
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </form>
-      )}
-    </AccountShell>
+          </form>
+        )}
+      </AccountShell>
     </>
   );
 }

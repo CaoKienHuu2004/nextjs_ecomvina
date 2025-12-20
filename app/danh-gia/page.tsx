@@ -17,7 +17,7 @@ type Review = {
 type ProductOption = { id: number; name: string };
 
 export default function ReviewsPage() {
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
@@ -179,7 +179,7 @@ export default function ReviewsPage() {
       if (res.ok) {
         await fetchReviews();
         setEditing(null);
-        setForm({ id_sanpham: products[0]?.id ?? 0, diem: 5,  noidung: "" });
+        setForm({ id_sanpham: products[0]?.id ?? 0, diem: 5, noidung: "" });
         alert("Lưu đánh giá thành công.");
       } else {
         alert(json.message || "Lỗi khi lưu đánh giá.");
@@ -308,7 +308,7 @@ export default function ReviewsPage() {
 
             <div className="gap-8 d-flex">
               <button type="submit" className="btn btn-main">{editing ? "Cập nhật" : "Lưu"}</button>
-              <button type="button" onClick={() => { setEditing(null); setForm({ id_sanpham: products[0]?.id ?? 0, diem: 5,  noidung: "" }); }} className="border btn">Hủy</button>
+              <button type="button" onClick={() => { setEditing(null); setForm({ id_sanpham: products[0]?.id ?? 0, diem: 5, noidung: "" }); }} className="border btn">Hủy</button>
             </div>
           </form>
         </div>

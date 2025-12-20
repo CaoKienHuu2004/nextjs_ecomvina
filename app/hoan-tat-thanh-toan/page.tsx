@@ -70,7 +70,7 @@ type ServerOrder = {
   khuvucgiao?: string;
   phigiaohang?: number;
   phuongthucvanchuyen?: string;
-  
+
   hinhthucthanhtoan?: string;
   created_at?: string;
   chitietdonhang?: OrderItem[];
@@ -101,110 +101,110 @@ const fmtMoney = (val?: number | string | null) => {
 export default function HoanTatThanhToanPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order_id") || "";
-  
+
 
   const [loading, setLoading] = useState<boolean>(true);
   const [order, setOrder] = useState<ServerOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
   const getAuthHeaders = (): Record<string, string> => {
-  const t = Cookies.get("access_token");
-  return t ? { Authorization: `Bearer ${t}` } : {};
-};
+    const t = Cookies.get("access_token");
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  };
 
   // 2. FETCH DATA (Sử dụng logic "Lấy danh sách -> Lọc" để tránh lỗi 404)
   useEffect(() => {
 
-  const loadOrder = async () => {
-  if (!orderId) return;
-  setLoading(true);
-    try {
+    const loadOrder = async () => {
+      if (!orderId) return;
+      setLoading(true);
+      try {
 
-      const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
-      const token = Cookies.get("access_token");
-      const headers: Record<string, string> = { "Accept": "application/json" };
-      if (token) headers.Authorization = `Bearer ${token}`;
+        const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
+        const token = Cookies.get("access_token");
+        const headers: Record<string, string> = { "Accept": "application/json" };
+        if (token) headers.Authorization = `Bearer ${token}`;
 
-      // 1) Try status endpoint first (existing)
-      const res = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/status`, {
-        headers,
-        credentials: "include",
-      });
-      const json = await res.json().catch(() => ({}));
+        // 1) Try status endpoint first (existing)
+        const res = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/status`, {
+          headers,
+          credentials: "include",
+        });
+        const json = await res.json().catch(() => ({}));
 
-      if (json.status && json.data) {
-        setOrder(json.data as ServerOrder);
-        setError(null);
-        return;
-      }
-
-
-      // 2) If status endpoint returns only status text, try fetching full detail
-      if (json.status && (json.payment_status || json.order_status)) {
-        try {
-          const res2 = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}`, {
-            headers,
-            credentials: "include",
-          });
-          const json2 = await res2.json().catch(() => ({}));
-          if (json2.status && json2.data) {
-            setOrder(json2.data as ServerOrder);
-            setError(null);
-            return;
-          }
-        } catch (e) {
-          // ignore and fallback to minimal
+        if (json.status && json.data) {
+          setOrder(json.data as ServerOrder);
+          setError(null);
+          return;
         }
 
 
-        // 3) fallback: build a minimal order object from status response
-        const minimal: Partial<ServerOrder> = {
-          id: orderId,
-          madon: json.data?.madon ?? json.madon ?? orderId,
-          trangthaithanhtoan: json.payment_status ?? undefined,
-          trangthai: json.order_status ?? undefined,
-          created_at: undefined,
-          chitietdonhang: undefined,
-        };
-        setOrder(minimal as ServerOrder);
-        setError(null);
-        return;
+        // 2) If status endpoint returns only status text, try fetching full detail
+        if (json.status && (json.payment_status || json.order_status)) {
+          try {
+            const res2 = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}`, {
+              headers,
+              credentials: "include",
+            });
+            const json2 = await res2.json().catch(() => ({}));
+            if (json2.status && json2.data) {
+              setOrder(json2.data as ServerOrder);
+              setError(null);
+              return;
+            }
+          } catch (e) {
+            // ignore and fallback to minimal
+          }
+
+
+          // 3) fallback: build a minimal order object from status response
+          const minimal: Partial<ServerOrder> = {
+            id: orderId,
+            madon: json.data?.madon ?? json.madon ?? orderId,
+            trangthaithanhtoan: json.payment_status ?? undefined,
+            trangthai: json.order_status ?? undefined,
+            created_at: undefined,
+            chitietdonhang: undefined,
+          };
+          setOrder(minimal as ServerOrder);
+          setError(null);
+          return;
+        }
+
+        // 4) If none -> error
+        setOrder(null);
+        setError(json.message || "Không lấy được đơn hàng");
+      } catch (err) {
+
+        console.error(err);
+        setOrder(null);
+        setError("Lỗi khi lấy dữ liệu đơn hàng");
+      } finally {
+        setLoading(false);
       }
-
-      // 4) If none -> error
-      setOrder(null);
-      setError(json.message || "Không lấy được đơn hàng");
-    } catch (err) {
-
-      console.error(err);
-      setOrder(null);
-      setError("Lỗi khi lấy dữ liệu đơn hàng");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
 
-  loadOrder();
-}, [orderId]);
+    loadOrder();
+  }, [orderId]);
 
   // Chuẩn bị dữ liệu hiển thị
   const isSuccess = !!order;
   const orderCode = order?.madon || orderId || "#UNKNOWN";
   const formatDate = (dateString?: string | null) => {
-        if (!dateString) return "";
-        try {
-            const date = new Date(dateString);
-            // Kiểm tra nếu date không hợp lệ (Invalid Date)
-            if (isNaN(date.getTime())) return dateString; // Trả về nguyên gốc nếu không parse được
-            return date.toLocaleString("vi-VN");
-        } catch {
-            return dateString || "";
-        }
-    };
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      // Kiểm tra nếu date không hợp lệ (Invalid Date)
+      if (isNaN(date.getTime())) return dateString; // Trả về nguyên gốc nếu không parse được
+      return date.toLocaleString("vi-VN");
+    } catch {
+      return dateString || "";
+    }
+  };
   const orderDate = order?.created_at ?? "";
-  
-  
+
+
   const paymentText = order?.trangthaithanhtoan || "Thanh toán khi nhận hàng";
   const totalAmount = fmtMoney(order?.thanhtien);
 
@@ -257,7 +257,7 @@ export default function HoanTatThanhToanPage() {
                       href="/don-hang"
                       onClick={() => {
                         if (typeof window !== "undefined" && order?.id) {
-                          try { sessionStorage.setItem("openOrderId", String(order.id)); } catch {}
+                          try { sessionStorage.setItem("openOrderId", String(order.id)); } catch { }
                         }
                       }}
                       className="gap-4 pb-0 mb-0 text-sm text-gray-600 fw-semibold hover-text-main-600 transition-1 flex-align"
@@ -269,62 +269,62 @@ export default function HoanTatThanhToanPage() {
 
                   <div className="px-5 py-6">
                     {order?.chitietdonhang && order.chitietdonhang.length > 0 ? (
-                    (() => {
-                      // tách chính / quà tặng
-                      const raw = order.chitietdonhang!;
-                      const gifts = raw.filter(i => Number(i.thanhtien ?? i.tamtinh ?? i.dongia ?? NaN) === 0);
-                      const mains = raw.filter(i => !gifts.includes(i));
-                      const renderRow = (item: any, idx: number, isGift = false) => {
-                        const tenSP = item.tensanpham ?? item.bienthe?.sanpham?.ten ?? item.name ?? "Sản phẩm";
-                        const imgRaw = item.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh ?? item.bienthe?.sanpham?.hinhanh ?? item.hinhanh ?? "/assets/images/thumbs/placeholder.png";
-                        const anhSP = String(imgRaw).startsWith("http") ? String(imgRaw) : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${String(imgRaw)}`;
-                        const qty = item.soluong ?? item.quantity ?? 0;
-                        const price = isGift ? 0 : (item.dongia ?? item.price ?? item.thanhtien ?? 0);
-                        const productHref = item.bienthe?.sanpham?.slug ? `/san-pham/${item.bienthe.sanpham.slug}` : "#";
+                      (() => {
+                        // tách chính / quà tặng
+                        const raw = order.chitietdonhang!;
+                        const gifts = raw.filter(i => Number(i.thanhtien ?? i.tamtinh ?? i.dongia ?? NaN) === 0);
+                        const mains = raw.filter(i => !gifts.includes(i));
+                        const renderRow = (item: any, idx: number, isGift = false) => {
+                          const tenSP = item.tensanpham ?? item.bienthe?.sanpham?.ten ?? item.name ?? "Sản phẩm";
+                          const imgRaw = item.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh ?? item.bienthe?.sanpham?.hinhanh ?? item.hinhanh ?? "/assets/images/thumbs/placeholder.png";
+                          const anhSP = String(imgRaw).startsWith("http") ? String(imgRaw) : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${String(imgRaw)}`;
+                          const qty = item.soluong ?? item.quantity ?? 0;
+                          const price = isGift ? 0 : (item.dongia ?? item.price ?? item.thanhtien ?? 0);
+                          const productHref = item.bienthe?.sanpham?.slug ? `/san-pham/${item.bienthe.sanpham.slug}` : "#";
 
-                        return (
-                          <div key={item.id ?? idx} className="gap-12 mb-12 d-flex align-items-center">
-                            <Link href={productHref} className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: 90, maxHeight: 90, width: "100%", height: "100%" }}>
-                              <Image src={anhSP} alt={tenSP} width={90} height={90} className="object-cover w-100 rounded-8" unoptimized />
-                            </Link>
-                            <div className="text-start w-100">
-                              <h6 className="mb-0 title text-md fw-semibold">
-                                <Link href={productHref} className="link text-line-2" title={tenSP} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: 350, display: "inline-block" }}>
-                                  {tenSP}
-                                </Link>
-                              </h6>
-                              <div className="gap-16 mb-6 flex-align">
-                                <div className="gap-8 px-6 py-4 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">{item.tenloaibienthe ?? item.bienthe?.tenloaibienthe ?? ""}</div>
-                              </div>
-                              <div className="mb-6 product-card__price">
-                                <div className="gap-24 flex-align">
-                                  <span className="text-sm text-heading fw-medium">Số lượng: {qty}</span>
-                                  <span className="text-main-600 text-md fw-semibold">{fmtMoney(price)}</span>
+                          return (
+                            <div key={item.id ?? idx} className="gap-12 mb-12 d-flex align-items-center">
+                              <Link href={productHref} className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: 90, maxHeight: 90, width: "100%", height: "100%" }}>
+                                <Image src={anhSP} alt={tenSP} width={90} height={90} className="object-cover w-100 rounded-8" unoptimized />
+                              </Link>
+                              <div className="text-start w-100">
+                                <h6 className="mb-0 title text-md fw-semibold">
+                                  <Link href={productHref} className="link text-line-2" title={tenSP} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: 350, display: "inline-block" }}>
+                                    {tenSP}
+                                  </Link>
+                                </h6>
+                                <div className="gap-16 mb-6 flex-align">
+                                  <div className="gap-8 px-6 py-4 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">{item.tenloaibienthe ?? item.bienthe?.tenloaibienthe ?? ""}</div>
+                                </div>
+                                <div className="mb-6 product-card__price">
+                                  <div className="gap-24 flex-align">
+                                    <span className="text-sm text-heading fw-medium">Số lượng: {qty}</span>
+                                    <span className="text-main-600 text-md fw-semibold">{fmtMoney(price)}</span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      };
+                          );
+                        };
 
-                      return (
-                        <>
-                          {mains.map((it, i) => renderRow(it, i, false))}
-                          {gifts.length > 0 && (
-                            <>
-                              <div className="gap-8 mb-12 flex-align">
-                                <i className="text-lg ph-bold ph-gift text-main-600 pe-6"></i>
-                                <h6 className="m-0 text-md fw-semibold">Quà tặng nhận được</h6>
-                              </div>
-                              {gifts.map((it, i) => renderRow(it, i, true))}
-                            </>
-                          )}
-                        </>
-                      );
-                    })()
-                  ) : (
-                    <div className="py-10 text-center text-gray-600">Không có sản phẩm để hiển thị</div>
-                  )}
+                        return (
+                          <>
+                            {mains.map((it, i) => renderRow(it, i, false))}
+                            {gifts.length > 0 && (
+                              <>
+                                <div className="gap-8 mb-12 flex-align">
+                                  <i className="text-lg ph-bold ph-gift text-main-600 pe-6"></i>
+                                  <h6 className="m-0 text-md fw-semibold">Quà tặng nhận được</h6>
+                                </div>
+                                {gifts.map((it, i) => renderRow(it, i, true))}
+                              </>
+                            )}
+                          </>
+                        );
+                      })()
+                    ) : (
+                      <div className="py-10 text-center text-gray-600">Không có sản phẩm để hiển thị</div>
+                    )}
                   </div>
 
                   <div className="pt-16 mt-16 border-gray-200 row border-top">

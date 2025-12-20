@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { AuthUser } from "@/hooks/useAuth";
 
-const API_URL = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+const API_URL = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
 export async function getUserFromServer(): Promise<AuthUser | null> {
   // 1. Đọc cookie "access_token" ngay trên server Next.js
@@ -16,7 +16,7 @@ export async function getUserFromServer(): Promise<AuthUser | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    const res = await fetch(`${API_URL}/api/auth/thong-tin-nguoi-dung`, {
+    const res = await fetch(`${API_URL}/api/v1/thong-tin-ca-nhan`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,

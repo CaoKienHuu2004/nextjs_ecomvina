@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo,useRef, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -23,7 +23,7 @@ type OrderItem = {
   hinhanh?: string;
   tenloaibienthe?: string;
   quantity?: number;
-  price?: number; 
+  price?: number;
   bienthe?: {
     id?: number;
     giagoc?: number;
@@ -102,14 +102,14 @@ export default function OrdersPage() {
   const pageSize = 5;
 
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<DetailedOrder | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const displayStatusLabel = (status?: string) => {
-  const label = getTrangThaiDonHang(status);
+    const label = getTrangThaiDonHang(status);
     return label && label !== "Chưa rõ" ? label : (status || "Chưa rõ");
   };
 
@@ -118,7 +118,7 @@ export default function OrdersPage() {
     const fetchOrders = async () => {
       try {
         setLoading(true);
-        const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+        const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
         const token = Cookies.get("access_token");
 
         const res = await fetch(`${API}/api/tai-khoan/donhangs`, {
@@ -130,32 +130,32 @@ export default function OrdersPage() {
         });
 
         if (res.ok) {
-        const json = await res.json().catch(() => ({}));
-        // Normalize payload: accept either array-of-groups (server sample) or an array-of-orders
-        const payload = Array.isArray(json) ? json : (json.data ?? []);
+          const json = await res.json().catch(() => ({}));
+          // Normalize payload: accept either array-of-groups (server sample) or an array-of-orders
+          const payload = Array.isArray(json) ? json : (json.data ?? []);
 
-        // If payload looks like groups (items have `donhang`), treat as OrderGroup[]
-        const groupsResp: OrderGroup[] =
+          // If payload looks like groups (items have `donhang`), treat as OrderGroup[]
+          const groupsResp: OrderGroup[] =
             Array.isArray(payload) &&
-            payload.length > 0 &&
-            typeof ((payload[0] as Record<string, unknown>).donhang) !== "undefined"
+              payload.length > 0 &&
+              typeof ((payload[0] as Record<string, unknown>).donhang) !== "undefined"
               ? (payload as OrderGroup[])
               : [];
-        // Save groups (useful if you want to display server-provided counts later)
-        setGroups(groupsResp);
+          // Save groups (useful if you want to display server-provided counts later)
+          setGroups(groupsResp);
 
-        // Build flat order list:
-        const allOrders: Order[] = groupsResp.length
-          ? groupsResp.flatMap(g => g.donhang ?? [])
-          : (Array.isArray(payload) ? (payload as Order[]) : []);
+          // Build flat order list:
+          const allOrders: Order[] = groupsResp.length
+            ? groupsResp.flatMap(g => g.donhang ?? [])
+            : (Array.isArray(payload) ? (payload as Order[]) : []);
 
-        // Sort without mutating original
-        const sortedList = [...allOrders].sort((a, b) => b.id - a.id);
+          // Sort without mutating original
+          const sortedList = [...allOrders].sort((a, b) => b.id - a.id);
 
-        setOrders(sortedList);
-      } else {
-        console.error("Lỗi API:", res.status);
-      }
+          setOrders(sortedList);
+        } else {
+          console.error("Lỗi API:", res.status);
+        }
       } catch (error) {
         console.error("Lỗi tải đơn hàng:", error);
       } finally {
@@ -245,7 +245,7 @@ export default function OrdersPage() {
   };
   // Cho phép hủy khi trạng thái còn 'chờ' (cập nhật theo rule dự án)
   const isCancellable = (status?: string) => {
-  const s = (status || "").toLowerCase();
+    const s = (status || "").toLowerCase();
     return s.includes("chờ") || s.includes("pending");
   };
 
@@ -512,15 +512,15 @@ export default function OrdersPage() {
   // --- LOGIC FILTER ---
   // Helper map trạng thái từ API sang key filter
   const getFilterKey = (status?: string): FilterStatus => {
-  const s = (status || "").toLowerCase();
-  if (s.includes("chờ thanh toán")) return "pending";
-  if (s.includes("chờ xử lý") || s.includes("đã xác nhận") || s.includes("đang chuẩn bị") || s.includes("preparing")) return "processing";
-  if (s.includes("đang giao") || s.includes("shipping")) return "shipping";
-  if (s.includes("đã giao") || s.includes("delivered")) return "delivered";
-  if (s.includes("thành công") || s.includes("completed") || s.includes("success")) return "completed";
-  if (s.includes("đã hủy") || s.includes("cancel")) return "cancelled";
-  return "all";
-};
+    const s = (status || "").toLowerCase();
+    if (s.includes("chờ thanh toán")) return "pending";
+    if (s.includes("chờ xử lý") || s.includes("đã xác nhận") || s.includes("đang chuẩn bị") || s.includes("preparing")) return "processing";
+    if (s.includes("đang giao") || s.includes("shipping")) return "shipping";
+    if (s.includes("đã giao") || s.includes("delivered")) return "delivered";
+    if (s.includes("thành công") || s.includes("completed") || s.includes("success")) return "completed";
+    if (s.includes("đã hủy") || s.includes("cancel")) return "cancelled";
+    return "all";
+  };
 
   const filteredOrders = useMemo(() => {
     if (filterStatus === "all") return orders;
@@ -528,22 +528,22 @@ export default function OrdersPage() {
   }, [orders, filterStatus]);
 
   const countsByFilter = useMemo(() => {
-  const map: Record<FilterStatus, number> = {
-    all: 0,
-    pending: 0,
-    processing: 0,
-    shipping: 0,
-    delivered: 0,
-    completed: 0,
-    cancelled: 0,
-  };
-  map.all = orders.length;
-  for (const o of orders) {
-    const k = getFilterKey(o.trangthai);
-    map[k] = (map[k] ?? 0) + 1;
-  }
-  return map;
-}, [orders]);
+    const map: Record<FilterStatus, number> = {
+      all: 0,
+      pending: 0,
+      processing: 0,
+      shipping: 0,
+      delivered: 0,
+      completed: 0,
+      cancelled: 0,
+    };
+    map.all = orders.length;
+    for (const o of orders) {
+      const k = getFilterKey(o.trangthai);
+      map[k] = (map[k] ?? 0) + 1;
+    }
+    return map;
+  }, [orders]);
 
   // Pagination
   const totalPages = Math.ceil(filteredOrders.length / pageSize);
@@ -701,364 +701,364 @@ export default function OrdersPage() {
                   </div>
 
                   {(() => {
-                      const items = (detailOrder.chitietdonhang ?? []);
-                      const purchased = items.filter(it => Number(it.dongia ?? it.price ?? 0) > 0);
-                      const gifts = items.filter(it => Number(it.dongia ?? it.price ?? 0) === 0);
+                    const items = (detailOrder.chitietdonhang ?? []);
+                    const purchased = items.filter(it => Number(it.dongia ?? it.price ?? 0) > 0);
+                    const gifts = items.filter(it => Number(it.dongia ?? it.price ?? 0) === 0);
 
-                      const renderItem = (it: OrderItem) => {
-                        const variant = it.bienthe ?? undefined;
-                        const sp = (variant as OrderItem["bienthe"])?.sanpham ?? {};
-                        const title = sp.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
-                        const imgRaw =
-                          (sp.hinhanhsanpham?.[0]?.hinhanh as string | undefined) ??
-                          (sp.hinhanh as string | undefined) ??
-                          (it.hinhanh as string | undefined) ??
-                          "/assets/images/thumbs/placeholder.png";
-                        const imgSrc = String(imgRaw).startsWith("http")
-                          ? String(imgRaw)
-                          : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${String(imgRaw)}`;
-                        const variantLabel =
-                          (variant as OrderItem["bienthe"])?.loaibienthe?.ten ??
-                          (variant as OrderItem["bienthe"])?.tenloaibienthe ??
-                          it.tenloaibienthe ??
-                          it.bienthe?.tenloaibienthe ??
-                          "";
-                        const qty = it.soluong ?? it.quantity ?? 0;
-                        const price = Number(it.dongia ?? it.price ?? 0);
-                        const orig = Number((it.bienthe as any)?.giagoc ?? (it as any).giagoc ?? (it as any).price ?? price);
-                        const hasDiscount = orig > price && orig > 0;
-                        const discountPct = hasDiscount ? Math.round((orig - price) / orig * 100) : 0;
-                        return (
-                          <div key={it.id} className="gap-12 mb-12 d-flex align-items-center">
-                            <a href="#" className="border border-gray-100 rounded-8 flex-center" style={{ width: 72, height: 72, flexShrink: 0 }}>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={imgSrc} alt={title} className="object-cover rounded-6" style={{ width: 72, height: 72 }} />
-                            </a>
-                            <div className="text-start w-100">
-                              <h6 className="mb-2 title text-md fw-semibold" style={{ maxWidth: 520, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {title}
-                              </h6>
-                              <div className="gap-12 mb-6 flex-align">
-                                <div className="gap-8 px-6 py-4 text-sm btn bg-gray-50 text-heading rounded-8 flex-center fw-normal">{variantLabel}</div>
-                                <div className="text-sm text-gray-600">Số lượng: <span className="fw-medium">{qty}</span></div>
-                              </div>
-                            </div>
-                            <div className="text-end" style={{ minWidth: 160 }}>
-                              {price === 0 ? (
-                                <>
-                                  <div className="text-sm text-gray-500">Quà tặng miễn phí</div>
-                                  <div className="text-gray-700 text-md fw-semibold">0 ₫</div>
-                                </>
-                              ) : (
-                                <>
-                                  {hasDiscount && <div className="text-sm text-gray-500"><s>{formatPrice(orig)}</s> <span className="ms-2 text-danger-600 fw-medium">-{discountPct}%</span></div>}
-                                  <div className="text-md fw-semibold text-main-600">{formatPrice(price)}</div>
-                                </>
-                              )}
+                    const renderItem = (it: OrderItem) => {
+                      const variant = it.bienthe ?? undefined;
+                      const sp = (variant as OrderItem["bienthe"])?.sanpham ?? {};
+                      const title = sp.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
+                      const imgRaw =
+                        (sp.hinhanhsanpham?.[0]?.hinhanh as string | undefined) ??
+                        (sp.hinhanh as string | undefined) ??
+                        (it.hinhanh as string | undefined) ??
+                        "/assets/images/thumbs/placeholder.png";
+                      const imgSrc = String(imgRaw).startsWith("http")
+                        ? String(imgRaw)
+                        : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${String(imgRaw)}`;
+                      const variantLabel =
+                        (variant as OrderItem["bienthe"])?.loaibienthe?.ten ??
+                        (variant as OrderItem["bienthe"])?.tenloaibienthe ??
+                        it.tenloaibienthe ??
+                        it.bienthe?.tenloaibienthe ??
+                        "";
+                      const qty = it.soluong ?? it.quantity ?? 0;
+                      const price = Number(it.dongia ?? it.price ?? 0);
+                      const orig = Number((it.bienthe as any)?.giagoc ?? (it as any).giagoc ?? (it as any).price ?? price);
+                      const hasDiscount = orig > price && orig > 0;
+                      const discountPct = hasDiscount ? Math.round((orig - price) / orig * 100) : 0;
+                      return (
+                        <div key={it.id} className="gap-12 mb-12 d-flex align-items-center">
+                          <a href="#" className="border border-gray-100 rounded-8 flex-center" style={{ width: 72, height: 72, flexShrink: 0 }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={imgSrc} alt={title} className="object-cover rounded-6" style={{ width: 72, height: 72 }} />
+                          </a>
+                          <div className="text-start w-100">
+                            <h6 className="mb-2 title text-md fw-semibold" style={{ maxWidth: 520, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {title}
+                            </h6>
+                            <div className="gap-12 mb-6 flex-align">
+                              <div className="gap-8 px-6 py-4 text-sm btn bg-gray-50 text-heading rounded-8 flex-center fw-normal">{variantLabel}</div>
+                              <div className="text-sm text-gray-600">Số lượng: <span className="fw-medium">{qty}</span></div>
                             </div>
                           </div>
-                        );
-                      };
-
-                      return (
-                        <>
-                          {/* Purchased items */}
-                          {purchased.map(renderItem)}
-                          {/* Divider + Gifts */}
-                          {gifts.length > 0 && (
-                            <>
-                              <div className="my-6 border-gray-200 border-top" />
-                              <div className="mb-4 text-sm text-gray-600">Quà tặng nhận được</div>
-                              <div style={{ paddingLeft: 20 }}>
-                                {gifts.map(renderItem)}
-                              </div>
-                            </>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Tổng tiền */}
-                  <div className="pt-16 mt-16 border-gray-300 border-top border-1">
-                    <div className="gap-8 mb-8 flex-between">
-                      <span></span>
-                      <div className="gap-24 flex-align flex-between" style={{ width: "22%" }}>
-                        <span className="text-gray-700 text-md">Tạm tính:</span>
-                        <span className="text-gray-900 text-md fw-semibold">{formatPrice(detailOrder.tamtinh ?? detailOrder.thanhtien ?? 0)}</span>
-                      </div>
-                    </div>
-
-                    <div className="gap-8 mb-8 flex-between">
-                      <span></span>
-                      <div className="gap-24 flex-align flex-between" style={{ width: "22%" }}>
-                        <span className="text-gray-700 text-md">Phí giao hàng:</span>
-                        <span className="text-md text-info-900 fw-semibold">{formatPrice(detailOrder.phivanchuyen?.phi ?? detailOrder.phigiaohang ?? 0)}</span>
-                      </div>
-                    </div>
-
-                    {detailOrder.magiamgia?.giatri ? (
-                      <div className="gap-8 mb-8 flex-between">
-                        <span></span>
-                        <div style={{ width: "22%" }} className="gap-24 flex-align flex-between">
-                          <span className="text-gray-700 text-md">Giảm giá:</span>
-                          <span className="text-md text-success-600 fw-semibold">-{formatPrice(detailOrder.magiamgia.giatri)}</span>
+                          <div className="text-end" style={{ minWidth: 160 }}>
+                            {price === 0 ? (
+                              <>
+                                <div className="text-sm text-gray-500">Quà tặng miễn phí</div>
+                                <div className="text-gray-700 text-md fw-semibold">0 ₫</div>
+                              </>
+                            ) : (
+                              <>
+                                {hasDiscount && <div className="text-sm text-gray-500"><s>{formatPrice(orig)}</s> <span className="ms-2 text-danger-600 fw-medium">-{discountPct}%</span></div>}
+                                <div className="text-md fw-semibold text-main-600">{formatPrice(price)}</div>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ) : null}
+                      );
+                    };
 
-                    <div className="gap-8 flex-between">
-                      <span></span>
-                      <div className="gap-24 flex-align">
-                        <span className="text-xl text-gray-900 fw-bold">Tổng tiền:</span>
-                        <span className="text-xl text-main-600 fw-bold">{formatPrice(detailOrder.thanhtien ?? detailOrder.tamtinh ?? 0)}</span>
-                      </div>
-                    </div>
-                  </div>
+                    return (
+                      <>
+                        {/* Purchased items */}
+                        {purchased.map(renderItem)}
+                        {/* Divider + Gifts */}
+                        {gifts.length > 0 && (
+                          <>
+                            <div className="my-6 border-gray-200 border-top" />
+                            <div className="mb-4 text-sm text-gray-600">Quà tặng nhận được</div>
+                            <div style={{ paddingLeft: 20 }}>
+                              {gifts.map(renderItem)}
+                            </div>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
-                <div className="gap-12 mt-10 flex-align flex-between">
-                  <a onClick={closeDetail} className="gap-8 mt-10 text-main-600 text-md fw-medium flex-align" style={{ cursor: "pointer" }}>
-                    <i className="ph-bold ph-arrow-fat-lines-left text-main-600 text-md"></i> Quay lại đơn hàng của tôi
-                  </a>
+                {/* Tổng tiền */}
+                <div className="pt-16 mt-16 border-gray-300 border-top border-1">
+                  <div className="gap-8 mb-8 flex-between">
+                    <span></span>
+                    <div className="gap-24 flex-align flex-between" style={{ width: "22%" }}>
+                      <span className="text-gray-700 text-md">Tạm tính:</span>
+                      <span className="text-gray-900 text-md fw-semibold">{formatPrice(detailOrder.tamtinh ?? detailOrder.thanhtien ?? 0)}</span>
+                    </div>
+                  </div>
 
-                  <div className="gap-12 flex-align">
-                    {/* Nếu đơn đang ở trạng thái chờ thanh toán -> hiển thị Quay lại thanh toán */}
-                    {getFilterKey(detailOrder.trangthai) === "pending" && (
-                      <button
-                        type="button"
-                        onClick={() => retryPayment(detailOrder.id,"dbt")}
-                        className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
-                      >
-                        <i className="ph-bold ph-credit-card" /> Quay lại thanh toán
-                      </button>
-                    )}
-                    
-                    {isCancellable(detailOrder.trangthai) && (
-                      <button onClick={() => handleCancelOrder(detailOrder.id)} className="gap-8 px-8 py-4 border fw-medium text-main-600 text-md border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
-                        <i className="ph-bold ph-trash"></i> Hủy đơn
-                      </button>
-                    )}
+                  <div className="gap-8 mb-8 flex-between">
+                    <span></span>
+                    <div className="gap-24 flex-align flex-between" style={{ width: "22%" }}>
+                      <span className="text-gray-700 text-md">Phí giao hàng:</span>
+                      <span className="text-md text-info-900 fw-semibold">{formatPrice(detailOrder.phivanchuyen?.phi ?? detailOrder.phigiaohang ?? 0)}</span>
+                    </div>
+                  </div>
+
+                  {detailOrder.magiamgia?.giatri ? (
+                    <div className="gap-8 mb-8 flex-between">
+                      <span></span>
+                      <div style={{ width: "22%" }} className="gap-24 flex-align flex-between">
+                        <span className="text-gray-700 text-md">Giảm giá:</span>
+                        <span className="text-md text-success-600 fw-semibold">-{formatPrice(detailOrder.magiamgia.giatri)}</span>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="gap-8 flex-between">
+                    <span></span>
+                    <div className="gap-24 flex-align">
+                      <span className="text-xl text-gray-900 fw-bold">Tổng tiền:</span>
+                      <span className="text-xl text-main-600 fw-bold">{formatPrice(detailOrder.thanhtien ?? detailOrder.tamtinh ?? 0)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              <div className="gap-12 mt-10 flex-align flex-between">
+                <a onClick={closeDetail} className="gap-8 mt-10 text-main-600 text-md fw-medium flex-align" style={{ cursor: "pointer" }}>
+                  <i className="ph-bold ph-arrow-fat-lines-left text-main-600 text-md"></i> Quay lại đơn hàng của tôi
+                </a>
+
+                <div className="gap-12 flex-align">
+                  {/* Nếu đơn đang ở trạng thái chờ thanh toán -> hiển thị Quay lại thanh toán */}
+                  {getFilterKey(detailOrder.trangthai) === "pending" && (
+                    <button
+                      type="button"
+                      onClick={() => retryPayment(detailOrder.id, "dbt")}
+                      className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
+                    >
+                      <i className="ph-bold ph-credit-card" /> Quay lại thanh toán
+                    </button>
+                  )}
+
+                  {isCancellable(detailOrder.trangthai) && (
+                    <button onClick={() => handleCancelOrder(detailOrder.id)} className="gap-8 px-8 py-4 border fw-medium text-main-600 text-md border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
+                      <i className="ph-bold ph-trash"></i> Hủy đơn
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
+          </div>
         ) : (
           /* ELSE: render original orders list section (paste your existing section here) */
           <section className="mt-10 overflow-hidden trending-productss fix-scale-80">
-          <div className="p-24 border border-gray-100 rounded-8" style={{ paddingBottom: 120 }}>
-            {/* <div className="p-24 border border-gray-100 rounded-8"> */}
-            <div className="mb-20 section-heading">
-              <div className="flex-wrap gap-8 flex-between flex-align">
-                <ul className="pb-2 m-0 mb-3 overflow-auto nav common-tab style-two nav-pills flex-nowrap">
-                  {STATUS_OPTIONS.map((opt) => {
-                    const active = filterStatus === opt.key;
-                    return (
-                      <li key={opt.key} className="nav-item">
-                        <button
-                          type="button"
-                          onClick={() => { setFilterStatus(opt.key); setPage(1); }}
-                          className={`px-10 py-8 rounded-10 flex-align gap-8 fw-medium text-xs transition-1 me-2 mb-2 ${active ? "bg-main-600 text-white" : "border border-gray-600 text-gray-900 hover-border-main-600 hover-text-main-600"}`}
-                        >
-                          {opt.icon && <i className={`ph-bold ${opt.icon}`} />}
-                          {opt.label} ({countsByFilter[opt.key] ?? 0})
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </div>
-
-            {/* Orders list cards */}
-            <div className="mt-4">
-              {loading ? (
-                <div className="py-5 text-center">Đang tải dữ liệu...</div>
-              ) : currentOrders.length === 0 ? (
-                <div className="py-5 text-center border rounded-8">
-                  <p className="mb-3 text-gray-500">Không tìm thấy đơn hàng nào.</p>
-                  <Link href="/" className="px-4 btn btn-main rounded-pill">Mua sắm ngay</Link>
+            <div className="p-24 border border-gray-100 rounded-8" style={{ paddingBottom: 120 }}>
+              {/* <div className="p-24 border border-gray-100 rounded-8"> */}
+              <div className="mb-20 section-heading">
+                <div className="flex-wrap gap-8 flex-between flex-align">
+                  <ul className="pb-2 m-0 mb-3 overflow-auto nav common-tab style-two nav-pills flex-nowrap">
+                    {STATUS_OPTIONS.map((opt) => {
+                      const active = filterStatus === opt.key;
+                      return (
+                        <li key={opt.key} className="nav-item">
+                          <button
+                            type="button"
+                            onClick={() => { setFilterStatus(opt.key); setPage(1); }}
+                            className={`px-10 py-8 rounded-10 flex-align gap-8 fw-medium text-xs transition-1 me-2 mb-2 ${active ? "bg-main-600 text-white" : "border border-gray-600 text-gray-900 hover-border-main-600 hover-text-main-600"}`}
+                          >
+                            {opt.icon && <i className={`ph-bold ${opt.icon}`} />}
+                            {opt.label} ({countsByFilter[opt.key] ?? 0})
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
-              ) : (
-                currentOrders.map(order => {
-                  const firstItem = order.chitietdonhang?.[0];
-                  const spDau = firstItem?.bienthe?.sanpham || {};
-                  const tenSpDau = spDau.ten || firstItem?.name || "Sản phẩm";
-                  const anhSpDau = spDau.hinhanh || firstItem?.hinhanh || "/assets/images/thumbs/placeholder.png";
-                  const soLuongSp = order.chitietdonhang?.length || 0;
-                  const loaiBienTheDau = firstItem?.bienthe?.loaibienthe || {};
-                  const tenLoaiBienTheDau = loaiBienTheDau.ten || "Loại Biến Thể";
-                  return (
-                    <div key={order.id} className="my-10 border border-gray-200 p-14 rounded-4">
-                      <div className="d-flex flex-align flex-between">
-                        <div className="gap-12 flex-align">
-                          <span className="text-gray-900 fw-semibold text-md">Đơn hàng #{order.madon}</span>
-                        </div>
-                        <div className="gap-12 flex-align">
-                          {(() => {
-                            const badge = getStatusBadgeProps(order.trangthai);
+              </div>
+
+              {/* Orders list cards */}
+              <div className="mt-4">
+                {loading ? (
+                  <div className="py-5 text-center">Đang tải dữ liệu...</div>
+                ) : currentOrders.length === 0 ? (
+                  <div className="py-5 text-center border rounded-8">
+                    <p className="mb-3 text-gray-500">Không tìm thấy đơn hàng nào.</p>
+                    <Link href="/" className="px-4 btn btn-main rounded-pill">Mua sắm ngay</Link>
+                  </div>
+                ) : (
+                  currentOrders.map(order => {
+                    const firstItem = order.chitietdonhang?.[0];
+                    const spDau = firstItem?.bienthe?.sanpham || {};
+                    const tenSpDau = spDau.ten || firstItem?.name || "Sản phẩm";
+                    const anhSpDau = spDau.hinhanh || firstItem?.hinhanh || "/assets/images/thumbs/placeholder.png";
+                    const soLuongSp = order.chitietdonhang?.length || 0;
+                    const loaiBienTheDau = firstItem?.bienthe?.loaibienthe || {};
+                    const tenLoaiBienTheDau = loaiBienTheDau.ten || "Loại Biến Thể";
+                    return (
+                      <div key={order.id} className="my-10 border border-gray-200 p-14 rounded-4">
+                        <div className="d-flex flex-align flex-between">
+                          <div className="gap-12 flex-align">
+                            <span className="text-gray-900 fw-semibold text-md">Đơn hàng #{order.madon}</span>
+                          </div>
+                          <div className="gap-12 flex-align">
+                            {(() => {
+                              const badge = getStatusBadgeProps(order.trangthai);
                               return (
                                 <span className={badge.className}>
                                   <i className={`ph-bold ${badge.icon}`} /> {displayStatusLabel(order.trangthai)}
                                 </span>
                               );
-                          })()}
+                            })()}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="mb-10 d-flex flex-align flex-between">
-                        <div className="gap-8 flex-align">
-                          <span className="text-sm text-gray-600 fw-medium">Đặt ngày {formatOrderDate(order.created_at)}</span>
+                        <div className="mb-10 d-flex flex-align flex-between">
+                          <div className="gap-8 flex-align">
+                            <span className="text-sm text-gray-600 fw-medium">Đặt ngày {formatOrderDate(order.created_at)}</span>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="px-5 py-6">
-                       { (order.chitietdonhang ?? []).length === 0 ? (
-                          <div className="py-3 text-sm text-center text-gray-500">Không có sản phẩm</div>
-                        ) : (
-                          (() => {
-                            const items = order.chitietdonhang ?? [];
-                            const purchased = items.filter(it => Number(it.dongia ?? it.price ?? 0) > 0);
-                            const gifts = items.filter(it => Number(it.dongia ?? it.price ?? 0) === 0);
+                        <div className="px-5 py-6">
+                          {(order.chitietdonhang ?? []).length === 0 ? (
+                            <div className="py-3 text-sm text-center text-gray-500">Không có sản phẩm</div>
+                          ) : (
+                            (() => {
+                              const items = order.chitietdonhang ?? [];
+                              const purchased = items.filter(it => Number(it.dongia ?? it.price ?? 0) > 0);
+                              const gifts = items.filter(it => Number(it.dongia ?? it.price ?? 0) === 0);
 
-                            const renderCompact = (it: OrderItem) => {
-                              const title = it.bienthe?.sanpham?.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
-                              const imgRaw = it.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh ?? it.bienthe?.sanpham?.hinhanh ?? it.hinhanh ?? "/assets/images/thumbs/placeholder.png";
-                              const img = String(imgRaw).startsWith("http") ? imgRaw : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${imgRaw}`;
-                              const qty = it.soluong ?? it.quantity ?? 0;
-                              const price = Number(it.dongia ?? it.price ?? 0);
-                              const orig = Number(it.bienthe?.giagoc ?? (it as any).giagoc ?? 0);
-                              const hasDiscount = orig > 0 && orig > price;
-                              const discountPct = hasDiscount ? Math.round((orig - price) / orig * 100) : 0;
+                              const renderCompact = (it: OrderItem) => {
+                                const title = it.bienthe?.sanpham?.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
+                                const imgRaw = it.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh ?? it.bienthe?.sanpham?.hinhanh ?? it.hinhanh ?? "/assets/images/thumbs/placeholder.png";
+                                const img = String(imgRaw).startsWith("http") ? imgRaw : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${imgRaw}`;
+                                const qty = it.soluong ?? it.quantity ?? 0;
+                                const price = Number(it.dongia ?? it.price ?? 0);
+                                const orig = Number(it.bienthe?.giagoc ?? (it as any).giagoc ?? 0);
+                                const hasDiscount = orig > 0 && orig > price;
+                                const discountPct = hasDiscount ? Math.round((orig - price) / orig * 100) : 0;
 
-                              return (
-                                <div key={it.id} className="py-2 d-flex align-items-center justify-content-between border-bottom">
-                                  <div className="gap-12 d-flex align-items-center" style={{ maxWidth: 420 }}>
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={img} alt={title} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8 }} />
-                                    <div style={{ minWidth: 0 }}>
-                                      <div className="text-sm fw-medium text-truncate" style={{ maxWidth: 320 }}>{title}</div>
-                                      <div className="gap-12 d-flex align-items-center">
-                                        <div className="text-xs text-gray-500">Số lượng: <span className="fw-medium">{qty}</span></div>
-                                        <div className="gap-8 d-flex align-items-baseline">
-                                          {hasDiscount && (
-                                            <span className="text-xs text-gray-400 fw-semibold text-decoration-line-through">
-                                              {formatPrice(orig)}
-                                            </span>
-                                          )}
-                                          <span className="text-sm fw-semibold text-main-600">{formatPrice(price)}</span>
-                                          {hasDiscount && (
-                                            <span className="text-xs text-main-two-600 ms-2">-{discountPct}%</span>
-                                          )}
+                                return (
+                                  <div key={it.id} className="py-2 d-flex align-items-center justify-content-between border-bottom">
+                                    <div className="gap-12 d-flex align-items-center" style={{ maxWidth: 420 }}>
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={img} alt={title} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8 }} />
+                                      <div style={{ minWidth: 0 }}>
+                                        <div className="text-sm fw-medium text-truncate" style={{ maxWidth: 320 }}>{title}</div>
+                                        <div className="gap-12 d-flex align-items-center">
+                                          <div className="text-xs text-gray-500">Số lượng: <span className="fw-medium">{qty}</span></div>
+                                          <div className="gap-8 d-flex align-items-baseline">
+                                            {hasDiscount && (
+                                              <span className="text-xs text-gray-400 fw-semibold text-decoration-line-through">
+                                                {formatPrice(orig)}
+                                              </span>
+                                            )}
+                                            <span className="text-sm fw-semibold text-main-600">{formatPrice(price)}</span>
+                                            {hasDiscount && (
+                                              <span className="text-xs text-main-two-600 ms-2">-{discountPct}%</span>
+                                            )}
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
+                                    <div style={{ width: 8 }} />
                                   </div>
-                                  <div style={{ width: 8 }} />
-                                </div>
-                              );
-                            };
+                                );
+                              };
 
-                            const renderGift = (g: OrderItem, idx: number) => {
-                              const title = g.tensanpham ?? g.name ?? "Quà tặng";
-                              const imgRaw = g.hinhanh ?? g.bienthe?.sanpham?.hinhanh ?? "/assets/images/thumbs/product-placeholder.png";
-                              const img = String(imgRaw).startsWith("http") ? imgRaw : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${imgRaw}`;
-                              const qty = g.soluong ?? g.quantity ?? 1;
-                              const orig = Number(g.bienthe?.giagoc ?? (g as any).giagoc ?? 0);
+                              const renderGift = (g: OrderItem, idx: number) => {
+                                const title = g.tensanpham ?? g.name ?? "Quà tặng";
+                                const imgRaw = g.hinhanh ?? g.bienthe?.sanpham?.hinhanh ?? "/assets/images/thumbs/product-placeholder.png";
+                                const img = String(imgRaw).startsWith("http") ? imgRaw : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${imgRaw}`;
+                                const qty = g.soluong ?? g.quantity ?? 1;
+                                const orig = Number(g.bienthe?.giagoc ?? (g as any).giagoc ?? 0);
+                                return (
+                                  <div key={String(g.bienthe?.id ?? g.id ?? idx)} className="py-2 d-flex align-items-center justify-content-between">
+                                    <div className="gap-12 d-flex align-items-center" style={{ maxWidth: 420 }}>
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={img} alt={title} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8 }} />
+                                      <div style={{ minWidth: 0 }}>
+                                        <div className="text-sm fw-medium text-truncate" style={{ maxWidth: 320 }}>{title}</div>
+                                        <div className="text-xs text-gray-500">Số lượng: <span className="fw-medium">{qty}</span></div>
+                                      </div>
+                                    </div>
+                                    <div className="text-end" style={{ minWidth: 120 }}>
+                                      {orig > 0 && (
+                                        <div className="text-xs text-gray-400 fw-semibold text-decoration-line-through">{formatPrice(orig)}</div>
+                                      )}
+                                      <div className="gap-4 text-xs flex-align text-main-two-600"><i className="text-sm ph-fill ph-seal-percent"></i> Quà tặng miễn phí</div>
+                                    </div>
+                                  </div>
+                                );
+                              };
                               return (
-                                <div key={String(g.bienthe?.id ?? g.id ?? idx)} className="py-2 d-flex align-items-center justify-content-between">
-                                  <div className="gap-12 d-flex align-items-center" style={{ maxWidth: 420 }}>
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={img} alt={title} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8 }} />
-                                    <div style={{ minWidth: 0 }}>
-                                      <div className="text-sm fw-medium text-truncate" style={{ maxWidth: 320 }}>{title}</div>
-                                      <div className="text-xs text-gray-500">Số lượng: <span className="fw-medium">{qty}</span></div>
-                                    </div>
-                                  </div>
-                                  <div className="text-end" style={{ minWidth: 120 }}>
-                                    {orig > 0 && (
-                                      <div className="text-xs text-gray-400 fw-semibold text-decoration-line-through">{formatPrice(orig)}</div>
-                                    )}
-                                    <div className="gap-4 text-xs flex-align text-main-two-600"><i className="text-sm ph-fill ph-seal-percent"></i> Quà tặng miễn phí</div>
-                                  </div>
-                                </div>
+                                <>
+                                  {purchased.map(renderCompact)}
+
+                                  {gifts.length > 0 && (
+                                    <>
+                                      <div className="my-3 border-gray-200 border-top" />
+                                      <div className="mb-2 text-sm text-gray-600 d-flex align-items-center">
+                                        <i className="ph-bold ph-gift text-main-600 me-2"></i>
+                                        <span>Quà tặng của bạn</span>
+                                      </div>
+                                      <div style={{ paddingLeft: 12 }}>
+                                        {gifts.map(renderGift)}
+                                      </div>
+                                    </>
+                                  )}
+                                </>
                               );
-                            };
-                            return (
-                              <>
-                                {purchased.map(renderCompact)}
-
-                                {gifts.length > 0 && (
-                                  <>
-                                    <div className="my-3 border-gray-200 border-top" />
-                                    <div className="mb-2 text-sm text-gray-600 d-flex align-items-center">
-                                      <i className="ph-bold ph-gift text-main-600 me-2"></i>
-                                      <span>Quà tặng của bạn</span>
-                                    </div>
-                                    <div style={{ paddingLeft: 12 }}>
-                                      {gifts.map(renderGift)}
-                                    </div>
-                                  </>
-                                )}
-                              </>
-                            );
-                          })()
-                        )}
-                      </div>
-                      <div className="d-flex flex-align flex-between">
-                        <div className="gap-12 flex-align">
-                          <span className="text-sm text-gray-600 fw-semibold"></span>
+                            })()
+                          )}
                         </div>
-                        <div className="gap-12 flex-align">
-                          <span className="text-sm fw-medium">Tổng thanh toán</span>
-                        </div>
-                      </div>
-
-                      <div className="d-flex flex-align flex-between">
-                        <div className="gap-12 flex-align">
+                        <div className="d-flex flex-align flex-between">
                           <div className="gap-12 flex-align">
-                            {/* Nếu đơn đang ở trạng thái chờ thanh toán -> hiển thị Quay lại thanh toán */}
-                            {getFilterKey(order.trangthai) === "pending" && (
-                              <button
-                                type="button"
-                                onClick={() => retryPayment(order.id,"dbt")}
-                                className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
-                              >
-                                <i className="ph-bold ph-credit-card" /> Quay lại thanh toán
-                              </button>
-                            )}
-                            
-                            {isReviewableStatus(order.trangthai) ? (
-                              <Link href={`/danh-gia?order_id=${order.id}`} className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
-                                <i className="ph ph-star" /> Đánh giá
-                              </Link>
-                            ) : (
-                              <button
-                                onClick={() => handleCancelOrder(order.id)}
-                                disabled={!isCancellable(order.trangthai)}
-                                className={`gap-8 px-8 py-4 text-sm border fw-medium rounded-4 transition-1 flex-align ${isCancellable(order.trangthai)
-                                  ? "text-danger-600 border-danger-600 hover-bg-danger-600 hover-text-white cursor-pointer"
+                            <span className="text-sm text-gray-600 fw-semibold"></span>
+                          </div>
+                          <div className="gap-12 flex-align">
+                            <span className="text-sm fw-medium">Tổng thanh toán</span>
+                          </div>
+                        </div>
+
+                        <div className="d-flex flex-align flex-between">
+                          <div className="gap-12 flex-align">
+                            <div className="gap-12 flex-align">
+                              {/* Nếu đơn đang ở trạng thái chờ thanh toán -> hiển thị Quay lại thanh toán */}
+                              {getFilterKey(order.trangthai) === "pending" && (
+                                <button
+                                  type="button"
+                                  onClick={() => retryPayment(order.id, "dbt")}
+                                  className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
+                                >
+                                  <i className="ph-bold ph-credit-card" /> Quay lại thanh toán
+                                </button>
+                              )}
+
+                              {isReviewableStatus(order.trangthai) ? (
+                                <Link href={`/danh-gia?order_id=${order.id}`} className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
+                                  <i className="ph ph-star" /> Đánh giá
+                                </Link>
+                              ) : (
+                                <button
+                                  onClick={() => handleCancelOrder(order.id)}
+                                  disabled={!isCancellable(order.trangthai)}
+                                  className={`gap-8 px-8 py-4 text-sm border fw-medium rounded-4 transition-1 flex-align ${isCancellable(order.trangthai)
+                                    ? "text-danger-600 border-danger-600 hover-bg-danger-600 hover-text-white cursor-pointer"
                                     : "text-gray-400 border-gray-200 bg-gray-50 cursor-not-allowed opacity-50"
-                                  }`}
-                              >
-                                <i className="ph-bold ph-trash" /> Hủy đơn
-                              </button>
-                            )}
-                            
+                                    }`}
+                                >
+                                  <i className="ph-bold ph-trash" /> Hủy đơn
+                                </button>
+                              )}
 
-                            {/* Mua lại cho đơn đã giao / hoàn tất */}
-                            {isReviewableStatus(order.trangthai) && (
-                              <button
-                                type="button"
-                                onClick={() => handleReorder(order.id)}
-                                className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
-                              >
-                                <i className="ph ph-shopping-cart" /> Mua lại
-                              </button>
-                            )}
 
-                            {/* Thanh toán lại cho đơn đã hủy */}
-                            {/* {getFilterKey(order.trangthai) === "cancelled" && (
+                              {/* Mua lại cho đơn đã giao / hoàn tất */}
+                              {isReviewableStatus(order.trangthai) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleReorder(order.id)}
+                                  className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
+                                >
+                                  <i className="ph ph-shopping-cart" /> Mua lại
+                                </button>
+                              )}
+
+                              {/* Thanh toán lại cho đơn đã hủy */}
+                              {/* {getFilterKey(order.trangthai) === "cancelled" && (
                               <button
                                 type="button"
                                 onClick={() => handleRetryPaymentFromCancelled(order.id)}
@@ -1068,30 +1068,30 @@ export default function OrdersPage() {
                               </button>
                             )} */}
 
-                            <button
-                              type="button"
-                              onClick={() => openDetail(order.id)}
-                              className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
-                            >
-                              <i className="ph-bold ph-eye" /> Xem chi tiết
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => openDetail(order.id)}
+                                className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
+                              >
+                                <i className="ph-bold ph-eye" /> Xem chi tiết
+                              </button>
+                            </div>
+                          </div>
+                          <div className="gap-12 flex-align">
+                            <span className="text-lg fw-bold text-main-600">{formatPrice(order.thanhtien)}</span>
                           </div>
                         </div>
-                        <div className="gap-12 flex-align">
-                          <span className="text-lg fw-bold text-main-600">{formatPrice(order.thanhtien)}</span>
-                        </div>
                       </div>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
         )}
 
-        
-        
+
+
         {totalPages > 1 && (
           <div className="gap-8 mt-24 d-flex justify-content-center">
             <button className="btn btn-sm btn-black" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Trước</button>
@@ -1099,7 +1099,7 @@ export default function OrdersPage() {
             <button className="btn btn-sm btn-black" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Sau</button>
           </div>
         )}
-        
+
         {/* Payment method choice modal */}
         {paymentModalOpen && (
           <div

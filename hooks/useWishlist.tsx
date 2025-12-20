@@ -16,7 +16,7 @@ type Ctx = {
 const WishlistContext = createContext<Ctx | null>(null);
 
 function useWishlistCore(): Ctx {
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
   const [ids, setIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
 
@@ -27,7 +27,7 @@ function useWishlistCore(): Ctx {
     (async () => {
       try {
         const token = typeof window !== "undefined" ? (Cookies.get("access_token") || Cookies.get("token")) : null;
-        const headers: Record<string,string> = { Accept: "application/json" };
+        const headers: Record<string, string> = { Accept: "application/json" };
         if (token) headers.Authorization = `Bearer ${token}`;
         const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
           headers,
@@ -66,7 +66,7 @@ function useWishlistCore(): Ctx {
             return toNumber((row as { product: { id: unknown } }).product.id);
           }
           if (hasId(row)) return toNumber((row as { id: unknown }).id);
-           return null;
+          return null;
         };
 
         const arr = Array.isArray(raw) ? raw : [];
@@ -109,7 +109,7 @@ function useWishlistCore(): Ctx {
     try {
       const token = typeof window !== 'undefined' ? (Cookies.get('access_token') || Cookies.get('token')) : null;
       const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
-        if (token) headers.Authorization = `Bearer ${token}`;
+      if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
         method: "POST",
         headers,

@@ -35,7 +35,7 @@ type ServerGroup = {
 export default function OrderLookupResult() {
   const search = useSearchParams();
   const code = search?.get("madon")?.trim() ?? "";
-  
+
   const [order, setOrder] = useState<ServerOrder | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,48 +53,48 @@ export default function OrderLookupResult() {
       setOrder(null);
 
       try {
-        const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+        const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
         const token = Cookies.get("access_token");
-        
+
         // Gọi API Public
         // const res = await fetch(`${API}/api/web/tracuu-donhang?madon=${encodeURIComponent(code)}`, {
-          // comment token bearer va mo headers: { "Accept": "application/json" }, neu khong dung auth
+        // comment token bearer va mo headers: { "Accept": "application/json" }, neu khong dung auth
         const res = await fetch(`${API}/web/tracuu-donhang?madon=${encodeURIComponent(code)}`, {
-            headers: { "Accept": "application/json" },
-            // headers: {
-            //     "Authorization": `Bearer ${token}`,
-            // },
-            cache: "no-store"
+          headers: { "Accept": "application/json" },
+          // headers: {
+          //     "Authorization": `Bearer ${token}`,
+          // },
+          cache: "no-store"
         });
 
         if (res.ok) {
-            const json = await res.json();
-            // API trả về danh sách nhóm (ApiGroup[]), ta cần tìm đơn hàng trong đó
-            const groups = (Array.isArray(json) ? json : json.data || []) as ServerGroup[];
-            
-            let found: ServerOrder | null = null;
-            
-            // Duyệt qua các nhóm để tìm mã đơn khớp
-            for (const group of groups) {
-                if (group.donhang) {
-                    const match = group.donhang.find(o => 
-                        o.madon?.toLowerCase() === code.toLowerCase() || 
-                        String(o.id) === code
-                    );
-                    if (match) {
-                        found = match;
-                        break;
-                    }
-                }
-            }
+          const json = await res.json();
+          // API trả về danh sách nhóm (ApiGroup[]), ta cần tìm đơn hàng trong đó
+          const groups = (Array.isArray(json) ? json : json.data || []) as ServerGroup[];
 
-            if (found) {
-                setOrder(found);
-            } else {
-                setError("Không tìm thấy đơn hàng với mã này.");
+          let found: ServerOrder | null = null;
+
+          // Duyệt qua các nhóm để tìm mã đơn khớp
+          for (const group of groups) {
+            if (group.donhang) {
+              const match = group.donhang.find(o =>
+                o.madon?.toLowerCase() === code.toLowerCase() ||
+                String(o.id) === code
+              );
+              if (match) {
+                found = match;
+                break;
+              }
             }
+          }
+
+          if (found) {
+            setOrder(found);
+          } else {
+            setError("Không tìm thấy đơn hàng với mã này.");
+          }
         } else {
-            setError("Không tìm thấy đơn hàng hoặc lỗi hệ thống.");
+          setError("Không tìm thấy đơn hàng hoặc lỗi hệ thống.");
         }
       } catch (err) {
         console.error(err);
@@ -112,15 +112,15 @@ export default function OrderLookupResult() {
   return (
     <div className="mb-20">
       {loading && (
-          <div className="p-16 text-center text-gray-500 bg-white border rounded-8">
-              Đang tra cứu thông tin...
-          </div>
+        <div className="p-16 text-center text-gray-500 bg-white border rounded-8">
+          Đang tra cứu thông tin...
+        </div>
       )}
-      
+
       {error && (
-          <div className="p-16 text-center border bg-warning-50 border-warning-200 rounded-8 text-danger-600 fw-medium">
-              <i className="ph-bold ph-warning-circle me-2"></i> {error}
-          </div>
+        <div className="p-16 text-center border bg-warning-50 border-warning-200 rounded-8 text-danger-600 fw-medium">
+          <i className="ph-bold ph-warning-circle me-2"></i> {error}
+        </div>
       )}
 
       {order && (
@@ -138,7 +138,7 @@ export default function OrderLookupResult() {
                   className="w-100 h-100 object-fit-cover"
                 />
               </div>
-              
+
               {/* Thông tin chính */}
               <div>
                 <div className="gap-8 mb-1 d-flex align-items-center">
@@ -150,12 +150,12 @@ export default function OrderLookupResult() {
                 <div className="mb-2 text-sm text-gray-500">
                   {order.created_at ? new Date(order.created_at).toLocaleDateString("vi-VN") : ""}
                 </div>
-                
+
                 {/* Tên sản phẩm đầu tiên */}
                 {order.chitietdonhang?.[0] && (
-                    <div className="text-sm text-gray-900 fw-medium line-clamp-1">
-                        {order.chitietdonhang[0].bienthe?.sanpham?.ten || "Sản phẩm"}
-                    </div>
+                  <div className="text-sm text-gray-900 fw-medium line-clamp-1">
+                    {order.chitietdonhang[0].bienthe?.sanpham?.ten || "Sản phẩm"}
+                  </div>
                 )}
               </div>
             </div>
@@ -179,31 +179,31 @@ export default function OrderLookupResult() {
           {/* Chi tiết mở rộng */}
           {expanded && (
             <div className="pt-16 mt-16 border-gray-100 border-top">
-               <h6 className="mb-12 text-sm fw-bold">Danh sách sản phẩm</h6>
-               <div className="gap-12 d-flex flex-column">
-                  {order.chitietdonhang?.map((item, idx) => {
-                      const sp = item.bienthe?.sanpham || {};
-                      return (
-                          <div key={idx} className="p-8 d-flex justify-content-between align-items-center bg-gray-50 rounded-8">
-                              <div className="gap-12 d-flex align-items-center">
-                                  <span className="text-sm text-gray-500 fw-medium">x{item.soluong}</span>
-                                  <span className="text-sm text-gray-900 line-clamp-1" style={{maxWidth: 200}}>
-                                      {sp.ten || "Sản phẩm"}
-                                  </span>
-                              </div>
-                              <span className="text-sm text-gray-900 fw-bold">
-                                  {formatVND(item.dongia)}
-                              </span>
-                          </div>
-                      )
-                  })}
-               </div>
-               <div className="mt-12 text-sm text-end">
-                   <span className="text-gray-500 me-2">Thanh toán:</span>
-                   <span className={`fw-bold ${order.trangthaithanhtoan?.includes("Đã") ? "text-success-600" : "text-warning-600"}`}>
-                       {order.trangthaithanhtoan || "Chưa thanh toán"}
-                   </span>
-               </div>
+              <h6 className="mb-12 text-sm fw-bold">Danh sách sản phẩm</h6>
+              <div className="gap-12 d-flex flex-column">
+                {order.chitietdonhang?.map((item, idx) => {
+                  const sp = item.bienthe?.sanpham || {};
+                  return (
+                    <div key={idx} className="p-8 d-flex justify-content-between align-items-center bg-gray-50 rounded-8">
+                      <div className="gap-12 d-flex align-items-center">
+                        <span className="text-sm text-gray-500 fw-medium">x{item.soluong}</span>
+                        <span className="text-sm text-gray-900 line-clamp-1" style={{ maxWidth: 200 }}>
+                          {sp.ten || "Sản phẩm"}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-900 fw-bold">
+                        {formatVND(item.dongia)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="mt-12 text-sm text-end">
+                <span className="text-gray-500 me-2">Thanh toán:</span>
+                <span className={`fw-bold ${order.trangthaithanhtoan?.includes("Đã") ? "text-success-600" : "text-warning-600"}`}>
+                  {order.trangthaithanhtoan || "Chưa thanh toán"}
+                </span>
+              </div>
             </div>
           )}
         </div>

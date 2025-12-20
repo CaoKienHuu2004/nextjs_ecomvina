@@ -13,7 +13,7 @@ const PartnerBrands = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const API = (process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud").replace(/\/$/, "");
+  const API = (process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com").replace(/\/$/, "");
   const url = `${API}/api/brands`;
 
   useEffect(() => {

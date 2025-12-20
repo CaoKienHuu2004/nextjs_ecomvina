@@ -61,7 +61,7 @@ export function useGiftPrograms() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+    const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
     // Fetch all gift programs
     const fetchPrograms = useCallback(async (params?: {

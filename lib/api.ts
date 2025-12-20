@@ -1,7 +1,7 @@
 import { VoucherConditionType } from "@/hooks/useCart";
 
 // lib/api.ts
-const BASE_URL = process.env.SERVER_API || process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+const BASE_URL = process.env.SERVER_API || process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
 if (!BASE_URL) {
   console.warn("⚠️ BASE_URL chưa được khai báo trong .env");
@@ -1267,7 +1267,7 @@ export interface V1ShopProductsResponse {
 }
 
 /**
- * Fetch all products from shop API with filters (API cũ - sieuthivina.cloud)
+ * Fetch all products from shop API with filters (API cũ - sieuthivina.com)
  * @param params - Optional query parameters for filtering
  * @returns Promise with shop products and filter options
  */
@@ -1281,7 +1281,7 @@ export async function fetchShopProducts(params?: {
   page?: number;
   per_page?: number;
 }): Promise<ShopProductsResponse> {
-  const HOME_API_URL = "https://sieuthivina.cloud";
+  const HOME_API_URL = "https://sieuthivina.com";
 
   // Build query string from params
   const queryParams = new URLSearchParams();

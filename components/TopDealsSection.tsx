@@ -28,7 +28,7 @@ type ProductHotDeal = {
   sold_count?: string;
 };
 
-const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
 export default function TopDealsSection({
   title = "Top deal • Siêu rẻ",

@@ -12,20 +12,20 @@ type ProductListItem = {
   slug?: string;
   ten?: string;
   hinh_anh?: string; // API trả về key này
-  
+
   // Các trường giá từ JSON
-  gia?: { 
-    current?: number; 
+  gia?: {
+    current?: number;
     before_discount?: number;
     discount_percent?: number;
   };
-  
+
   // Các trường hỗ trợ hiển thị/logic
   selling_price?: number; // Fallback cũ
   original_price?: number; // Fallback cũ
   is_free?: boolean;
   id_chuongtrinh?: number; // Quan trọng cho logic quà tặng/khuyến mãi
-  
+
   loaibienthe?: string;
   thuonghieu?: string;
 };
@@ -33,14 +33,14 @@ type ProductListItem = {
 export default function ProductsPage() {
   const sp = useSearchParams();
   const source = (sp.get("source") || "hot_sales").toLowerCase();
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
   const [loading, setLoading] = React.useState(true);
   const [items, setItems] = React.useState<ProductListItem[]>([]);
 
   React.useEffect(() => {
     let alive = true;
-    
+
     // Xây dựng URL API
     // const url = `${API}/api/sanphams-all?per_page=${perPage}`;
     const url = `${API}/api/sanphams-all`;
@@ -52,13 +52,13 @@ export default function ProductsPage() {
       .then((r) => r.json())
       .then((res: { status?: boolean; data?: unknown }) => {
         if (!alive) return;
-        
+
         // Kiểm tra kỹ cấu trúc trả về
         if (res?.status && Array.isArray(res.data)) {
           setItems(res.data as ProductListItem[]);
         } else if (Array.isArray(res)) {
-           // Trường hợp API trả về mảng trực tiếp không bọc trong data
-           setItems(res as ProductListItem[]);
+          // Trường hợp API trả về mảng trực tiếp không bọc trong data
+          setItems(res as ProductListItem[]);
         } else {
           setItems([]);
         }
@@ -81,18 +81,18 @@ export default function ProductsPage() {
   const toCardProps = (p: ProductListItem) => {
     // 1. Xử lý Link
     const href = `/products/${String(p.slug ?? p.id ?? "")}`;
-    
+
     // 2. Xử lý Ảnh (Ưu tiên hinh_anh từ API)
-    const img = (typeof p.hinh_anh === "string" && p.hinh_anh.trim()) 
-      ? p.hinh_anh 
+    const img = (typeof p.hinh_anh === "string" && p.hinh_anh.trim())
+      ? p.hinh_anh
       : "/assets/images/thumbs/product-two-img1.png";
 
     // 3. Xử lý Tiêu đề
     const title = p.ten ?? "Sản phẩm";
 
     // 4. Xử lý Giá (Ưu tiên lấy từ object `gia` theo cấu trúc JSON mới)
-    const price = typeof p.gia?.current === "number" 
-      ? p.gia.current 
+    const price = typeof p.gia?.current === "number"
+      ? p.gia.current
       : (p.selling_price ?? 0);
 
     const oldPrice = typeof p.gia?.before_discount === "number"
@@ -134,11 +134,11 @@ export default function ProductsPage() {
 
         {loading ? (
           <div className="p-16 text-center border rounded-12 text-gray-500">
-             Đang tải dữ liệu...
+            Đang tải dữ liệu...
           </div>
         ) : items.length === 0 ? (
           <div className="p-16 text-center border rounded-12 text-gray-500">
-             Không có sản phẩm nào.
+            Không có sản phẩm nào.
           </div>
         ) : (
           <div className="row g-12">
@@ -161,7 +161,7 @@ export default function ProductsPage() {
                     thuonghieu={card.thuonghieu}
                     slug={card.slug}
                     // Nếu ProductCardV2 của bạn hỗ trợ id_chuongtrinh để add to cart
-                    id_chuongtrinh={card.id_chuongtrinh} 
+                    id_chuongtrinh={card.id_chuongtrinh}
                   />
                 </div>
               );

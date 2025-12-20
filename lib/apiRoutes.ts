@@ -10,7 +10,7 @@ export const API_ROUTES = {
   // Routes gọi kèm endpoint khác
   TU_KHOAS: "/api/tukhoas",
 
-  
+
 
   // can-xac-thuc-tai-khoan-truoc Người dùng - Frontend scope - routes đăng nhập token
   TOI_DON_HANGS: "/api/tai-khoan/donhangs",
@@ -25,16 +25,16 @@ export const API_ROUTES = {
   TOI_YEU_THICH_ITEM: (idSanPham: string | number) => `/api/tai-khoan/yeuthichs/${idSanPham}`,
 
   // xac-thuc-tai-khoan  Auth
-  AUTH_DANG_KY: "/api/auth/dang-ky", //POST
-  AUTH_DANG_NHAP: "/api/auth/dang-nhap", //POST
-  AUTH_DANG_XUAT: "/api/auth/dang-xuat", //POST
-  AUTH_ME: "/api/auth/thong-tin-nguoi-dung", //POST
-  AUTH_ME_UPDATE: "/api/auth/cap-nhat-thong-tin", //POST
+  AUTH_DANG_KY: "/api/v1/dang-ky", //POST
+  AUTH_DANG_NHAP: "/api/v1/dang-nhap", //POST
+  AUTH_DANG_XUAT: "/api/v1/dang-xuat", //POST
+  AUTH_ME: "/api/v1/thong-tin-ca-nhan", //POST
+  AUTH_ME_UPDATE: "/api/v1/thong-tin-ca-nhan/cap-nhat", //POST
 
   // Khác (banner, chương trình, mã giảm giá, từ khoá, ...) // ko quan trọng lắm có trong trang-chu
-  
+
   BANNERS: "/api/bannerquangcaos",
   SU_KIENS: "/api/chuongtrinhsukiens",
   MA_GIAM_GIAS: "/api/magiamgias",
-  
+
 };

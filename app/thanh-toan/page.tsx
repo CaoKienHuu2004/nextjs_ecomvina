@@ -94,7 +94,7 @@ export default function ThanhToanPage() {
     const map = new Map<string, any>();
     for (const it of arr) {
       const key =
-        String(it.product?.id ?? it.id ?? it.bienthe?.id ?? it.product?.ten ?? it.name ?? JSON.stringify(it.product?.slug ?? "")) ;
+        String(it.product?.id ?? it.id ?? it.bienthe?.id ?? it.product?.ten ?? it.name ?? JSON.stringify(it.product?.slug ?? ""));
       if (map.has(key)) {
         const ex = map.get(key);
         ex.quantity = Number(ex.quantity ?? ex.soluong ?? 0) + Number(it.quantity ?? it.soluong ?? 1);
@@ -119,7 +119,7 @@ export default function ThanhToanPage() {
 
     setIsSubmitting(true);
     try {
-      const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+      const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
       const token = Cookies.get("access_token");
 
       const payload = {
@@ -242,7 +242,7 @@ export default function ThanhToanPage() {
 
   // Render 1 dòng sản phẩm trong bảng tóm tắt
 
-    const renderSummaryRow = (item: CartItem, isGift = false, idx = 0): React.ReactElement => {
+  const renderSummaryRow = (item: CartItem, isGift = false, idx = 0): React.ReactElement => {
     const rec = item as unknown as Record<string, unknown>;
     const spCandidate = (rec.product as Record<string, unknown> | undefined) ?? rec;
     const sp = (spCandidate ?? {}) as {

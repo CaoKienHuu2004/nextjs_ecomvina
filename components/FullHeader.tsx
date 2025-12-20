@@ -158,7 +158,7 @@ export default function FullHeader({
 
   // Chuẩn hoá host để cookie không rớt (localhost ↔ 127.0.0.1)
   const API = useMemo(() => {
-    const raw = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+    const raw = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
     try {
       if (typeof window === "undefined") return raw;
       const u = new URL(raw);
@@ -794,7 +794,7 @@ export default function FullHeader({
                           >
                             {user?.avatar ? (
                               <img
-                                src={user.avatar.startsWith('http') ? user.avatar : `https://sieuthivina.cloud${user.avatar}`}
+                                src={user.avatar.startsWith('http') ? user.avatar : `https://sieuthivina.com${user.avatar}`}
                                 alt="Avatar"
                                 className="rounded-circle"
                                 style={{ width: 28, height: 28, objectFit: 'cover' }}

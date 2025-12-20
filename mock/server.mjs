@@ -25,7 +25,7 @@ server.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
-  console.debug('[mock] incoming', req.method, req.url, 'Cookie=', req.headers.cookie || '-', 'Content-Type=', req.headers['content-type'] || '-'); 
+  console.debug('[mock] incoming', req.method, req.url, 'Cookie=', req.headers.cookie || '-', 'Content-Type=', req.headers['content-type'] || '-');
   next();
 });
 
@@ -157,7 +157,7 @@ function getUserIdFromCookie(req) {
 function requireOrInitUser(req, res) {
   let uid = getUserIdFromCookie(req);
   if (!uid) {
-    uid = `guest:${Date.now().toString(36)}:${Math.random().toString(36).slice(2,8)}`;
+    uid = `guest:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
     setUserCookie(res, uid); // tái dùng cookie có sẵn
   }
   return String(uid);
@@ -239,7 +239,7 @@ server.post('/auth/dang-nhap', (req, res) => {
 });
 
 // ===== Vietnamese auth aliases used by the FE =====
-server.post('/api/auth/dang-ky', (req, res) => {
+server.post('/api/v1/dang-ky', (req, res) => {
   try {
     const payload = req.body || {};
 
@@ -270,12 +270,12 @@ server.post('/api/auth/dang-ky', (req, res) => {
       data: { id: user.id, username: user.username, name: user.name }
     });
   } catch (err) {
-    console.error('[mock] /api/auth/dang-ky error', err);
+    console.error('[mock] /api/v1/dang-ky error', err);
     return res.status(500).json({ success: false, message: 'Lỗi mock khi đăng ký' });
   }
 });
 
-server.post('/api/auth/dang-nhap', (req, res) => {
+server.post('/api/v1/dang-nhap', (req, res) => {
   const { identifier, password } = req.body || {};
   if (!identifier || !password) return res.status(400).json({ message: 'Thiếu thông tin đăng nhập' });
   const id = String(identifier).trim();
@@ -293,7 +293,7 @@ server.post('/api/auth/dang-nhap', (req, res) => {
   });
 });
 
-server.post('/api/auth/dang-xuat', (req, res) => {
+server.post('/api/v1/dang-xuat', (req, res) => {
   clearUserCookie(res);
   return res.status(200).json({ status: true });
 });
@@ -308,7 +308,7 @@ server.get('/api/toi/giohang', (req, res) => {
   const feItems = rows.map(r => {
     const p = productStub(r.id_bienthesp);
     const current = Number(p?.gia?.current ?? 0);
-    const before  = Number(p?.gia?.before_discount ?? 0) || current;
+    const before = Number(p?.gia?.before_discount ?? 0) || current;
     return {
       ...r,
       product: {
@@ -340,9 +340,9 @@ server.get('/api/toi/giohang', (req, res) => {
 
   // 4) Map sang shape docx khi ?v=docx
   const docxItems = feItems.map(it => {
-    const p   = it.product;
+    const p = it.product;
     const qty = Number(it.quantity ?? 0);
-    const price  = Number(p?.gia?.current ?? 0);
+    const price = Number(p?.gia?.current ?? 0);
     const origin = Number(p?.gia?.before_discount ?? price);
     const tamtinh = price * qty;
     const giam = origin > price ? Math.round((origin - price) / origin * 100) : 0;
@@ -447,7 +447,7 @@ function resolveUserIdFromReq(req) {
   return null;
 }
 // ===== Profile endpoints (improved) =====
-server.get('/api/auth/thong-tin-nguoi-dung', (req, res) => {
+server.get('/api/v1/thong-tin-ca-nhan', (req, res) => {
   const uid = resolveUserIdFromReq(req);
   if (!uid) return res.status(401).json({ message: 'Chưa đăng nhập (mock). Gửi cookie hoặc Authorization: Bearer <userId:ts>' });
 
@@ -485,18 +485,18 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname) || '';
-    const name = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`;
+    const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
     cb(null, name);
   }
 });
 
 const upload = multer({ storage });
 
-server.put('/api/auth/thong-tin-nguoi-dung', upload.single('avatar'), (req, res) => {
+server.put('/api/v1/thong-tin-ca-nhan', upload.single('avatar'), (req, res) => {
   try {
-    console.debug('[mock] PUT /api/auth/thong-tin-nguoi-dung content-type=', req.headers['content-type']);
-    console.debug('[mock] PUT /api/auth/thong-tin-nguoi-dung req.file =', req.file);
-    console.debug('[mock] PUT /api/auth/thong-tin-nguoi-dung req.body keys =', Object.keys(req.body || {}));
+    console.debug('[mock] PUT /api/v1/thong-tin-ca-nhan content-type=', req.headers['content-type']);
+    console.debug('[mock] PUT /api/v1/thong-tin-ca-nhan req.file =', req.file);
+    console.debug('[mock] PUT /api/v1/thong-tin-ca-nhan req.body keys =', Object.keys(req.body || {}));
 
     // resolve uid consistently (use existing helper)
     const uid = resolveUserIdFromReq(req) || (req.headers['x-user-id'] ? String(req.headers['x-user-id']) : null);
@@ -555,7 +555,7 @@ server.put('/api/auth/thong-tin-nguoi-dung', upload.single('avatar'), (req, res)
 
     return res.json({ status: true, data: after });
   } catch (err) {
-    console.error('[mock] error in PUT /api/auth/thong-tin-nguoi-dung', err);
+    console.error('[mock] error in PUT /api/v1/thong-tin-ca-nhan', err);
     if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     return res.status(500).json({ status: false, message: 'Internal mock error' });
   }
@@ -2041,7 +2041,7 @@ server.get('/mock/vnpay/pay', (req, res) => {
   const encodedAccountName = encodeURIComponent(accountName);
   const desc = encodeURIComponent(`DH${order_id}`); // nội dung chuyển khoản
   const qrUrl = `https://img.vietqr.io/image/${bankCode}-${accountNo}-compact2.png` +
-                `?amount=${amount}&addInfo=${desc}&accountName=${encodedAccountName}`;
+    `?amount=${amount}&addInfo=${desc}&accountName=${encodedAccountName}`;
 
   res.send(`
     <html>
@@ -2163,10 +2163,10 @@ const VNP_SECRET = process.env.VNP_SECRET || '';
 const hasRealVnp = !!(VNP_TMNCODE && VNP_SECRET);
 const vnpay = hasRealVnp
   ? new VNPay({
-      tmnCode: VNP_TMNCODE,
-      secureSecret: VNP_SECRET,
-      testMode: true, // sandbox
-    })
+    tmnCode: VNP_TMNCODE,
+    secureSecret: VNP_SECRET,
+    testMode: true, // sandbox
+  })
   : null;
 
 /** Helper: IP client */
@@ -2201,7 +2201,7 @@ server.post('/api/vnpay/create', (req, res) => {
   try {
     const { cart, amount: rawAmount, returnUrl } = req.body || {};
     const amount = Number(rawAmount ?? 0) || 0;
-    
+
     // 1. Tạo Order Mock trong db.json
     const orderId = String(Date.now());
     const order = {
@@ -2216,7 +2216,7 @@ server.post('/api/vnpay/create', (req, res) => {
     if (!router.db.has('orders').value()) router.db.set('orders', []).write();
     router.db.get('orders').push(order).write();
 
-    
+
     process.env.TZ = 'Asia/Ho_Chi_Minh';
     const createDate = moment(new Date()).format('YYYYMMDDHHmmss');
     const ipAddr = getClientIp(req);
@@ -2238,14 +2238,14 @@ server.post('/api/vnpay/create', (req, res) => {
     vnp_Params['vnp_ReturnUrl'] = VNPAY_RETURN_URL; // Dùng VNPAY_RETURN_URL từ .env
     vnp_Params['vnp_IpAddr'] = ipAddr;
     vnp_Params['vnp_CreateDate'] = createDate;
-    
+
     vnp_Params = sortObject(vnp_Params);
-    
+
     let signData = querystring.stringify(vnp_Params, { encode: false });
     let hmac = crypto.createHmac("sha512", VNPAY_HASH_SECRET); // Dùng secret key
     let signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");
     vnp_Params['vnp_SecureHash'] = signed;
-    
+
     const vnpUrl = VNPAY_URL + '?' + querystring.stringify(vnp_Params, { encode: false });
 
     console.log('[mock] Generated VNPAY URL:', vnpUrl);
@@ -2269,11 +2269,11 @@ server.get('/api/vnpay/return', (req, res) => {
     const secureHash = vnp_Params['vnp_SecureHash'];
     const orderId = vnp_Params['vnp_TxnRef'];
     const responseCode = vnp_Params['vnp_ResponseCode'] || '99';
-    
+
     // Bỏ qua check hash trong mock, chỉ xử lý logic status
     const isSuccess = responseCode === '00';
     const orders = router.db.get('orders');
-    
+
     if (orderId) {
       const existed = orders.find({ id: orderId }).value();
       if (existed) {
@@ -2361,8 +2361,8 @@ server.get('/api/order/status', (req, res) => {
     order.paymentMethod === 'cod'
       ? 'cash_on_delivery'
       : order.status === 'paid'
-      ? 'online_payment'
-      : 'pending';
+        ? 'online_payment'
+        : 'pending';
 
   return res.json({
     status: true,
@@ -2387,16 +2387,16 @@ function mapOrderToApiDonHang(o) {
     created_at: o.created_at || new Date().toISOString(),
     chitietdonhang: Array.isArray(o.chitietdonhang)
       ? o.chitietdonhang.map(it => ({
-          id: it.id,
-          soluong: it.soluong ?? it.quantity ?? 1,
-          dongia: it.dongia ?? it.price ?? 0,
-          bienthe: {
-            sanpham: {
-              ten: it.bienthe?.sanpham?.ten ?? it.name ?? "Sản phẩm",
-              hinhanh: it.bienthe?.sanpham?.hinhanh ?? it.image ?? "/assets/images/thumbs/default.png"
-            }
+        id: it.id,
+        soluong: it.soluong ?? it.quantity ?? 1,
+        dongia: it.dongia ?? it.price ?? 0,
+        bienthe: {
+          sanpham: {
+            ten: it.bienthe?.sanpham?.ten ?? it.name ?? "Sản phẩm",
+            hinhanh: it.bienthe?.sanpham?.hinhanh ?? it.image ?? "/assets/images/thumbs/default.png"
           }
-        }))
+        }
+      }))
       : []
   };
 }

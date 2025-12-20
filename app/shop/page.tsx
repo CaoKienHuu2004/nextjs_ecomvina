@@ -683,7 +683,7 @@ export default function ShopPage() {
       return logo;
     }
 
-    const api = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+    const api = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
     return `${api}/${logo.replace(/^\/+/g, "")}`;
   };
 

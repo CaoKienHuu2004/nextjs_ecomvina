@@ -150,7 +150,7 @@ export default function TrendingProductsTabs() {
 
   useEffect(() => {
     let alive = true;
-    const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+    const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
     fetch(`${API}/api/sanphams-selection?selection=top_categories&per_page=6`)
       .then((r) => r.json() as Promise<ApiResponseTopCategories>)
       .then((res) => {

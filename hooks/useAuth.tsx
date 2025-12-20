@@ -48,23 +48,23 @@ export type AuthContextType = {
 const AuthContext = createContext<AuthContextType | null>(null);
 const TOKEN_KEY = "access_token";
 
-export function AuthProvider({ 
-  children, 
-  initialUser 
-}: { 
-  children: React.ReactNode; 
-  initialUser: AuthUser | null 
+export function AuthProvider({
+  children,
+  initialUser
+}: {
+  children: React.ReactNode;
+  initialUser: AuthUser | null
 }) {
   const [user, setUserState] = useState<AuthUser | null>(initialUser);
   const [token, setToken] = useState<string | null>(() => Cookies.get(TOKEN_KEY) || null);
-  
+
   const router = useRouter();
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
   const changePassword = useCallback(async (current_password: string, new_password: string, new_password_confirmation: string) => {
     const t = Cookies.get(TOKEN_KEY) || token;
     if (!t) throw new Error("Chưa đăng nhập");
-    const res = await fetch(`${API}/api/auth/cap-nhat-mat-khau`, {
+    const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat-mat-khau`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -86,34 +86,34 @@ export function AuthProvider({
   //   }
   // }, [token]);
   useEffect(() => {
-  const currentToken = Cookies.get(TOKEN_KEY);
-  if (currentToken) setToken(currentToken);
-}, []);
+    const currentToken = Cookies.get(TOKEN_KEY);
+    if (currentToken) setToken(currentToken);
+  }, []);
 
   // --- Fetch Me Helper ---
   // Dùng useCallback để tránh warning dependency ở login
   const fetchMe = useCallback(async (accessToken: string) => {
     try {
-      const res = await fetch(`${API}/api/auth/thong-tin-nguoi-dung`, {
-        headers: { 
+      const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {
+        headers: {
           Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json" 
+          Accept: "application/json"
         },
       });
       if (res.ok) {
         const data = await res.json();
         if (data.user) {
-            const mappedUser: AuthUser = {
-                id: data.user.id,
-                username: data.user.username,
-                hoten: data.user.hoten,
-                sodienthoai: data.user.sodienthoai,
-                gioitinh: data.user.gioitinh,
-                ngaysinh: data.user.ngaysinh,
-                avatar: data.user.avatar,
-                diachi: data.user.diachi
-            };
-            setUserState(mappedUser);
+          const mappedUser: AuthUser = {
+            id: data.user.id,
+            username: data.user.username,
+            hoten: data.user.hoten,
+            sodienthoai: data.user.sodienthoai,
+            gioitinh: data.user.gioitinh,
+            ngaysinh: data.user.ngaysinh,
+            avatar: data.user.avatar,
+            diachi: data.user.diachi
+          };
+          setUserState(mappedUser);
         }
       }
     } catch (e) {
@@ -124,7 +124,7 @@ export function AuthProvider({
   // --- Login ---
   // Fix eslint: Thêm dependency 'API' và 'fetchMe'
   const login = useCallback(async ({ username, password }: { username: string; password: string }) => {
-    const res = await fetch(`${API}/api/auth/dang-nhap`, {
+    const res = await fetch(`${API}/api/v1/dang-nhap`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ username, password }),
@@ -133,7 +133,7 @@ export function AuthProvider({
     if (!res.ok) throw new Error("Đăng nhập thất bại");
 
     const data = await res.json();
-    
+
     if (data.success && data.token) {
       Cookies.set(TOKEN_KEY, data.token, { expires: 1, path: '/' });
       setToken(data.token);
@@ -144,15 +144,15 @@ export function AuthProvider({
   // --- Register ---
   // 3. Fix lỗi any ở tham số payload
   const register = useCallback(async (payload: RegisterPayload) => {
-    const res = await fetch(`${API}/api/auth/dang-ky`, {
+    const res = await fetch(`${API}/api/v1/dang-ky`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Đăng ký thất bại");
+      const err = await res.json();
+      throw new Error(err.message || "Đăng ký thất bại");
     }
   }, [API]);
   // --- Update profile ---
@@ -160,7 +160,7 @@ export function AuthProvider({
     try {
       const t = Cookies.get(TOKEN_KEY) || token;
       if (!t) throw new Error("Chưa đăng nhập");
-      const res = await fetch(`${API}/api/auth/cap-nhat-thong-tin`, {
+      const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

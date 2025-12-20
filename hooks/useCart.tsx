@@ -312,7 +312,7 @@ export function useCart() {
   const isMountedRef = useRef(true);
 
   const emitCartUpdated = useCallback((detail: { count?: number; force?: boolean } = {}) => {
-  // merge detail: nếu có count mới thì cập nhật, nếu có force thì giữ force
+    // merge detail: nếu có count mới thì cập nhật, nếu có force thì giữ force
     pendingDetailRef.current = {
       ...(pendingDetailRef.current || {}),
       ...detail,
@@ -372,7 +372,7 @@ export function useCart() {
 
   const hasSyncedRef = useRef(false);
 
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.cloud";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
   // Kiểm tra đăng nhập dựa vào token thực sự có trong cookie
   const hasValidToken = useCallback((): boolean => {
@@ -694,22 +694,22 @@ export function useCart() {
   }, [hasValidToken, syncLocalToServer, fetchCart, loadLocalCart]);
 
   useEffect(() => {
-  const handleCartUpdated = async () => {
+    const handleCartUpdated = async () => {
       // [QUAN TRỌNG] Thêm dòng này để bảo vệ component
       if (typeof isMountedRef !== 'undefined' && !isMountedRef.current) return;
-      
+
       await fetchCart();
     };
 
     window.addEventListener("cart:updated", handleCartUpdated);
-    
+
     return () => {
       window.removeEventListener("cart:updated", handleCartUpdated);
     };
   }, [fetchCart]);
 
   // --- ACTIONS ---
-    const addToCart = useCallback(async (product: AddToCartInput, soluong = 1, id_chuongtrinh?: number | string) => {
+  const addToCart = useCallback(async (product: AddToCartInput, soluong = 1, id_chuongtrinh?: number | string) => {
     // [THÊM] Check mount sớm
     if (!isMountedRef.current) return;
 
@@ -821,19 +821,19 @@ export function useCart() {
   }, [API, buildCartStateFromRaw, isLoggedIn, hasValidToken, getAuthHeaders, extractCartPayload, loadServerCart, loadLocalCart, saveLocalCart]);
 
   const updatesoluong = useCallback(async (id_giohang: number | string, soluong: number) => {
-  if (soluong < 1) return;
+    if (soluong < 1) return;
 
-  // optimistic update và lấy kết quả updated
-  let updatedItems: CartItem[] = [];
-  setItems(prev => {
-    const updated = prev.filter(it => it.id_giohang !== id_giohang);
-    // emit từ updated
-    const count = updated.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-    emitCartUpdated({ count });
-    return updated;
-  });
+    // optimistic update và lấy kết quả updated
+    let updatedItems: CartItem[] = [];
+    setItems(prev => {
+      const updated = prev.filter(it => it.id_giohang !== id_giohang);
+      // emit từ updated
+      const count = updated.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+      emitCartUpdated({ count });
+      return updated;
+    });
 
-  const hasToken = hasValidToken();
+    const hasToken = hasValidToken();
     if (hasToken) {
       try {
         await fetch(`${API}/api/tai-khoan/giohang/${id_giohang}`, {
@@ -860,9 +860,9 @@ export function useCart() {
   const removeItem = useCallback(async (id_giohang: number | string) => {
     //mo comment dong nay de tat request 2 lan (nho bo comment updatedItems = updated; va doan "[SỬA] Không gọi loadServerCart() ở đây — dùng updatedItems để tính count")
     // let updatedItems: CartItem[] = [];
-  setItems(prev => prev.filter(it => it.id_giohang !== id_giohang));
+    setItems(prev => prev.filter(it => it.id_giohang !== id_giohang));
 
-  const hasToken = hasValidToken();
+    const hasToken = hasValidToken();
     if (hasToken) {
       try {
         await fetch(`${API}/api/tai-khoan/giohang/${id_giohang}`, {
@@ -928,7 +928,7 @@ export function useCart() {
     }
   }, [subtotal]);
 
-// Áp voucher theo id (gọi API /api/ma-giam-gia/:id)
+  // Áp voucher theo id (gọi API /api/ma-giam-gia/:id)
   const applyVoucherById = useCallback(async (id: number | string) => {
     if (!id) return;
     setLoading(true);
