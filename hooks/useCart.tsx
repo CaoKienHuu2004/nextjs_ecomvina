@@ -394,11 +394,37 @@ export function useCart() {
   }, [isLoggedIn]);
   // --- HELPER MAP DATA ---
   const mapServerDataToCartItem = useCallback((serverItem: unknown): CartItem => {
-    const sItem = serverItem as ServerCartItemRaw;
+  const s = (serverItem ?? {}) as Record<string, any>;
 
-    const id_giohang = sItem.id_giohang ?? sItem.id ?? `temp_${Date.now()}_${Math.random()}`;
-    const soluong = Number(sItem.soluong ?? sItem.bienthe?.soluong ?? 1);
-    const bienthe = sItem.bienthe;
+  // flat/guest response mapping (your sample)
+  if (s && (s.ten_sp || s.hinhanh || s.giaban)) {
+    const id_bienthe = s.id_bienthe ?? s.bienthe_id ?? `local_${Date.now()}`;
+    const qty = Number(s.soluong ?? 1);
+    const price = Number(s.giaban ?? s.gia ?? 0);
+    const media = s.hinhanh ?? s.mediaurl ?? "/assets/images/thumbs/product-placeholder.png";
+    const name = s.ten_sp ?? s.ten ?? "Sản phẩm";
+    const variant = s.ten_bt ?? s.loaibienthe ?? "";
+
+    return {
+      id_giohang: s.id_giohang ?? s.id ?? `local_${id_bienthe}_${Date.now()}`,
+      id_bienthe,
+      soluong: qty,
+      product: {
+        id: id_bienthe,
+        ten: name,
+        mediaurl: media,
+        gia: { current: price, before_discount: Number(s.giagoc ?? 0), discount_percent: 0 },
+        loaibienthe: variant,
+        thuonghieu: s.thuonghieu ?? undefined,
+        slug: s.slug ?? undefined,
+      },
+    };
+  }
+
+  // existing nested mapping fallback (keep original mapping here)
+  const id_giohang = (serverItem as any)?.id_giohang ?? (serverItem as any)?.id ?? `temp_${Date.now()}`;
+  const soluong = Number((serverItem as any)?.soluong ?? 1);
+    const bienthe = s.bienthe;
     const detail = bienthe?.detail;
     const sanpham = bienthe?.sanpham;
 
@@ -472,13 +498,24 @@ export function useCart() {
     }
 
     return {
-      id_giohang,
-      id_bienthe: sItem.id_bienthe ?? id_giohang,
-      soluong,
-      id_chuongtrinh: sItem.id_chuongtrinh,
-      product: productInfo
-    };
-  }, []);
+    id_giohang,
+    id_bienthe: (serverItem as any)?.id_bienthe ?? (serverItem as any)?.bienthe?.id ?? undefined,
+    soluong,
+    product: {
+      id: (serverItem as any)?.id_bienthe ?? (serverItem as any)?.bienthe?.id,
+      ten: (serverItem as any)?.bienthe?.sanpham?.ten ?? (serverItem as any)?.bienthe?.detail?.ten ?? "Sản phẩm",
+      mediaurl: (serverItem as any)?.bienthe?.sanpham?.hinhanh ?? "/assets/images/thumbs/product-placeholder.png",
+      gia: {
+        current: Number((serverItem as any)?.bienthe?.gia ?? 0),
+        before_discount: Number((serverItem as any)?.bienthe?.gia_old ?? 0),
+        discount_percent: 0,
+      },
+      loaibienthe: (serverItem as any)?.bienthe?.ten ?? undefined,
+      thuonghieu: (serverItem as any)?.bienthe?.sanpham?.thuonghieu ?? undefined,
+      slug: (serverItem as any)?.bienthe?.sanpham?.slug ?? undefined,
+    },
+  };
+}, []);
 
   const extractCartPayload = useCallback((payload: unknown): unknown[] => {
     if (Array.isArray(payload)) return payload;
@@ -487,6 +524,9 @@ export function useCart() {
       if (Array.isArray(obj.data)) return obj.data as unknown[];
       if (Array.isArray(obj.items)) return obj.items as unknown[];
       if (Array.isArray(obj.cart)) return obj.cart as unknown[];
+      if (obj.item && !Array.isArray(obj.item)) return [obj.item] as unknown[];
+      if (Array.isArray(obj.item)) return obj.item as unknown[];
+      if (obj.item && typeof obj.item === "object") return Array.isArray(obj.item) ? obj.item as unknown[] : [obj.item];
     }
     return [];
   }, []);
@@ -543,15 +583,24 @@ export function useCart() {
   // --- FETCH CART ---
   const loadServerCart = useCallback(async (): Promise<{ items: CartItem[], gifts: GiftItem[] }> => {
     try {
+      const hasToken = hasValidToken();
       let res: Response;
-      try {
+      if (hasToken) {
+        // Logged-in: GET cart from DB
         res = await fetch(`${API}/api/v1/gio-hang`, {
+          method: "GET",
           headers: getAuthHeaders(),
           cache: "no-store",
         });
-      } catch (fetchErr) {
-        console.warn("⚠️ Network error khi load cart (server có thể không khả dụng):", fetchErr);
-        return { items: [], gifts: [] };
+      } else {
+        // Guest: ask server to "materialize" local cart (POST cart_local => server computes totals)
+        const local = loadLocalCart().map(i => ({ id_bienthe: i.id_bienthe, soluong: i.soluong }));
+        res = await fetch(`${API}/api/v1/gio-hang`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ cart_local: local, voucher_code: "" }),
+          cache: "no-store",
+        });
       }
       if (!res.ok) {
         console.warn("⚠️ API trả về lỗi:", res.status);
@@ -560,7 +609,7 @@ export function useCart() {
       const j: unknown = await res.json();
 
       // DEBUG: Log raw response để xem cấu trúc
-      console.log('🛒 Raw cart API response:', JSON.stringify(j, null, 2));
+      console.log('🛒 Raw cart API response:', j);
 
       const rawData = extractCartPayload(j);
 
@@ -622,25 +671,24 @@ export function useCart() {
     if (localItems.length === 0) return;
     setLoading(true);
     try {
-      for (const item of localItems) {
-        await fetch(`${API}/api/v1/gio-hang/them`, {
-          method: "POST",
-          headers: getAuthHeaders(),
-          // credentials: "include",
-          body: JSON.stringify({
-            id_bienthe: String(item.id_bienthe),
-            // include id_giohang if we stored a local cart-row id (local_...) or server row id
-            id_giohang: (item.id_giohang !== undefined) ? String(item.id_giohang) : undefined,
-            soluong: Number(item.soluong || 1),
-          }),
-        }).catch(() => { });
+      const payload = { cart_items: localItems.map(i => ({ id_bienthe: i.id_bienthe, soluong: i.soluong })) };
+      const res = await fetch(`${API}/api/v1/gio-hang/sync`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        clearLocalCart();
+        const { items: serverItems, gifts: serverGifts } = await loadServerCart();
+        if (isMountedRef.current) {
+          setItems(serverItems);
+          setGifts(serverGifts);
+        }
+        const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+        emitCartUpdated({ count });
+      } else {
+        console.warn("⚠️ Sync failed", await res.text().catch(() => ''));
       }
-      clearLocalCart();
-      const { items: serverItems, gifts: serverGifts } = await loadServerCart();
-      setItems(serverItems);
-      setGifts(serverGifts);
-      const count = serverItems.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-      emitCartUpdated({ count });
     } finally { setLoading(false); }
   }, [API, getAuthHeaders, loadLocalCart, clearLocalCart, loadServerCart]);
 
@@ -773,6 +821,38 @@ export function useCart() {
       } else {
         // === (Logic cũ khi chưa login: session/localStorage) ===
         // session API try/catch omitted for brevity — keep your existing logic
+        try {
+          const res = await fetch(`${API}/api/v1/gio-hang/them`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ id_bienthe: Number(id_bienthe), soluong }),
+          });
+          if (res.ok || res.status === 201) {
+            const resp = await res.json().catch(() => null);
+            // resp should contain the full item; merge into localStorage
+            const localCart = loadLocalCart();
+            const returned = Array.isArray(resp?.data) ? resp.data[0] : (resp?.data ?? resp);
+            const added = mapServerDataToCartItem(returned);
+            // keep existing logic for dedupe
+            const existingIndex = localCart.findIndex(i => i.id_bienthe == added.id_bienthe);
+            if (existingIndex >= 0) {
+              localCart[existingIndex].soluong = (Number(localCart[existingIndex].soluong) || 0) + Number(added.soluong || 0);
+            } else {
+              localCart.push(added);
+            }
+            saveLocalCart(localCart);
+            if (isMountedRef.current) setItems(localCart);
+            if (typeof window !== "undefined") {
+              const count = localCart.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
+              emitCartUpdated({ count });
+            }
+            return;
+          }
+        } catch (e) {
+          console.warn("Guest addToCart API error:", e);
+        }
+
+        // Fallback: local-only behavior if guest API fails
         const localCart = loadLocalCart();
         const existingIndex = localCart.findIndex(i => i.id_bienthe == id_bienthe);
 

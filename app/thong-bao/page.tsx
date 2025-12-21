@@ -201,7 +201,7 @@ export default function ThongBaoPage(): JSX.Element {
                   <div>Đang tải...</div>
                 ) : visible.length === 0 ? (
                   <div className="py-40 text-center">
-                    <img src="/assets/client/images/empty/notification-empty.png" alt="no" className="mx-auto mb-16" />
+                    <img src="/assets/images/thumbs/placeholder.png" alt="no" className="mx-auto mb-16" />
                     <div className="text-gray-600">Bạn chưa có thông báo nào.</div>
                   </div>
                 ) : (
