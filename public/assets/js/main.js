@@ -1,18 +1,6 @@
 (function ($) {
   "use strict";
 
-  // Helper function để khởi tạo slick an toàn
-  function safeSlick(selector, options) {
-    var $el = $(selector);
-    if ($el.length && $.fn.slick) {
-      try {
-        $el.slick(options);
-      } catch (e) {
-        console.warn('Slick init error for ' + selector + ':', e.message);
-      }
-    }
-  }
-
   // ==========================================
   //      Start Document Ready function
   // ==========================================
@@ -55,24 +43,22 @@
 
     // ===================== Scroll Back to Top Js Start ======================
     var progressPath = document.querySelector(".progress-wrap path");
-    if (progressPath) {
-      var pathLength = progressPath.getTotalLength();
-      progressPath.style.transition = progressPath.style.WebkitTransition =
-        "none";
-      progressPath.style.strokeDasharray = pathLength + " " + pathLength;
-      progressPath.style.strokeDashoffset = pathLength;
-      progressPath.getBoundingClientRect();
-      progressPath.style.transition = progressPath.style.WebkitTransition =
-        "stroke-dashoffset 10ms linear";
-      var updateProgress = function () {
-        var scroll = $(window).scrollTop();
-        var height = $(document).height() - $(window).height();
-        var progress = pathLength - (scroll * pathLength) / height;
-        progressPath.style.strokeDashoffset = progress;
-      };
-      updateProgress();
-      $(window).scroll(updateProgress);
-    }
+    var pathLength = progressPath.getTotalLength();
+    progressPath.style.transition = progressPath.style.WebkitTransition =
+      "none";
+    progressPath.style.strokeDasharray = pathLength + " " + pathLength;
+    progressPath.style.strokeDashoffset = pathLength;
+    progressPath.getBoundingClientRect();
+    progressPath.style.transition = progressPath.style.WebkitTransition =
+      "stroke-dashoffset 10ms linear";
+    var updateProgress = function () {
+      var scroll = $(window).scrollTop();
+      var height = $(document).height() - $(window).height();
+      var progress = pathLength - (scroll * pathLength) / height;
+      progressPath.style.strokeDashoffset = progress;
+    };
+    updateProgress();
+    $(window).scroll(updateProgress);
     var offset = 50;
     var duration = 550;
     jQuery(window).on("scroll", function () {
@@ -133,12 +119,12 @@
     // ========================== Select2 Js End =================================
 
     // ========================== Select2 Js End =================================
-    // $(".search-icon").on("click", function () {
-    //   $(".search-box").addClass("active");
-    // });
-    // $(".search-box__close").on("click", function () {
-    //   $(".search-box").removeClass("active");
-    // });
+    $(".search-icon").on("click", function () {
+      $(".search-box").addClass("active");
+    });
+    $(".search-box__close").on("click", function () {
+      $(".search-box").removeClass("active");
+    });
     // ========================== Select2 Js End =================================
 
     // ========================== Category Dropdown Responsive Js Start =================================
@@ -190,7 +176,7 @@
     // ========================== Set Language in dropdown Js End =================================
 
     // ========================= Banner Slider Js Start ==============
-    safeSlick(".banner-slider", {
+    $(".banner-slider").slick({
       slidesToShow: 1,
       slidesToScroll: 1,
       autoplay: true,
@@ -234,7 +220,7 @@
     // ========================= Category Js End ===================
 
     // ========================= hot deals Slider Js Start ==============
-    safeSlick(".product-one-slider", {
+    $(".product-one-slider").slick({
       slidesToShow: 6,
       slidesToScroll: 1,
       autoplay: true,
@@ -297,7 +283,7 @@
     // ========================= hot deals Slider Js End ===================
 
     // ========================= Banner Three Slider Js Start ==============
-    safeSlick(".banner-three-slider", {
+    $(".banner-three-slider").slick({
       slidesToShow: 1,
       slidesToScroll: 1,
       autoplay: false,
@@ -317,10 +303,10 @@
     // ========================= Banner Three Slider Js End ===================
 
     // ========================= hot deals Slider Js Start ==============
-    safeSlick(".feature-item-wrapper", {
-      slidesToShow: 10,
+    $(".feature-item-wrapper").slick({
+      slidesToShow: 6,
       slidesToScroll: 1,
-      autoplay: true,
+      autoplay: false,
       autoplaySpeed: 2000,
       speed: 1500,
       dots: false,
@@ -336,13 +322,13 @@
         {
           breakpoint: 1699,
           settings: {
-            slidesToShow: 9,
+            slidesToShow: 6,
           },
         },
         {
           breakpoint: 1599,
           settings: {
-            slidesToShow: 8,
+            slidesToShow: 6,
           },
         },
         {
@@ -354,31 +340,31 @@
         {
           breakpoint: 992,
           settings: {
-            slidesToShow: 5,
+            slidesToShow: 6,
           },
         },
         {
           breakpoint: 768,
           settings: {
-            slidesToShow: 4,
+            slidesToShow: 5,
           },
         },
         {
           breakpoint: 575,
           settings: {
-            slidesToShow: 3,
+            slidesToShow: 5,
           },
         },
         {
           breakpoint: 424,
           settings: {
-            slidesToShow: 2,
+            slidesToShow: 5,
           },
         },
         {
           breakpoint: 359,
           settings: {
-            slidesToShow: 1,
+            slidesToShow: 4,
           },
         },
       ],
@@ -386,7 +372,76 @@
     // ========================= hot deals Slider Js End ===================
 
     // ========================= hot deals Slider Js Start ==============
-    safeSlick(".feature-three-item-wrapper", {
+    $(".feature-item-mobile-wrapper").slick({
+      slidesToShow: 10,
+      slidesToScroll: 1,
+      autoplay: false,
+      autoplaySpeed: 2000,
+      speed: 1500,
+      dots: false,
+      pauseOnHover: true,
+      arrows: true,
+      draggable: true,
+      rtl: $("html").attr("dir") === "rtl" ? true : false,
+      speed: 900,
+      infinite: true,
+      nextArrow: "#feature-item-mobile-wrapper-next",
+      prevArrow: "#feature-item-mobile-wrapper-prev",
+      responsive: [
+        {
+          breakpoint: 1699,
+          settings: {
+            slidesToShow: 10,
+          },
+        },
+        {
+          breakpoint: 1599,
+          settings: {
+            slidesToShow: 10,
+          },
+        },
+        {
+          breakpoint: 1399,
+          settings: {
+            slidesToShow: 6,
+          },
+        },
+        {
+          breakpoint: 992,
+          settings: {
+            slidesToShow: 6,
+          },
+        },
+        {
+          breakpoint: 768,
+          settings: {
+            slidesToShow: 5,
+          },
+        },
+        {
+          breakpoint: 575,
+          settings: {
+            slidesToShow: 5,
+          },
+        },
+        {
+          breakpoint: 424,
+          settings: {
+            slidesToShow: 5,
+          },
+        },
+        {
+          breakpoint: 359,
+          settings: {
+            slidesToShow: 4,
+          },
+        },
+      ],
+    });
+    // ========================= hot deals Slider Js End ===================
+
+    // ========================= hot deals Slider Js Start ==============
+    $(".feature-three-item-wrapper").slick({
       slidesToShow: 6,
       slidesToScroll: 1,
       autoplay: true,
@@ -449,21 +504,21 @@
     // ========================= hot deals Slider Js End ===================
 
     // ========================= Banner Slider Js Start ==============
-    safeSlick(".banner-item-two__slider", {
+    $(".banner-item-two__slider").slick({
       slidesToShow: 1,
       slidesToScroll: 1,
       autoplay: true,
-      autoplaySpeed: 4000,
-      speed: 1500,
+      autoplaySpeed: 2500,
+      speed: 2500,
       dots: true,
-      pauseOnHover: true,
+      pauseOnHover: false,
       arrows: true,
       draggable: true,
       rtl: $("html").attr("dir") === "rtl" ? true : false,
       speed: 900,
       infinite: true,
-      fade: true,
-      cssEase: "linear",
+      // fade: true,
+      // cssEase: "linear",
       nextArrow: "#banner-next",
       prevArrow: "#banner-prev",
       responsive: [
@@ -477,8 +532,37 @@
     });
     // ========================= Banner Slider Js End ===================
 
+    // ========================= Banner Slider Js Start ==============
+    $(".banner-item-mobile__slider").slick({
+      slidesToShow: 1,
+      slidesToScroll: 1,
+      autoplay: true,
+      autoplaySpeed: 2500,
+      speed: 2500,
+      dots: true,
+      pauseOnHover: false,
+      arrows: true,
+      draggable: true,
+      rtl: $("html").attr("dir") === "rtl" ? true : false,
+      speed: 900,
+      infinite: true,
+      // fade: true,
+      // cssEase: "linear",
+      nextArrow: "#banner-mobile-next",
+      prevArrow: "#banner-mobile-prev",
+      responsive: [
+        {
+          breakpoint: 767,
+          settings: {
+            slidesToShow: 1,
+          },
+        },
+      ],
+    });
+    // ========================= Banner Slider Js End ===================
+
     // ========================= flash Sale Four Slider Js Start ==============
-    safeSlick(".flash-sales__slider", {
+    $(".flash-sales__slider").slick({
       slidesToShow: 2,
       slidesToScroll: 1,
       autoplay: true,
@@ -497,7 +581,7 @@
         {
           breakpoint: 991,
           settings: {
-            slidesToShow: 1,
+            slidesToShow: 2,
             arrows: false,
           },
         },
@@ -506,7 +590,7 @@
     // ========================= flash Sale Four Slider Js End ==================
 
     // ========================= hot deals Slider Js Start ==============
-    safeSlick(".hot-deals-slider", {
+    $(".hot-deals-slider").slick({
       slidesToShow: 4,
       slidesToScroll: 1,
       autoplay: true,
@@ -548,7 +632,315 @@
     // ========================= hot deals Slider Js End ===================
 
     // ========================= hot deals Slider Js Start ==============
-    safeSlick(".deals-week-slider", {
+    $(".gift-event-slider").slick({
+      slidesToShow: 6,
+      slidesToScroll: 1,
+      autoplay: true,
+      autoplaySpeed: 2500,
+      speed: 1000,
+      dots: false,
+      pauseOnHover: false,
+      arrows: true,
+      draggable: false,
+      rtl: $("html").attr("dir") === "rtl" ? true : false,
+      speed: 900,
+      infinite: true,
+      nextArrow: "#gift-event-next",
+      prevArrow: "#gift-event-prev",
+      responsive: [
+        {
+          breakpoint: 1920,
+          settings: {
+            slidesToShow: 5,
+            arrows: true,
+          },
+        },
+        {
+          breakpoint: 1366,
+          settings: {
+            slidesToShow: 4,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 1280,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 576,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+      ],
+    });
+    // ========================= hot deals Slider Js End ===================
+
+    // ========================= hot deals Slider Js Start ==============
+    $(".gift-event-mobile-slider").slick({
+      slidesToShow: 6,
+      slidesToScroll: 1,
+      autoplay: false,
+      autoplaySpeed: 1500,
+      speed: 1000,
+      dots: false,
+      pauseOnHover: false,
+      arrows: true,
+      draggable: false,
+      rtl: $("html").attr("dir") === "rtl" ? true : false,
+      speed: 900,
+      infinite: true,
+      nextArrow: "#gift-event-mobile-next",
+      prevArrow: "#gift-event-mobile-prev",
+      responsive: [
+        {
+          breakpoint: 1599,
+          settings: {
+            slidesToShow: 5,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 1399,
+          settings: {
+            slidesToShow: 3,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 1199,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 575,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+      ],
+    });
+    // ========================= hot deals Slider Js End ===================
+
+    // ========================= hot deals Slider Js Start ==============
+    $(".top-selling-product-slider").slick({
+      slidesToShow: 5,
+      slidesToScroll: 1,
+      autoplay: true,
+      autoplaySpeed: 2200,
+      speed: 1500,
+      dots: false,
+      pauseOnHover: false,
+      arrows: true,
+      draggable: true,
+      rtl: $("html").attr("dir") === "rtl" ? true : false,
+      speed: 900,
+      infinite: true,
+      nextArrow: "#top-selling-next",
+      prevArrow: "#top-selling-prev",
+      responsive: [
+        {
+          breakpoint: 1399,
+          settings: {
+            slidesToShow: 3,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 1199,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 575,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+      ],
+    });
+    // ========================= hot deals Slider Js End ===================
+
+    // ========================= hot deals Slider Js Start ==============
+    $(".san-pham-hang-dau-slider").slick({
+      slidesToShow: 5,
+      slidesToScroll: 1,
+      autoplay: true,
+      autoplaySpeed: 2200,
+      speed: 1500,
+      dots: false,
+      pauseOnHover: false,
+      arrows: true,
+      draggable: true,
+      rtl: $("html").attr("dir") === "rtl" ? true : false,
+      speed: 900,
+      infinite: true,
+      nextArrow: "#sphd-next",
+      prevArrow: "#sphd-prev",
+      responsive: [
+        {
+          breakpoint: 1399,
+          settings: {
+            slidesToShow: 3,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 1199,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 575,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+      ],
+    });
+    // ========================= hot deals Slider Js End ===================
+
+    // ========================= hot deals Slider Js Start ==============
+    $(".top-selling-product-mobile-slider").slick({
+      slidesToShow: 5,
+      slidesToScroll: 1,
+      autoplay: true,
+      autoplaySpeed: 2200,
+      speed: 1500,
+      dots: false,
+      pauseOnHover: false,
+      arrows: true,
+      draggable: true,
+      rtl: $("html").attr("dir") === "rtl" ? true : false,
+      speed: 900,
+      infinite: true,
+      nextArrow: "#top-selling-mobile-next",
+      prevArrow: "#top-selling-mobile-prev",
+      responsive: [
+        {
+          breakpoint: 1399,
+          settings: {
+            slidesToShow: 3,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 1199,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 575,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+      ],
+    });
+    // ========================= hot deals Slider Js End ===================
+
+    // ========================= hot deals Slider Js Start ==============
+    $(".top-brand-slider").slick({
+      slidesToShow: 5,
+      slidesToScroll: 1,
+      autoplay: true,
+      autoplaySpeed: 1200,
+      speed: 1500,
+      dots: false,
+      pauseOnHover: false,
+      arrows: true,
+      draggable: true,
+      rtl: $("html").attr("dir") === "rtl" ? true : false,
+      speed: 900,
+      infinite: true,
+      nextArrow: "#top-brand-next",
+      prevArrow: "#top-brand-prev",
+      responsive: [
+        {
+          breakpoint: 1399,
+          settings: {
+            slidesToShow: 3,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 1199,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 575,
+          settings: {
+            slidesToShow: 1,
+            arrows: false,
+          },
+        },
+      ],
+    });
+    // ========================= hot deals Slider Js End ===================
+
+    // ========================= hot deals Slider Js Start ==============
+    $(".topic-slider").slick({
+      slidesToShow: 5,
+      slidesToScroll: 1,
+      autoplay: true,
+      autoplaySpeed: 1200,
+      speed: 1500,
+      dots: false,
+      pauseOnHover: false,
+      arrows: true,
+      draggable: true,
+      rtl: $("html").attr("dir") === "rtl" ? true : false,
+      speed: 900,
+      infinite: true,
+      nextArrow: "#topic-next",
+      prevArrow: "#topic-prev",
+      responsive: [
+        {
+          breakpoint: 1399,
+          settings: {
+            slidesToShow: 3,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 1199,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 575,
+          settings: {
+            slidesToShow: 1,
+            arrows: false,
+          },
+        },
+      ],
+    });
+    // ========================= hot deals Slider Js End ===================
+
+    // ========================= hot deals Slider Js Start ==============
+    $(".organic-food__slider").slick({
       slidesToShow: 6,
       slidesToScroll: 1,
       autoplay: true,
@@ -561,43 +953,8 @@
       rtl: $("html").attr("dir") === "rtl" ? true : false,
       speed: 900,
       infinite: true,
-      nextArrow: "#deal-week-next",
-      prevArrow: "#deal-week-prev",
-      responsive: [
-        {
-          breakpoint: 1599,
-          settings: {
-            slidesToShow: 5,
-            arrows: false,
-          },
-        },
-        {
-          breakpoint: 1399,
-          settings: {
-            slidesToShow: 1,
-            arrows: false,
-          },
-        },
-      ],
-    });
-    // ========================= hot deals Slider Js End ===================
-
-    // ========================= New arrival Slider Js Start ==============
-    safeSlick(".new-arrival__slider", {
-      slidesToShow: 6,
-      slidesToScroll: 1,
-      autoplay: false,
-      autoplaySpeed: 2000,
-      speed: 1500,
-      dots: false,
-      pauseOnHover: true,
-      arrows: true,
-      draggable: true,
-      rtl: $("html").attr("dir") === "rtl" ? true : false,
-      speed: 900,
-      infinite: true,
-      nextArrow: "#new-arrival-next",
-      prevArrow: "#new-arrival-prev",
+      nextArrow: "#organic-next",
+      prevArrow: "#organic-prev",
       responsive: [
         {
           breakpoint: 1599,
@@ -636,10 +993,66 @@
         },
       ],
     });
+    // ========================= hot deals Slider Js End ===================
+
+    // ========================= New arrival Slider Js Start ==============
+    $(".new-arrival__slider").slick({
+      slidesToShow: 5,
+      slidesToScroll: 1,
+      autoplay: false,
+      autoplaySpeed: 2000,
+      speed: 1500,
+      dots: false,
+      pauseOnHover: true,
+      arrows: true,
+      draggable: true,
+      rtl: $("html").attr("dir") === "rtl" ? true : false,
+      speed: 900,
+      infinite: true,
+      nextArrow: "#new-arrival-next",
+      prevArrow: "#new-arrival-prev",
+      responsive: [
+        {
+          breakpoint: 1599,
+          settings: {
+            slidesToShow: 5,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 1399,
+          settings: {
+            slidesToShow: 4,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 992,
+          settings: {
+            slidesToShow: 3,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 575,
+          settings: {
+            slidesToShow: 2,
+            arrows: false,
+          },
+        },
+        {
+          breakpoint: 424,
+          settings: {
+            slidesToShow: 1,
+            arrows: false,
+          },
+        },
+      ],
+    });
     // ========================= New arrival Slider Js End ===================
 
     // ========================= hot deals Slider Js Start ==============
-    safeSlick(".short-product-list", {
+    $(".short-product-list").slick({
       slidesToShow: 1,
       slidesToScroll: 1,
       autoplay: true,
@@ -682,7 +1095,7 @@
     // ========================= Copy Coupon Code Js End ===================
 
     // ========================= hot deals Slider Js Start ==============
-    safeSlick(".brand-slider", {
+    $(".brand-slider").slick({
       slidesToShow: 8,
       slidesToScroll: 1,
       autoplay: true,
@@ -752,7 +1165,7 @@
     // ========================= Category Dropdown Two Js End ===============================
 
     // ========================= Featured Products Slider Js Start ==============
-    safeSlick(".featured-product-slider", {
+    $(".featured-product-slider").slick({
       slidesToShow: 2,
       slidesToScroll: 1,
       autoplay: true,
@@ -780,7 +1193,7 @@
     // ========================= Featured Products Slider Js End ==================
 
     // ========================= hot deals Slider Js Start ==============
-    safeSlick(".recommended-slider", {
+    $(".recommended-slider").slick({
       slidesToShow: 4,
       slidesToScroll: 1,
       autoplay: true,
@@ -822,7 +1235,7 @@
     // ========================= hot deals Slider Js End ===================
 
     // ========================= hot deals Slider Js Start ==============
-    safeSlick(".vendor-card__list.style-two", {
+    $(".vendor-card__list.style-two").slick({
       slidesToShow: 4,
       slidesToScroll: 1,
       autoplay: true,
@@ -841,7 +1254,7 @@
     // ========================= hot deals Slider Js End ===================
 
     // ========================= hot deals Slider Js Start ==============
-    safeSlick(".top-brand__slider", {
+    $(".top-brand__slider").slick({
       slidesToShow: 8,
       slidesToScroll: 1,
       autoplay: true,
@@ -904,7 +1317,7 @@
     // ========================= hot deals Slider Js End ===================
 
     // ========================= Product Details Thumbs Slider Js Start ===================
-    safeSlick(".product-details__thumb-slider", {
+    $(".product-details__thumb-slider").slick({
       slidesToShow: 1,
       slidesToScroll: 1,
       arrows: false,
@@ -912,7 +1325,7 @@
       asNavFor: ".product-details__images-slider",
     });
 
-    safeSlick(".product-details__images-slider", {
+    $(".product-details__images-slider").slick({
       slidesToShow: 4,
       slidesToScroll: 1,
       asNavFor: ".product-details__thumb-slider",
@@ -970,9 +1383,9 @@
       });
       $("#amount").val(
         "$" +
-        $("#slider-range").slider("values", 0) +
-        " - $" +
-        $("#slider-range").slider("values", 1)
+          $("#slider-range").slider("values", 0) +
+          " - $" +
+          $("#slider-range").slider("values", 1)
       );
     });
     // ========================== Range Slider Js End =====================
@@ -1043,6 +1456,7 @@
       }
     });
     // ========================= Password Show Hide Js End ===========================
+
     // ========================= Background Image Js Start ===================
     $(".bg-img").css("background-image", function () {
       var bg = "url(" + $(this).data("background-image") + ")";
@@ -1051,23 +1465,24 @@
     // ========================= Background Image Js End ===================
 
     // ========================== Text Slide Js Start =====================
-    if ($.fn && $.fn.marquee && $(".text-slider").length) {
-      $(".text-slider").marquee({
-        pauseOnHover: true,
-        allowCss3Support: true,
-        css3easing: "linear",
-        easing: "linear",
-        delayBeforeStart: 0,
-        duration: 7000,
-        gap: 20,
-        pauseOnCycle: false,
-        startVisible: true,
-      });
-    }
+    $(".text-slider").marquee({
+      pauseOnHover: true,
+      allowCss3Support: true,
+      css3easing: "linear",
+      easing: "linear",
+      delayBeforeStart: 0,
+      duration: 7000,
+      gap: 20,
+      pauseOnCycle: false,
+      startVisible: true,
+    });
     // ========================== Text Slide Js End =====================
 
-    // ========================== Accordion Js Start =====================
-    $(".accordion-button").on("click", function () {
+    // ========================== Trending Products Js Strt =====================
+    $(".expand-btn").on("click", function () {
+      $(this).toggleClass("bg-main-two-600 text-white");
+      $(this).parent().find(".expand-icons").toggleClass("d-flex");
+
       if ($(this).children("i").hasClass("ph ph-plus")) {
         $(this).children("i").removeClass("ph ph-plus");
         $(this).children("i").addClass("ph ph-x");
@@ -1101,7 +1516,7 @@
     // ========================== Wishlist Button Js End =====================
 
     // ========================== Instagram Slider Js Start =====================
-    safeSlick(".instagram-slider", {
+    $(".instagram-slider").slick({
       slidesToShow: 4,
       slidesToScroll: 1,
       autoplay: true,
@@ -1150,7 +1565,7 @@
     // ========================== Instagram Slider Js End =====================
 
     // ========================== Testimonials Thumbs Slider Js Start =====================
-    safeSlick(".testimonials-slider", {
+    $(".testimonials-slider").slick({
       slidesToShow: 1,
       slidesToScroll: 1,
       asNavFor: ".testimonials-thumbs-slider",
@@ -1163,7 +1578,7 @@
       arrows: false,
     });
 
-    safeSlick(".testimonials-thumbs-slider", {
+    $(".testimonials-thumbs-slider").slick({
       slidesToShow: 4,
       slidesToScroll: 1,
       autoplay: false,
@@ -1271,33 +1686,4 @@
     }
   });
   // ========================= Header Sticky Js End===================
-
-
-
-  // chỉ khởi tạo search box nếu bật cờ ở layout.tsx
-
-  function initGlobalSearchBox() {
-    if (!window.__THEME__ || window.__THEME__.enableGlobalSearch !== true) return;
-    // ... code cũ tạo search box
-  }
-
-  function runSlickOnce(selector, opts) {
-    var $el = window.jQuery && window.jQuery(selector);
-    if (!$el || !$el.length) return;           // không có -> bỏ qua
-    if ($el.hasClass('slick-initialized')) return; // tránh double-init
-    $el.slick(opts);
-  }
-
-  // Cho phép React gọi lại khi render xong data/DOM
-  window.initTheme = function () {
-    runSlickOnce('.banner-item-two__slider', {
-      arrows: true, autoplay: true, autoplaySpeed: 4000
-    });
-    // thêm các slider khác nếu có...
-  };
-
-  // Khởi tạo những thứ luôn có sẵn
-  initGlobalSearchBox();
-  // Không auto run slick ở đây nữa; để React gọi window.initTheme()
-
 })(jQuery);
