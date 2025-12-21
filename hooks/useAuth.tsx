@@ -21,6 +21,7 @@ export type AuthUser = {
   username?: string;
   hoten?: string;
   sodienthoai?: string;
+  email?: string;
   gioitinh?: string;
   ngaysinh?: string;
   avatar?: string;
@@ -42,7 +43,8 @@ export type AuthContextType = {
   // 2. Sử dụng Type RegisterPayload thay vì any
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
-  updateProfile: (payload: Partial<AuthUser>) => Promise<void>;
+  updateProfile: (payload: Partial<AuthUser>) => Promise<AuthUser | null>;
+  refreshProfile: () => Promise<AuthUser | null>;
   setUser: (u: AuthUser | null) => void;
   changePassword: (current_password: string, new_password: string, new_password_confirmation: string) => Promise<void>;
 };
@@ -101,42 +103,75 @@ export function AuthProvider({
           Authorization: `Bearer ${accessToken}`,
           Accept: "application/json",
         },
+        credentials: "include",
       });
-
-      // nếu 401 thì clear state
       if (res.status === 401) {
         Cookies.remove(TOKEN_KEY);
         setToken(null);
         setUserState(null);
         return null;
       }
-
       const data = await res.json().catch(() => null);
-      console.debug("fetchMe response:", data);
-
-      // normalize possible shapes
       const candidate = (data && (data.user ?? data.data?.user ?? data.data ?? data)) || null;
-      if (!candidate) {
-        console.warn("fetchMe: no user payload found", data);
-        return null;
-      }
-
+      if (!candidate) return null;
       const mappedUser: AuthUser = {
         id: candidate.id ?? candidate.user_id ?? candidate.ID ?? "",
         username: candidate.username ?? candidate.email ?? candidate.name,
         hoten: candidate.hoten ?? candidate.name ?? undefined,
         sodienthoai: candidate.sodienthoai ?? candidate.phone ?? undefined,
+        email: candidate.email ?? undefined,
         gioitinh: candidate.gioitinh ?? undefined,
         ngaysinh: candidate.ngaysinh ?? undefined,
         avatar: candidate.avatar ?? candidate.photo ?? undefined,
         diachi: candidate.diachi ?? candidate.address ?? undefined,
       };
       setUserState(mappedUser);
-      // ensure token state kept
       if (!token) setToken(accessToken);
       return mappedUser;
     } catch (e) {
       console.error("fetchMe error:", e);
+      return null;
+    }
+  }, [API, token]);
+
+  // Public: refreshProfile - lấy dữ liệu user mới nhất từ server (dùng cookie/token)
+  const refreshProfile = useCallback(async (): Promise<AuthUser | null> => {
+    try {
+      const t = Cookies.get(TOKEN_KEY) || token;
+      const headers: Record<string, string> = { Accept: "application/json" };
+      if (t) headers.Authorization = `Bearer ${t}`;
+      const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {
+        method: "GET",
+        headers,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          Cookies.remove(TOKEN_KEY);
+          setToken(null);
+          setUserState(null);
+        }
+        return null;
+      }
+      const data = await res.json().catch(() => null);
+      const candidate = (data && (data.user ?? data.data ?? data)) || null;
+      if (!candidate) return null;
+      const mapped: AuthUser = {
+        id: candidate.id ?? candidate.user_id ?? candidate.ID ?? "",
+        username: candidate.username ?? candidate.email ?? undefined,
+        hoten: candidate.hoten ?? candidate.name ?? undefined,
+        sodienthoai: candidate.sodienthoai ?? candidate.phone ?? undefined,
+        email: candidate.email ?? undefined,
+        gioitinh: candidate.gioitinh ?? undefined,
+        ngaysinh: candidate.ngaysinh ?? undefined,
+        avatar: candidate.avatar ?? candidate.photo ?? undefined,
+        diachi: candidate.diachi ?? candidate.address ?? undefined,
+      };
+      setUserState(mapped);
+      try { Cookies.set("user_info", JSON.stringify(mapped), { expires: 7, path: "/" }); } catch {}
+      return mapped;
+    } catch (e) {
+      console.error("refreshProfile error:", e);
       return null;
     }
   }, [API, token]);
@@ -199,7 +234,7 @@ export function AuthProvider({
 
     if (accessToken) {
       // lưu cookie cục bộ (dùng fallback nếu server không dùng httpOnly cookie)
-      Cookies.set(TOKEN_KEY, String(accessToken), { expires: 7, path: "/" });
+      Cookies.set(TOKEN_KEY, String(accessToken), { expires: 1, path: "/" });
       setToken(String(accessToken));
     }
 
@@ -209,6 +244,7 @@ export function AuthProvider({
         username: userPayload.username ?? userPayload.email ?? undefined,
         hoten: userPayload.hoten ?? userPayload.name ?? undefined,
         sodienthoai: userPayload.sodienthoai ?? userPayload.phone ?? undefined,
+        email: userPayload.email ?? undefined,
         gioitinh: userPayload.gioitinh ?? undefined,
         ngaysinh: userPayload.ngaysinh ?? undefined,
         avatar: userPayload.avatar ?? userPayload.photo ?? undefined,
@@ -240,37 +276,33 @@ export function AuthProvider({
       const t = Cookies.get(TOKEN_KEY) || token;
       if (!t) throw new Error("Chưa đăng nhập");
       const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat`, {
-        method: "POST",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
           "Authorization": `Bearer ${t}`,
         },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Cập nhật thất bại");
-      }
-      const data = await res.json();
-      // API có thể trả về user trong data.user hoặc data.data
-      const returned = data.user ?? data.data ?? data ?? payload;
-      if (returned) {
-        const mappedUser: AuthUser = {
-          id: returned.id ?? user?.id ?? "",
-          username: returned.username ?? returned.email ?? user?.username,
-          hoten: returned.hoten ?? user?.hoten,
-          sodienthoai: returned.sodienthoai ?? user?.sodienthoai,
-          gioitinh: returned.gioitinh ?? user?.gioitinh,
-          ngaysinh: returned.ngaysinh ?? user?.ngaysinh,
-          avatar: returned.avatar ?? user?.avatar,
-          diachi: returned.diachi ?? user?.diachi,
-        };
-        Cookies.set("user_info", JSON.stringify(mappedUser), { expires: 1, path: '/' });
-        setUserState(mappedUser);
-      }
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.message ?? "Cập nhật thất bại");
+      const returned = j.user ?? j.data ?? j ?? payload;
+      const mappedUser: AuthUser = {
+        id: returned.id ?? user?.id ?? "",
+        username: returned.username ?? returned.email ?? user?.username,
+        hoten: returned.hoten ?? user?.hoten,
+        sodienthoai: returned.sodienthoai ?? user?.sodienthoai,
+        email: returned.email ?? user?.email,
+        gioitinh: returned.gioitinh ?? user?.gioitinh,
+        ngaysinh: returned.ngaysinh ?? user?.ngaysinh,
+        avatar: returned.avatar ?? user?.avatar,
+        diachi: returned.diachi ?? user?.diachi,
+      };
+      Cookies.set("user_info", JSON.stringify(mappedUser), { expires: 7, path: "/" });
+      setUserState(mappedUser);
+      return mappedUser;
     } catch (e) {
-      // rethrow so callers can show error
       throw e;
     }
   }, [API, token, user]);
@@ -291,6 +323,7 @@ export function AuthProvider({
     register,
     updateProfile,
     logout,
+    refreshProfile,
     setUser: setUserState,
     changePassword,
   }), [user, token, login, register, updateProfile, logout, changePassword]);

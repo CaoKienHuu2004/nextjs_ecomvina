@@ -50,7 +50,7 @@ type Address = {
 };
 
 type AuthUser = {
-  id?: number;
+  id?: number| string;
   username?: string | null;
   email?: string | null;
   sodienthoai?: string | null;
@@ -78,10 +78,45 @@ const getUserString = (obj: unknown, key: string): string | undefined => {
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null;
 
+function normalizeUser(raw: unknown): AuthUser {
+      if (!isPlainObject(raw)) return {};
+      const r = raw as Record<string, any>;
+      const diachiRaw = Array.isArray(r.diachi) ? r.diachi : r.danh_sach_diachi ?? null;
+      const diachi = Array.isArray(diachiRaw)
+        ? diachiRaw
+            .map((it: any) => {
+              if (!it || (it.id == null && it.id === undefined)) return null;
+              const idNum = Number(it.id);
+              if (!Number.isFinite(idNum)) return null;
+              return {
+                id: idNum,
+                hoten: typeof it.hoten === "string" ? it.hoten : String(it.hoten ?? ""),
+                sodienthoai: typeof it.sodienthoai === "string" ? it.sodienthoai : String(it.sodienthoai ?? ""),
+                diachi: typeof it.diachi === "string" ? it.diachi : String(it.diachi ?? ""),
+                tinhthanh: typeof it.tinhthanh === "string" ? it.tinhthanh : undefined,
+                trangthai: typeof it.trangthai === "string" ? it.trangthai : undefined,
+              } as Address;
+            })
+            .filter(Boolean) as Address[]
+        : null;
+      const mapped: AuthUser = {
+        id: r.id ?? r.ID ?? r.user_id ?? undefined,
+        username: typeof r.username === "string" ? r.username : r.email ?? undefined,
+        hoten: typeof r.hoten === "string" ? r.hoten : r.name ?? undefined,
+        sodienthoai: typeof r.sodienthoai === "string" ? r.sodienthoai : r.phone ?? undefined,
+        email: typeof r.email === "string" ? r.email : undefined,
+        gioitinh: typeof r.gioitinh === "string" ? r.gioitinh : undefined,
+        ngaysinh: typeof r.ngaysinh === "string" ? r.ngaysinh : undefined,
+        avatar: typeof r.avatar === "string" ? r.avatar : undefined,
+        diachi: diachi ?? null,
+      };
+      return mapped;
+    }
+
 export default function Page() {
   const router = useRouter();
   const search = useSearchParams();
-  const { login, register, logout, user, isLoggedIn, updateProfile } = useAuth();
+  const { login, register, logout, user, isLoggedIn, updateProfile, refreshProfile } = useAuth();
   const [profile, setProfile] = useState<AuthUser | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [editingPhone, setEditingPhone] = useState(false);
@@ -96,6 +131,7 @@ export default function Page() {
     // if cookie already present, nothing to do
     if (document.cookie.match(/\bx-user-id=([^;]+)/)) return;
 
+    
     // candidate token keys used by the app
     const candidates = [
       localStorage.getItem("token"),
@@ -143,7 +179,7 @@ export default function Page() {
 
   // Chuẩn hoá host để cookie không rớt (localhost ↔ 127.0.0.1)
   const API = useMemo(() => {
-    const raw = process.env.NEXT_PUBLIC_SERVER_API || "http://localhost:4000";
+    const raw = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
     try {
       if (typeof window === "undefined") return raw;
       const u = new URL(raw);
@@ -188,38 +224,25 @@ export default function Page() {
 
   useEffect(() => {
     let alive = true;
-    // 1) seed profile from useAuth.user so UI updates immediately after login
-    if (user) {
-      setProfile((user as AuthUser) ?? null);
-    }
+    // seed profile from useAuth.user so UI updates immediately after login
+    if (user) setProfile((user as AuthUser) ?? null);
 
-    // 2) fetch detailed profile (diachi etc.) only when logged in
+    // refresh detailed profile from server when logged in
     if (!isLoggedIn) return () => { alive = false; };
     (async () => {
       try {
-        const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {
-          method: "GET",
-          headers: {
-            // "Authorization": `Bearer ${token}`,
-            // "Content-Type": "application/json",
-            ...getAuthHeaders(),
-          },
-          // credentials: "include",
+        const latest = await refreshProfile();
+        if (alive && latest) setProfile((prev) => {
+          // merge and normalize to satisfy TS types
+          const normalized = normalizeUser(latest);
+          return { ...(prev ?? {}), ...(normalized ?? {}) } as AuthUser;
         });
-        if (!alive) return;
-        if (!res.ok) return;
-        const j = await res.json();
-        const remote = (j?.data ?? j?.user ?? j) as AuthUser | null;
-        if (remote && alive) {
-          // merge to keep any fields already in user (avoid dropping token/other)
-          setProfile((prev) => ({ ...(prev ?? {}), ...(remote ?? {}) }));
-        }
       } catch {
         // ignore
       }
     })();
     return () => { alive = false; };
-  }, [user, isLoggedIn, API]);
+  }, [user, isLoggedIn, API, refreshProfile]);
   // Khi đã đăng nhập, nếu đang ở tab login/register thì chuyển sang wishlist
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -235,27 +258,39 @@ export default function Page() {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
           const headers: Record<string, string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {  headers });//credentials: "include",
+          const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, { credentials: "include", headers });//credentials: "include",
           const data = await res.json();
           setWishlist(Array.isArray(data) ? (data as WishlistRow[]) : (data?.data ?? []));
         } else if (tab === "cart") {
-          const res = await fetch(`${API}/api/v1/gio-hang`, { headers: getAuthHeaders() });
+          const res = await fetch(`${API}/api/v1/gio-hang`, {
+            method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...getAuthHeaders(),
+              },
+              credentials: "include",
+              body: JSON.stringify({ /* optional payload, e.g. action: "list" */ }),
+            });
           const j = await res.json();
           setCart((j?.data as CartRow[]) ?? []);
         } else if (tab === "orders") {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
           const headers: Record<string, string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(`${API}/api/v1/don-hang`, {  headers });//credentials: "include",
+          const res = await fetch(`${API}/api/v1/don-hang`, {  credentials: "include", headers });//credentials: "include",
           const j = await res.json();
           setOrders((j?.data as Order[]) ?? []);
         } else if (tab === "profile") {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
           const headers: Record<string, string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {  headers });//credentials: "include",
+          const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {
+            method: "GET",
+            headers: { ...getAuthHeaders() },
+            credentials: "include",
+          });
           const j = await res.json();
-          setProfile((j?.data as AuthUser) ?? null);
+          setProfile((j?.data ?? j?.user ?? j) as AuthUser ?? null);
         }
       } catch {
         // ignore
@@ -302,9 +337,9 @@ export default function Page() {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
-          // "Content-Type": "application/json",
+          "Content-Type": "application/json",
         },
-        // credentials: "include",
+        credentials: "include",
         body: fd,
       });
 
