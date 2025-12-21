@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import FullHeader from '@/components/FullHeader';
-
+import { useSearchParams, useRouter } from 'next/navigation';
+import GiftDetailContent from '@/components/GiftDetailContent';
 const API_URL = 'https://sieuthivina.com';
 
 // Interface cho sản phẩm được tặng
@@ -133,6 +134,10 @@ async function fetchQuaTangs(params?: { page?: number }): Promise<QuaTangRespons
 }
 
 export default function GiftPromotionPage() {
+    const searchParams = useSearchParams();
+    const slug = searchParams.get('slug');
+    const router = useRouter();
+
     const [gifts, setGifts] = useState<QuaTang[]>([]);
     const [providers, setProviders] = useState<Provider[]>([]);
     const [pagination, setPagination] = useState<QuaTangPagination | null>(null);
@@ -141,30 +146,25 @@ export default function GiftPromotionPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    // Fetch dữ liệu quà tặng từ API
     useEffect(() => {
         const loadGifts = async () => {
             try {
                 setLoading(true);
-                const response = await fetchQuaTangs({
-                    page: currentPage,
-                });
+                const response = await fetchQuaTangs({ page: currentPage });
 
                 if (response.status === 200 && response.data?.data) {
-                    // Lọc chỉ lấy các quà tặng đang hiển thị và chưa hết hạn
                     let activeGifts = response.data.data.filter((gift) => {
                         const now = new Date();
                         const endDate = new Date(gift.ngayketthuc);
                         return gift.trangthai === 'Hiển thị' && endDate > now;
                     });
 
-                    // Lọc theo provider nếu có
                     if (selectedProvider !== null) {
-                        activeGifts = activeGifts.filter((gift) => {
-                            return gift.sanphamduoctang?.some(
+                        activeGifts = activeGifts.filter((gift) =>
+                            gift.sanphamduoctang?.some(
                                 (sp) => sp.sanpham?.thuonghieu?.id === selectedProvider
-                            );
-                        });
+                            )
+                        );
                     }
 
                     setGifts(activeGifts);
@@ -183,6 +183,7 @@ export default function GiftPromotionPage() {
                 setLoading(false);
             }
         };
+
         loadGifts();
     }, [currentPage, selectedProvider]);
 
@@ -195,6 +196,10 @@ export default function GiftPromotionPage() {
         setSelectedProvider(null);
         setCurrentPage(1);
     };
+
+    if (slug) {
+        return <GiftDetailContent slug={slug} />;
+    }
 
     return (
         <>
@@ -274,17 +279,7 @@ export default function GiftPromotionPage() {
                                                             onChange={() => handleProviderChange(provider.id)}
                                                         />
                                                         <label className="form-check-label flex-align gap-8" htmlFor={`provider-${provider.id}`}>
-                                                            <img
-                                                                src={`${API_URL}/assets/client/images/brands/${provider.logo}`}
-                                                                alt={provider.ten}
-                                                                className="rounded-circle"
-                                                                style={{ width: '24px', height: '24px', objectFit: 'cover' }}
-                                                                onError={(e) => {
-                                                                    const img = e.currentTarget;
-                                                                    img.onerror = null;
-                                                                    img.src = '/assets/images/thumbs/placeholder.png';
-                                                                }}
-                                                            />
+
                                                             {provider.ten}
                                                         </label>
                                                     </div>
@@ -361,7 +356,7 @@ export default function GiftPromotionPage() {
                                                         )}
 
                                                         <Link
-                                                            href={`/chi-tiet-qt?slug=${gift.slug}`}
+                                                            href={`/qua-tang?slug=${gift.slug}`}
                                                             className="rounded-8 bg-gray-50 h-100 position-relative"
                                                             style={{ width: '70%' }}
                                                         >
@@ -451,7 +446,7 @@ export default function GiftPromotionPage() {
                                                             {/* Tiêu đề */}
                                                             <h6 className="title text-lg fw-semibold mt-2 mb-2">
                                                                 <Link
-                                                                    href={`/chi-tiet-qt?slug=${gift.slug}`}
+                                                                    href={`/qua-tang?slug=${gift.slug}`}
                                                                     className="link text-line-2"
                                                                     tabIndex={0}
                                                                 >

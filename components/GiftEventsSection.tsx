@@ -232,7 +232,7 @@ export default function GiftEventsSection() {
                 return (
                   <div key={gift.id} style={{ width: "244px", display: "inline-block" }}>
                     <div className="product-card p-card border border-gray-100 rounded-16 position-relative transition-2" style={{ height: "340px" }}>
-                      <Link href={`/chi-tiet-qt?slug=${gift.slug}`}>
+                      <Link href={`/qua-tang?slug=${gift.slug}`}>
                         <div
                           className="rounded-16"
                           style={{
@@ -325,7 +325,7 @@ export default function GiftEventsSection() {
                       >
                         <div className="title text-lg fw-semibold mt-5 mb-5 text-center w-100">
                           <Link
-                            href={`/chi-tiet-qt?slug=${gift.slug}`}
+                            href={`/qua-tang?slug=${gift.slug}`}
                             className="link text-line-2"
                             style={{ color: "white", display: "block" }}
                           >

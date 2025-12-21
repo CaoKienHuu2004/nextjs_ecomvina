@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { fetchSearchProducts, SearchProduct } from "@/lib/api";
-
+import { fetchV1SearchProducts, SearchProduct } from "@/lib/api";
 // Định dạng dữ liệu gợi ý hiển thị
 interface SuggestionItem {
     id: number;
@@ -38,17 +37,15 @@ export default function SearchBoxWithSuggestions({ placeholder = "chẤt viỆt 
 
         try {
             setLoading(true);
-            const data = await fetchSearchProducts(trimmed);
+            const data = await fetchV1SearchProducts(trimmed);
 
             const mapped: SuggestionItem[] = (data || []).slice(0, 5).map((item: SearchProduct) => {
                 const currentPrice = item.gia?.current || 0;
                 const beforeDiscount = item.gia?.before_discount || 0;
-
                 let imageUrl = item.hinh_anh || "/assets/images/thumbs/default-product.png";
                 if (imageUrl && !imageUrl.startsWith("http")) {
                     imageUrl = `https://sieuthivina.cloud${imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`}`;
                 }
-
                 return {
                     id: item.id,
                     name: item.ten,
@@ -68,7 +65,6 @@ export default function SearchBoxWithSuggestions({ placeholder = "chẤt viỆt 
             setLoading(false);
         }
     }, []);
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setInputValue(value);

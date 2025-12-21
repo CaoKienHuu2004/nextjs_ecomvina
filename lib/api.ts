@@ -1006,6 +1006,32 @@ function convertV1ToLegacyProductDetail(v1Response: V1ProductDetailResponse): Pr
 // Search Products API Types & Functions
 // ============================================
 
+interface V1SearchProductItem {
+  id: number;
+  tensanpham: string;
+  slug: string;
+  hinhanh: string;
+  thuonghieu: { ten: string } | null;
+  gia: {
+    giagoc: number;
+    giadagiam: number;
+  };
+}
+
+interface V1SearchSidebar {
+  danhsachdanhmuc: Array<{ id: number; ten: string; slug: string }>;
+  danhsachthuonghieu: Array<{ id: number; ten: string; slug: string }>;
+  bannerquangcao: Array<{ id: number; hinhanh: string; lienket: string }>;
+}
+
+interface V1SearchResponse {
+  status: number;
+  keyword: string;
+  products: {
+    data: V1SearchProductItem[];
+  };
+  sidebar: V1SearchSidebar;
+}
 export interface SearchProduct {
   id: number;
   ten: string;
@@ -1032,6 +1058,42 @@ export interface SearchProduct {
 export interface SearchProductsResponse {
   status: boolean;
   data: SearchProduct[];
+}
+
+/**
+ * Fetch search suggestions from api/v1/tim-kiem (server-side filtering)
+ */
+export async function fetchV1SearchProducts(keyword: string): Promise<SearchProduct[]> {
+  const trimmed = keyword.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  const url = `https://sieuthivina.com/api/v1/tim-kiem?keyword=${encodeURIComponent(trimmed)}`;
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Search API error: ${response.status}`);
+  }
+
+  const data: V1SearchResponse = await response.json();
+  const items = data.products?.data ?? [];
+
+  return items.map(item => ({
+    id: item.id,
+    ten: item.tensanpham,
+    slug: item.slug,
+    hinh_anh: item.hinhanh,
+    thuonghieu: item.thuonghieu?.ten || "",
+    gia: {
+      current: item.gia?.giadagiam ?? 0,
+      before_discount: item.gia?.giagoc ?? 0,
+      discount_percent: 0,
+    },
+  }));
 }
 
 /**
@@ -1265,6 +1327,8 @@ export interface V1ShopProductsResponse {
     banners: V1ShopBanner[];
   };
 }
+
+
 
 /**
  * Fetch all products from shop API with filters (API cũ - sieuthivina.com)
