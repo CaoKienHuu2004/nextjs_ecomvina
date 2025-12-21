@@ -24,17 +24,13 @@ export default function AccountShell({
   const { user, logout } = useAuth();
   const { count: wishlistCount } = useWishlist();
 
-  // 3. Helper xử lý ảnh Avatar (giống logic FullHeader)
+  // 3. Helper xử lý ảnh Avatar (chuẩn hoá host theo env)
+  const API_HOST = (process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com").replace(/\/$/, "");
   const getAvatarUrl = (path?: string) => {
     const defaultAvatar = "/assets/images/default-avatar.png";
     if (!path) return defaultAvatar;
-
-    // Nếu ảnh đã là link tuyệt đối (google, facebook...) thì giữ nguyên
     if (path.startsWith("http")) return path;
-
-    // Nếu ảnh từ server Laravel (tương đối), nối thêm domain
-    // Bạn có thể thay hardcode IP bằng process.env.NEXT_PUBLIC_SERVER_API
-    return `https://sieuthivina.cloud${path.startsWith('/') ? '' : '/'}${path}`;
+    return `${API_HOST}${path.startsWith('/') ? '' : '/'}${path}`;
   };
 
   // 4. Chuẩn bị dữ liệu hiển thị

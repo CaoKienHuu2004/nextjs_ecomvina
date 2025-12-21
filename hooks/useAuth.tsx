@@ -73,7 +73,7 @@ export function AuthProvider({
         Accept: "application/json",
         Authorization: `Bearer ${t}`,
       },
-      // credentials: "include",
+      credentials: "include",
       body: JSON.stringify({ current_password, new_password, new_password_confirmation }),
     });
     const j = await res.json().catch(() => ({}));
@@ -91,45 +91,92 @@ export function AuthProvider({
     const currentToken = Cookies.get(TOKEN_KEY);
     if (currentToken) setToken(currentToken);
   }, []);
-
   // --- Fetch Me Helper ---
   // Dùng useCallback để tránh warning dependency ở login
   const fetchMe = useCallback(async (accessToken: string) => {
     try {
       const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {
+        method: "GET",
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json"
+          Accept: "application/json",
         },
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user) {
-          const mappedUser: AuthUser = {
-            id: data.user.id,
-            username: data.user.username,
-            hoten: data.user.hoten,
-            sodienthoai: data.user.sodienthoai,
-            gioitinh: data.user.gioitinh,
-            ngaysinh: data.user.ngaysinh,
-            avatar: data.user.avatar,
-            diachi: data.user.diachi
-          };
-          setUserState(mappedUser);
-        }
+
+      // nếu 401 thì clear state
+      if (res.status === 401) {
+        Cookies.remove(TOKEN_KEY);
+        setToken(null);
+        setUserState(null);
+        return null;
       }
+
+      const data = await res.json().catch(() => null);
+      console.debug("fetchMe response:", data);
+
+      // normalize possible shapes
+      const candidate = (data && (data.user ?? data.data?.user ?? data.data ?? data)) || null;
+      if (!candidate) {
+        console.warn("fetchMe: no user payload found", data);
+        return null;
+      }
+
+      const mappedUser: AuthUser = {
+        id: candidate.id ?? candidate.user_id ?? candidate.ID ?? "",
+        username: candidate.username ?? candidate.email ?? candidate.name,
+        hoten: candidate.hoten ?? candidate.name ?? undefined,
+        sodienthoai: candidate.sodienthoai ?? candidate.phone ?? undefined,
+        gioitinh: candidate.gioitinh ?? undefined,
+        ngaysinh: candidate.ngaysinh ?? undefined,
+        avatar: candidate.avatar ?? candidate.photo ?? undefined,
+        diachi: candidate.diachi ?? candidate.address ?? undefined,
+      };
+      setUserState(mappedUser);
+      // ensure token state kept
+      if (!token) setToken(accessToken);
+      return mappedUser;
     } catch (e) {
-      console.error(e);
+      console.error("fetchMe error:", e);
+      return null;
     }
-  }, [API]);
+  }, [API, token]);
 
   // --- Login ---
   // Fix eslint: Thêm dependency 'API' và 'fetchMe'
-   const login= useCallback(async ({ phonemail, password }: { phonemail: string; password: string }) => {
+  //  const login= useCallback(async ({ phonemail, password }: { phonemail: string; password: string }) => {
+  //   if (!phonemail || !password) {
+  //     throw new Error("Vui lòng nhập Email hoặc Số điện thoại và mật khẩu.");
+  //   }
+  //   // validate phonemail: phải là email hoặc số điện thoại theo regex
+  //   if (!PHONE_REGEX.test(phonemail) && !EMAIL_REGEX.test(phonemail)) {
+  //     throw new Error("Vui lòng nhập Email hoặc Số điện thoại hợp lệ.");
+  //   }
+
+  //   const res = await fetch(`${API}/api/v1/dang-nhap`, {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json", Accept: "application/json" },
+  //     credentials: "include",
+  //     body: JSON.stringify({ phonemail, password }),
+  //   });
+
+  //   if (!res.ok) {
+  //     const err = await res.json().catch(() => ({}));
+  //     throw new Error(err.message || "Đăng nhập thất bại");
+  //   }
+
+  //   const data = await res.json();
+
+  //   if (data.success && data.token) {
+  //     Cookies.set(TOKEN_KEY, data.token, { expires: 1, path: '/' });
+  //     setToken(data.token);
+  //     await fetchMe(data.token);
+  //   }
+  // }, [API, fetchMe]);
+
+  const login = useCallback(async ({ phonemail, password }: { phonemail: string; password: string }) => {
     if (!phonemail || !password) {
       throw new Error("Vui lòng nhập Email hoặc Số điện thoại và mật khẩu.");
     }
-    // validate phonemail: phải là email hoặc số điện thoại theo regex
     if (!PHONE_REGEX.test(phonemail) && !EMAIL_REGEX.test(phonemail)) {
       throw new Error("Vui lòng nhập Email hoặc Số điện thoại hợp lệ.");
     }
@@ -137,20 +184,40 @@ export function AuthProvider({
     const res = await fetch(`${API}/api/v1/dang-nhap`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
+      credentials: "include",
       body: JSON.stringify({ phonemail, password }),
     });
 
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || "Đăng nhập thất bại");
+      throw new Error(data?.message || "Đăng nhập thất bại");
     }
 
-    const data = await res.json();
+    // server trả access_token và user (theo ví dụ bạn gửi)
+    const accessToken = data?.access_token ?? data?.token ?? data?.accessToken ?? null;
+    const userPayload = data?.user ?? data?.data ?? null;
 
-    if (data.success && data.token) {
-      Cookies.set(TOKEN_KEY, data.token, { expires: 1, path: '/' });
-      setToken(data.token);
-      await fetchMe(data.token);
+    if (accessToken) {
+      // lưu cookie cục bộ (dùng fallback nếu server không dùng httpOnly cookie)
+      Cookies.set(TOKEN_KEY, String(accessToken), { expires: 7, path: "/" });
+      setToken(String(accessToken));
+    }
+
+    if (userPayload) {
+      const mapped: AuthUser = {
+        id: userPayload.id ?? userPayload.user_id ?? "",
+        username: userPayload.username ?? userPayload.email ?? undefined,
+        hoten: userPayload.hoten ?? userPayload.name ?? undefined,
+        sodienthoai: userPayload.sodienthoai ?? userPayload.phone ?? undefined,
+        gioitinh: userPayload.gioitinh ?? undefined,
+        ngaysinh: userPayload.ngaysinh ?? undefined,
+        avatar: userPayload.avatar ?? userPayload.photo ?? undefined,
+        diachi: userPayload.danh_sach_diachi ?? userPayload.diachi ?? undefined,
+      };
+      setUserState(mapped);
+    } else if (accessToken) {
+      // nếu server chỉ trả token, gọi fetchMe để lấy user
+      await fetchMe(String(accessToken));
     }
   }, [API, fetchMe]);
 

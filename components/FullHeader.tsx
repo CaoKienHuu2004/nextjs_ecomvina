@@ -61,7 +61,10 @@ export default function FullHeader({
   const { count: wishlistCount } = useWishlist();
   // auth state
   const { user, isLoggedIn, logout, token } = useAuth();
-  const headers = token ? { Accept: 'application/json', Authorization: `Bearer ${token}` } : { Accept: 'application/json' };
+  const headers: HeadersInit = {
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 
 
   // ---- Danh mục (All Categories) ----
@@ -181,9 +184,10 @@ export default function FullHeader({
     (async () => {
       try {
         // dùng API đã chuẩn hoá origin ở biến API
-        const res = await fetch(`${API}/api/danhmucs-all`, {
-          headers: { Accept: "application/json" },
+        const res = await fetch(`${API}/api/v1/danhmucs-all`, {
+          headers,
           cache: "no-store",
+          credentials: "include",
         });
         if (!res.ok) {
           console.warn("API danhmucs-all error:", res.status);
