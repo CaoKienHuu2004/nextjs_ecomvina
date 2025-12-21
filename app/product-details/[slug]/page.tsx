@@ -457,7 +457,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                         </div>
 
 
-                                        <span class="mt-32 pt-30 text-gray-700 border-top border-gray-100 d-block"></span>
+                                        <span className="mt-32 pt-30 text-gray-700 border-top border-gray-100 d-block"></span>
 
                                         <div className="">
                                             <h6 className="mb-16">Loại sản phẩm</h6>
