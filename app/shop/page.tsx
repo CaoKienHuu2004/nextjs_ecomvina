@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { fetchShopProducts, fetchHomePage, fetchSearchProducts, fetchV1ShopProducts, type ShopCategory, type ShopBrand, type ShopPriceRange, type HomeHotSaleProduct, type V1ShopProduct, type V1ShopCategory, type V1ShopBrand } from "@/lib/api";
+import { fetchShopProducts, fetchHomePage, fetchV1SearchProducts, fetchV1ShopProducts, type ShopCategory, type ShopBrand, type ShopPriceRange, type HomeHotSaleProduct, type V1ShopProduct, type V1ShopCategory, type V1ShopBrand } from "@/lib/api";
 import type { TopBrand } from "@/lib/api";
 import FullHeader from "@/components/FullHeader";
 
@@ -362,7 +362,7 @@ export default function ShopPage() {
           try {
             console.log('🔍 Shop - Searching with fetchSearchProducts:', searchQuery);
 
-            const searchResults = await fetchSearchProducts(searchQuery.trim());
+            const searchResults = await fetchV1SearchProducts(searchQuery.trim());
 
             console.log(`✅ Shop - Search found ${searchResults.length} products`);
 
