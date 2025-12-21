@@ -121,7 +121,7 @@ export default function OrdersPage() {
         const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
         const token = Cookies.get("access_token");
 
-        const res = await fetch(`${API}/api/tai-khoan/donhangs`, {
+        const res = await fetch(`${API}/api/v1/don-hang`, {
           headers: {
             "Authorization": token ? `Bearer ${token}` : "",
             "Accept": "application/json",
@@ -189,7 +189,7 @@ export default function OrdersPage() {
     setLoadingDetail(true);
     try {
       const token = Cookies.get("access_token");
-      const res = await fetch(`${API}/api/tai-khoan/donhangs/${id}`, {
+      const res = await fetch(`${API}/api/v1/don-hang/${id}`, {
         headers: {
           "Authorization": token ? `Bearer ${token}` : "",
           "Accept": "application/json",
@@ -222,7 +222,7 @@ export default function OrdersPage() {
     if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) return;
     try {
       const token = Cookies.get("access_token");
-      const res = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/huy`, {
+      const res = await fetch(`${API}/api/v1/don-hang/${orderId}/huy`, {
         method: "PATCH",
         headers: {
           "Authorization": token ? `Bearer ${token}` : "",
@@ -270,7 +270,7 @@ export default function OrdersPage() {
   const retryPayment = async (orderId: number, provider?: string) => {
     try {
       const token = Cookies.get("access_token");
-      const url = `${API}/api/tai-khoan/donhangs/${orderId}/payment-url`;
+      const url = `${API}/api/v1/don-hang/${orderId}/payment-url`;
       const body = provider ? JSON.stringify({ provider }) : undefined;
       const res = await fetch(url, {
         method: "POST",
@@ -358,7 +358,7 @@ export default function OrdersPage() {
   // helper to set payment method for an order
   const setOrderPaymentMethod = async (orderId: number, methodCode: string) => {
     const token = Cookies.get("access_token");
-    const res = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/phuong-thuc`, {
+    const res = await fetch(`${API}/api/v1/don-hang/${orderId}/phuong-thuc`, {
       method: "PATCH",
       headers: {
         "Accept": "application/json",
@@ -389,7 +389,7 @@ export default function OrdersPage() {
   // optional: call endpoint to update order status (server-side will decide new status)
   const setOrderStatus = async (orderId: number, payload: Record<string, unknown> = {}) => {
     const token = Cookies.get("access_token");
-    const res = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/trang-thai`, {
+    const res = await fetch(`${API}/api/v1/don-hang/${orderId}/trang-thai`, {
       method: "PATCH",
       headers: {
         "Accept": "application/json",
@@ -409,7 +409,7 @@ export default function OrdersPage() {
       if (paymentModalAction === "reorder") {
         // 1) create new order by mua-lai
         const token = Cookies.get("access_token");
-        const res = await fetch(`${API}/api/tai-khoan/donhangs/${paymentModalOrderId}/mua-lai-don-hang`, {
+        const res = await fetch(`${API}/api/v1/don-hang/${paymentModalOrderId}/mua-lai-don-hang`, {
           method: "PATCH",
           headers: {
             "Accept": "application/json",
@@ -453,7 +453,7 @@ export default function OrdersPage() {
       } else if (paymentModalAction === "retry") {
         // 1) ask server to prepare order for retry (thanh-toan-lai-don-hang)
         const token = Cookies.get("access_token");
-        const res = await fetch(`${API}/api/tai-khoan/donhangs/${paymentModalOrderId}/thanh-toan-lai-don-hang`, {
+        const res = await fetch(`${API}/api/v1/don-hang/${paymentModalOrderId}/thanh-toan-lai-don-hang`, {
           method: "PATCH",
           headers: {
             "Accept": "application/json",

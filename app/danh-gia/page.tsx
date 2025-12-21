@@ -61,7 +61,7 @@ export default function ReviewsPage() {
   const fetchProductsFromOrders = async () => {
     try {
       const token = Cookies.get("access_token");
-      const res = await fetch(`${API}/api/tai-khoan/donhangs`, {
+      const res = await fetch(`${API}/api/v1/don-hang`, {
         headers: { Authorization: token ? `Bearer ${token}` : "", Accept: "application/json" },
         cache: "no-store",
       });

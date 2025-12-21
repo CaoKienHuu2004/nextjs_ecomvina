@@ -85,10 +85,10 @@ export async function addToCart(id_bienthe: number, soluong = 1) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API}/api/toi/giohang/init`, {
+  const res = await fetch(`${API}/api/v1/sync-gio-hang`, {
     method: "POST",
     headers,
-    credentials: "include",
+    // credentials: "include",
     cache: "no-store",
     body: JSON.stringify({ id_bienthe: String(id_bienthe), soluong: Number(soluong) }),
   });
@@ -103,7 +103,7 @@ export async function addToCart(id_bienthe: number, soluong = 1) {
   try {
     // Fetch server cart to compute count
     try {
-      const listRes = await fetch(`${API}/api/toi/giohang`, { credentials: 'include', headers: { Accept: 'application/json' }, cache: 'no-store' });
+      const listRes = await fetch(`${API}/api/v1/gio-hang`, { /* credentials: 'include', */ headers: { Accept: 'application/json' }, cache: 'no-store' });
       if (listRes.ok) {
         const j = await listRes.json();
         const data = j?.data as unknown;

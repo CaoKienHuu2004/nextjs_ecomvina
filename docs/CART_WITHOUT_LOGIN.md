@@ -130,5 +130,5 @@ LocalStorage không validate số lượng tồn kho. Cần validate khi thanh t
 Nếu có vấn đề, kiểm tra:
 - Console log có lỗi gì không
 - LocalStorage có key `marketpro_cart` không
-- API `/api/toi/giohang` hoạt động bình thường không
+- API `/api/v1/gio-hang` hoạt động bình thường không
 - Event `cart:updated` có được trigger không

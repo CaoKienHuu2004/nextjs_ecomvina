@@ -298,7 +298,7 @@ server.post('/api/v1/dang-xuat', (req, res) => {
   return res.status(200).json({ status: true });
 });
 
-server.get('/api/toi/giohang', (req, res) => {
+server.get('/api/v1/gio-hang', (req, res) => {
   const uid = requireOrInitUser(req, res); // đảm bảo có guest-id khi chưa đăng nhập
   const v = String(req.query?.v || '').toLowerCase();
 
@@ -379,7 +379,7 @@ server.get('/api/toi/giohang', (req, res) => {
 });
 
 // POST
-server.post('/api/toi/giohang', (req, res) => {
+server.post('/api/v1/gio-hang', (req, res) => {
   const uid = requireOrInitUser(req, res);
   const { id_bienthesp, quantity } = req.body || {};
   if (!id_bienthesp) return res.status(400).json({ message: 'Thiếu id_bienthesp' });
@@ -398,7 +398,7 @@ server.post('/api/toi/giohang', (req, res) => {
 });
 
 // PUT
-server.put('/api/toi/giohang/:id_bienthesp', (req, res) => {
+server.put('/api/v1/gio-hang/:id_bienthesp', (req, res) => {
   const uid = requireOrInitUser(req, res);
   const vid = String(req.params?.id_bienthesp);
   const q = Math.max(0, Number((req.body || {}).quantity) || 0);
@@ -414,7 +414,7 @@ server.put('/api/toi/giohang/:id_bienthesp', (req, res) => {
 });
 
 // DELETE
-server.delete('/api/toi/giohang/:id_bienthesp', (req, res) => {
+server.delete('/api/v1/gio-hang/:id_bienthesp', (req, res) => {
   const uid = requireOrInitUser(req, res);
   const vid = String(req.params?.id_bienthesp);
   const col = router.db.get('giohangs');
@@ -612,8 +612,8 @@ function safeResolveUserId(req) {
 // ensure orders collection exists
 if (!router.db.has('orders').value()) router.db.set('orders', []).write();
 
-// Create order handler — accepts POST /api/toi/donhang and POST /api/tai-khoan/donhangs
-server.post(['/api/toi/donhang', '/api/tai-khoan/donhangs'], (req, res) => {
+// Create order handler — accepts POST /api/toi/donhang and POST /api/v1/don-hang
+server.post(['/api/toi/donhang', '/api/v1/don-hang'], (req, res) => {
   try {
     const uid = safeResolveUserId(req) || (req.body && req.body.user_id) || null;
     const payload = req.body || {};
@@ -674,8 +674,8 @@ server.post(['/api/toi/donhang', '/api/tai-khoan/donhangs'], (req, res) => {
   }
 });
 
-// List orders for current user (GET /api/tai-khoan/donhangs) — now reads "orders" collection
-server.get('/api/tai-khoan/donhangs', (req, res) => {
+// List orders for current user (GET /api/v1/don-hang) — now reads "orders" collection
+server.get('/api/v1/don-hang', (req, res) => {
   try {
     const uid = safeResolveUserId(req);
     if (!router.db.has('orders').value()) router.db.set('orders', []).write();
@@ -689,7 +689,7 @@ server.get('/api/tai-khoan/donhangs', (req, res) => {
 });
 
 // Get single order by id (support several path variants) — now reads "orders"
-server.get(['/api/tai-khoan/donhangs/:id', '/api/toi/donhang/:id', '/api/donhang/:id', '/api/orders/:id'], (req, res) => {
+server.get(['/api/v1/don-hang/:id', '/api/toi/donhang/:id', '/api/donhang/:id', '/api/orders/:id'], (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!router.db.has('orders').value()) router.db.set('orders', []).write();
@@ -2113,7 +2113,7 @@ server.get('/api/orders/:id', (req, res) => {
 });
 
 // PATCH update order (status, address, tracking, etc.)
-server.patch(['/api/orders/:id', '/api/tai-khoan/donhangs/:id', '/api/toi/donhang/:id', '/api/donhang/:id'], express.json(), (req, res) => {
+server.patch(['/api/orders/:id', '/api/v1/don-hang/:id', '/api/toi/donhang/:id', '/api/donhang/:id'], express.json(), (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!router.db.has('orders').value()) router.db.set('orders', []).write();
@@ -2132,7 +2132,7 @@ server.patch(['/api/orders/:id', '/api/tai-khoan/donhangs/:id', '/api/toi/donhan
 });
 
 // POST cancel endpoint for convenience
-server.post(['/api/orders/:id/cancel', '/api/tai-khoan/donhangs/:id/cancel', '/api/toi/donhang/:id/cancel'], express.json(), (req, res) => {
+server.post(['/api/orders/:id/cancel', '/api/v1/don-hang/:id/cancel', '/api/toi/donhang/:id/cancel'], express.json(), (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!router.db.has('orders').value()) router.db.set('orders', []).write();
@@ -2433,10 +2433,10 @@ server.get('/api/toi/theodoi-donhang', (req, res) => {
 
 /**
  * Backwards-compatible endpoints used by other parts of app.
- * - /api/tai-khoan/donhangs  -> trả danh sách đơn hàng phẳng (mảng ApiDonHang)
+ * - /api/v1/don-hang  -> trả danh sách đơn hàng phẳng (mảng ApiDonHang)
  * - /api/donhang/:id hoặc /api/toi/donhang/:id -> trả 1 ApiDonHang
  */
-server.get('/api/tai-khoan/donhangs', (req, res) => {
+server.get('/api/v1/don-hang', (req, res) => {
   try {
     const db = router.db;
     const all = db.get('orders').value() || [];

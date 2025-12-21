@@ -76,7 +76,7 @@ export default function Page() {
         try {
             try { localStorage.removeItem("access_token"); } catch { }
 
-            await login({ username, password });
+            await login({ phonemail: username, password });
 
             if (form.remember) {
                 const token = Cookies.get("access_token");

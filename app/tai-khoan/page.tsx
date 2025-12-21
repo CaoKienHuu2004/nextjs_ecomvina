@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { getAuthHeaders, useAuth } from "@/hooks/useAuth";
 import AccountShell from "@/components/AccountShell";
 import FullHeader from "@/components/FullHeader";
 import Cookies from "js-cookie";
@@ -81,7 +81,7 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 export default function Page() {
   const router = useRouter();
   const search = useSearchParams();
-  const { login, register, logout, user, isLoggedIn } = useAuth();
+  const { login, register, logout, user, isLoggedIn, updateProfile } = useAuth();
   const [profile, setProfile] = useState<AuthUser | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [editingPhone, setEditingPhone] = useState(false);
@@ -200,10 +200,11 @@ export default function Page() {
         const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
+            // "Authorization": `Bearer ${token}`,
+            // "Content-Type": "application/json",
+            ...getAuthHeaders(),
           },
-          credentials: "include",
+          // credentials: "include",
         });
         if (!alive) return;
         if (!res.ok) return;
@@ -234,28 +235,25 @@ export default function Page() {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
           const headers: Record<string, string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, { credentials: "include", headers });
+          const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {  headers });//credentials: "include",
           const data = await res.json();
           setWishlist(Array.isArray(data) ? (data as WishlistRow[]) : (data?.data ?? []));
         } else if (tab === "cart") {
-          const token = Cookies.get("access_token") || Cookies.get("token") || null;
-          const headers: Record<string, string> = { Accept: "application/json" };
-          if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(`${API}/api/toi/giohang`, { credentials: "include", headers });
+          const res = await fetch(`${API}/api/v1/gio-hang`, { headers: getAuthHeaders() });
           const j = await res.json();
           setCart((j?.data as CartRow[]) ?? []);
         } else if (tab === "orders") {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
           const headers: Record<string, string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(`${API}/api/tai-khoan/donhangs`, { credentials: "include", headers });
+          const res = await fetch(`${API}/api/v1/don-hang`, {  headers });//credentials: "include",
           const j = await res.json();
           setOrders((j?.data as Order[]) ?? []);
         } else if (tab === "profile") {
           const token = Cookies.get("access_token") || Cookies.get("token") || null;
           const headers: Record<string, string> = { Accept: "application/json" };
           if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, { credentials: "include", headers });
+          const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {  headers });//credentials: "include",
           const j = await res.json();
           setProfile((j?.data as AuthUser) ?? null);
         }
@@ -303,10 +301,10 @@ export default function Page() {
       const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,  // gửi token kèm header Authorization
+          "Authorization": `Bearer ${token}`,
           // "Content-Type": "application/json",
         },
-        credentials: "include",
+        // credentials: "include",
         body: fd,
       });
 
@@ -359,14 +357,11 @@ export default function Page() {
     const new_password_confirmation = String(form.get("new_password_confirmation") || "");
     setLoading(true);
     try {
-      const token = Cookies.get("access_token");
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat-mat-khau`, {
-        method: "PATCH",
-        headers,
-        credentials: "include",
-        body: JSON.stringify({ current_password, new_password, new_password_confirmation }),
+      const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
+      const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat-mat-khau`, { 
+        method: "PATCH", 
+        headers, 
+        body: JSON.stringify({ current_password, new_password, new_password_confirmation }) 
       });
       const j = (await res.json().catch(() => null)) as unknown;
       const msg =
@@ -394,7 +389,7 @@ export default function Page() {
           fetch(`${API}/api/tai-khoan/yeuthichs`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
-            credentials: "include",
+            // credentials: "include",
             body: JSON.stringify({ id_sanpham: id }),
           })
         )
@@ -406,13 +401,13 @@ export default function Page() {
   const handleLogin: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const username = String(form.get("username") || "").trim();
+    const phonemail = String(form.get("phonemail") || "").trim();
     const password = String(form.get("password") || "").trim();
     setLoading(true);
     setNotice(null);
     try {
       // gọi useAuth.login với key 'username'
-      await login({ username, password });
+      await login({ phonemail, password });
       await syncGuestWishlist();
       router.replace("/");
     } catch (err: unknown) {
@@ -474,7 +469,7 @@ export default function Page() {
       if (token) headers.Authorization = `Bearer ${token}`;
       await fetch(`${API}/api/tai-khoan/yeuthichs/${productId}`, {
         method: "PATCH",
-        credentials: "include",
+        // credentials: "include",
         headers,
       });
       setWishlist((prev) =>
@@ -545,7 +540,7 @@ export default function Page() {
                 <div className="row gy-4">
                   <div className="col-12">
                     <label htmlFor="login-username" className="text-sm text-gray-900 fw-medium">Email hoặc SĐT *</label>
-                    <input id="login-username" name="username" type="text" className="common-input" placeholder="tên đăng nhập / email / sđt" autoComplete="username" required />
+                    <input id="login-username" name="phonemail" type="text" className="common-input" placeholder="email hoặc số điện thoại" autoComplete="username" required />
                   </div>
                   <div className="col-12">
                     <label htmlFor="login-password" className="text-sm text-gray-900 fw-medium">Mật khẩu</label>
@@ -574,7 +569,7 @@ export default function Page() {
                   <div className="col-12">
                     <label htmlFor="reg-username" className="text-sm text-gray-900 fw-medium">Tên tài khoản (username)</label>
                     <input id="reg-username" name="username" type="text" autoComplete="username" className="common-input" placeholder="tùy chọn — để trống sẽ dùng họ tên" />
-                    <small className="text-xs text-muted">Bạn có thể đăng nhập bằng username, email hoặc số điện thoại.</small>
+                    <small className="text-xs text-muted">Bạn có thể đăng nhập bằng email hoặc số điện thoại.</small>
                   </div>
                   <div className="col-12">
                     <label htmlFor="reg-email" className="text-sm text-gray-900 fw-medium">Email</label>

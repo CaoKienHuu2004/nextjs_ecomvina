@@ -123,7 +123,7 @@ export default function Page() {
             const rawResp = await fetch("https://sieuthivina.com/api/v1/dang-ky", {
                 method: "POST",
                 // credentials: "include",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                headers: { "Content-Type": "application/json", Accept: "application/json" },
                 body: JSON.stringify(payload),
             });
 

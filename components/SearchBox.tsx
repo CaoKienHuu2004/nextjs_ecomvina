@@ -157,7 +157,7 @@ export default function SearchBox({ placeholder = "Thuốc giảm cân dành cho
       } else {
         await fetch(`${API}/api/tukhoas`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({ dulieu: kw, soluot: 1 }),
         });
       }
@@ -191,7 +191,7 @@ export default function SearchBox({ placeholder = "Thuốc giảm cân dành cho
       {/* Dropdown gợi ý */}
       {open && (q || loading) && (
         <div
-          className="mt-2 bg-white border border-gray-100 position-absolute w-100 rounded-8 shadow-lg overflow-hidden"
+          className="mt-2 overflow-hidden bg-white border border-gray-100 shadow-lg position-absolute w-100 rounded-8"
           style={{ zIndex: 50, maxHeight: "80vh", overflowY: "auto" }}
           onMouseDown={(e) => e.preventDefault()}
         >
@@ -203,17 +203,17 @@ export default function SearchBox({ placeholder = "Thuốc giảm cân dành cho
 
           {/* Phần 1: Sản phẩm gợi ý */}
           {!loading && products.length > 0 && (
-            <div className="border-bottom border-gray-100">
-              <div className="px-16 py-8 bg-neutral-50 text-xs fw-semibold text-gray-500 text-uppercase">
+            <div className="border-gray-100 border-bottom">
+              <div className="px-16 py-8 text-xs text-gray-500 bg-neutral-50 fw-semibold text-uppercase">
                 Sản phẩm gợi ý
               </div>
               {products.slice(0, 5).map((p) => (
                 <div
                   key={p.id}
-                  className="px-16 py-8 hover-bg-neutral-50 cursor-pointer d-flex align-items-center gap-12 transition-all"
+                  className="gap-12 px-16 py-8 transition-all cursor-pointer hover-bg-neutral-50 d-flex align-items-center"
                   onClick={() => goProduct(p.slug)}
                 >
-                  <div className="flex-shrink-0 border rounded-4 overflow-hidden" style={{ width: 40, height: 40 }}>
+                  <div className="flex-shrink-0 overflow-hidden border rounded-4" style={{ width: 40, height: 40 }}>
                     <Image
                       src={getImageUrl(p.hinh_anh)}
                       alt={p.ten}
@@ -222,9 +222,9 @@ export default function SearchBox({ placeholder = "Thuốc giảm cân dành cho
                       className="w-100 h-100 object-fit-cover"
                     />
                   </div>
-                  <div className="flex-grow-1 overflow-hidden">
+                  <div className="overflow-hidden flex-grow-1">
                     <div className="text-sm text-heading fw-medium text-truncate" title={p.ten}>{p.ten}</div>
-                    <div className="d-flex align-items-center gap-8">
+                    <div className="gap-8 d-flex align-items-center">
                       <span className="text-xs text-main-600 fw-semibold">{formatPrice(p.gia_ban)}đ</span>
                       {p.gia_goc > p.gia_ban && (
                         <span className="text-xs text-gray-400 text-decoration-line-through">{formatPrice(p.gia_goc)}đ</span>

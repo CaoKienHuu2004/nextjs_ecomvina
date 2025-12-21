@@ -63,7 +63,7 @@ export default function ThongBaoPage(): JSX.Element {
       const res = await fetch(`${API || ""}/api/tai-khoan/thongbaos`, {
         method: "GET",
         headers,
-        credentials: "include",
+        // credentials: "include",
       });
       const j = await res.json().catch(() => null);
       const items = Array.isArray(j?.data) ? j.data : [];
@@ -132,7 +132,7 @@ export default function ThongBaoPage(): JSX.Element {
           fetch(`${API || ""}/api/tai-khoan/thongbaos/${item.id}/daxem`, {
             method: "PATCH",
             headers,
-            credentials: "include",
+            // credentials: "include",
           }).catch((err) => {
             console.warn(`Failed marking ${item.id} as read`, err);
             return null;
@@ -152,23 +152,23 @@ export default function ThongBaoPage(): JSX.Element {
       <FullHeader showClassicTopBar={true} showTopNav={false} />
 
       <AccountShell title="Thông báo" current="notifications">
-        <div className="flex-between gap-16 flex-wrap mb-20">
-          <h6 className="mb-0 text-gray-900 flex-align gap-12">
+        <div className="flex-wrap gap-16 mb-20 flex-between">
+          <h6 className="gap-12 mb-0 text-gray-900 flex-align">
             <i className="ph-bold ph-bell-simple-ringing text-main-600" /> Thông báo của tôi
           </h6>
-          <div className="position-relative flex-align gap-16 flex-wrap">
+          <div className="flex-wrap gap-16 position-relative flex-align">
             <button
               type="button"
-              className="w-44 h-44 d-lg-none d-flex flex-center border border-gray-100 rounded-6 text-2xl sidebar-btn"
+              className="text-2xl border border-gray-100 w-44 h-44 d-lg-none d-flex flex-center rounded-6 sidebar-btn"
             >
               <i className="ph-bold ph-folder-user" />
             </button>
           </div>
         </div>
 
-        <div className="border border-gray-100 rounded-8 p-16">
-          <div className="py-10 flex-between flex-align mb-20">
-            <ul className="nav common-tab style-two nav-pills m-0" role="tablist">
+        <div className="p-16 border border-gray-100 rounded-8">
+          <div className="py-10 mb-20 flex-between flex-align">
+            <ul className="m-0 nav common-tab style-two nav-pills" role="tablist">
               {TAB_ORDER.map((t) => (
                 <li key={t.key} className="nav-item" role="presentation">
                   <button
@@ -188,7 +188,7 @@ export default function ThongBaoPage(): JSX.Element {
 
             <button
               onClick={markAllAsRead}
-              className="text-white hover-bg-main-800 text-sm bg-main-600 px-10 py-6 rounded-8 flex-align gap-12"
+              className="gap-12 px-10 py-6 text-sm text-white hover-bg-main-800 bg-main-600 rounded-8 flex-align"
             >
               <i className="ph-bold ph-check" /> Đánh dấu tất cả là đã đọc
             </button>
@@ -200,7 +200,7 @@ export default function ThongBaoPage(): JSX.Element {
                 {loading ? (
                   <div>Đang tải...</div>
                 ) : visible.length === 0 ? (
-                  <div className="text-center py-40">
+                  <div className="py-40 text-center">
                     <img src="/assets/client/images/empty/notification-empty.png" alt="no" className="mx-auto mb-16" />
                     <div className="text-gray-600">Bạn chưa có thông báo nào.</div>
                   </div>
@@ -231,19 +231,19 @@ export default function ThongBaoPage(): JSX.Element {
 
                       return (
                         <div key={n.id} className="col-12 col-lg-12">
-                          <div className="border border-gray-200 box-shadow-sm text-main-900 rounded-4 px-20 py-16 mb-10">
-                            <div className="d-flex flex-align gap-12">
-                              <span className="flex-shrink-0 text-main-600 text-4xl">
+                          <div className="px-20 py-16 mb-10 border border-gray-200 box-shadow-sm text-main-900 rounded-4">
+                            <div className="gap-12 d-flex flex-align">
+                              <span className="flex-shrink-0 text-4xl text-main-600">
                                 <i className="ph-bold ph-notepad" />
                               </span>
                               <div className="w-100">
-                                <div className="d-flex flex-between align-items-start gap-12">
+                                <div className="gap-12 d-flex flex-between align-items-start">
                                   <div>
-                                    <h6 className="mb-2 text-gray-900 text-lg">{n.tieude}</h6>
+                                    <h6 className="mb-2 text-lg text-gray-900">{n.tieude}</h6>
                                     <p className="mb-0 text-gray-700 text-md wrap-80">{n.noidung}</p>
-                                    <div className="text-muted text-sm">{timeText}</div>
+                                    <div className="text-sm text-muted">{timeText}</div>
                                   </div>
-                                  <div className="text-end flex-column d-flex align-items-end gap-8" style={{ minWidth: 160 }}>
+                                  <div className="gap-8 text-end flex-column d-flex align-items-end" style={{ minWidth: 160 }}>
                                     <a
                                       href={n.lienket ?? "#"}
                                       className={`border border-main-600 text-main-600 hover-text-white hover-bg-main-600 px-8 py-4 rounded-4 text-sm`}

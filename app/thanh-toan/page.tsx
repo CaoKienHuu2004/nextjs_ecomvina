@@ -132,7 +132,7 @@ export default function ThanhToanPage() {
         // khuvucgiao: selectedAddress?.tinhthanh ?? "",
       };
 
-      const res = await fetch(`${API}/api/tai-khoan/donhangs`, {
+      const res = await fetch(`${API}/api/thanh-toan/dat-hang`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -176,7 +176,8 @@ export default function ThanhToanPage() {
 
       if (paymentMethod === "dbt") {
         // gọi API tạo payment link
-        const resPay = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/payment-url`, {
+        // const resPay = await fetch(`${API}/api/v1/don-hang/${orderId}/payment-url`, {
+        const resPay = await fetch(`${API}/api/thanh-toan/vnp-return/${orderId}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -206,7 +207,7 @@ export default function ThanhToanPage() {
           return;
         }
         // if (paymentMethod === "cp") {
-        //     const resPay = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/payment-url`, {
+        //     const resPay = await fetch(`${API}/api/v1/don-hang/${orderId}/payment-url`, {
         //         method: "POST",
         //         headers: {
         //             "Content-Type": "application/json",

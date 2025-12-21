@@ -31,7 +31,7 @@ function useWishlistCore(): Ctx {
         if (token) headers.Authorization = `Bearer ${token}`;
         const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
           headers,
-          credentials: "include",
+          // credentials: "include",
         });
 
         if (res.status === 401) {
@@ -113,7 +113,7 @@ function useWishlistCore(): Ctx {
       const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
         method: "POST",
         headers,
-        credentials: "include",
+        // credentials: "include",
         body: JSON.stringify({ id_sanpham: id }),
       });
       if (res.status === 401) {
@@ -138,7 +138,7 @@ function useWishlistCore(): Ctx {
       const res = await fetch(`${API}/api/tai-khoan/yeuthichs/${id}`, {
         method: "PATCH",
         headers,
-        credentials: "include",
+        // credentials: "include",
       });
       if (res.status === 401) {
         // guest mode

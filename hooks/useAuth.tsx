@@ -4,6 +4,8 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 
+const PHONE_REGEX = /^0\d{9}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export type RegisterPayload = {
   hoten: string;
@@ -36,7 +38,7 @@ export type AuthContextType = {
   user: AuthUser | null;
   token: string | null;
   isLoggedIn: boolean;
-  login: (payload: { username: string; password: string }) => Promise<void>;
+  login: (payload: { phonemail: string; password: string }) => Promise<void>;
   // 2. Sử dụng Type RegisterPayload thay vì any
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
@@ -71,7 +73,7 @@ export function AuthProvider({
         Accept: "application/json",
         Authorization: `Bearer ${t}`,
       },
-      credentials: "include",
+      // credentials: "include",
       body: JSON.stringify({ current_password, new_password, new_password_confirmation }),
     });
     const j = await res.json().catch(() => ({}));
@@ -123,14 +125,25 @@ export function AuthProvider({
 
   // --- Login ---
   // Fix eslint: Thêm dependency 'API' và 'fetchMe'
-  const login = useCallback(async ({ username, password }: { username: string; password: string }) => {
+   const login= useCallback(async ({ phonemail, password }: { phonemail: string; password: string }) => {
+    if (!phonemail || !password) {
+      throw new Error("Vui lòng nhập Email hoặc Số điện thoại và mật khẩu.");
+    }
+    // validate phonemail: phải là email hoặc số điện thoại theo regex
+    if (!PHONE_REGEX.test(phonemail) && !EMAIL_REGEX.test(phonemail)) {
+      throw new Error("Vui lòng nhập Email hoặc Số điện thoại hợp lệ.");
+    }
+
     const res = await fetch(`${API}/api/v1/dang-nhap`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ phonemail, password }),
     });
 
-    if (!res.ok) throw new Error("Đăng nhập thất bại");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || "Đăng nhập thất bại");
+    }
 
     const data = await res.json();
 
@@ -142,7 +155,6 @@ export function AuthProvider({
   }, [API, fetchMe]);
 
   // --- Register ---
-  // 3. Fix lỗi any ở tham số payload
   const register = useCallback(async (payload: RegisterPayload) => {
     const res = await fetch(`${API}/api/v1/dang-ky`, {
       method: "POST",
@@ -175,7 +187,7 @@ export function AuthProvider({
       }
       const data = await res.json();
       // API có thể trả về user trong data.user hoặc data.data
-      const returned = data.user ?? data.data ?? data;
+      const returned = data.user ?? data.data ?? data ?? payload;
       if (returned) {
         const mappedUser: AuthUser = {
           id: returned.id ?? user?.id ?? "",
@@ -187,6 +199,7 @@ export function AuthProvider({
           avatar: returned.avatar ?? user?.avatar,
           diachi: returned.diachi ?? user?.diachi,
         };
+        Cookies.set("user_info", JSON.stringify(mappedUser), { expires: 1, path: '/' });
         setUserState(mappedUser);
       }
     } catch (e) {
@@ -223,3 +236,10 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within <AuthProvider>");
   return ctx;
 }
+
+export const getAuthHeaders = (): Record<string, string> => {
+  const t = Cookies.get(TOKEN_KEY) || null;
+  const base: Record<string, string> = { Accept: "application/json" };
+  if (t) base.Authorization = `Bearer ${t}`;
+  return base;
+};

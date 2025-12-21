@@ -13,9 +13,9 @@ export const API_ROUTES = {
 
 
   // can-xac-thuc-tai-khoan-truoc Người dùng - Frontend scope - routes đăng nhập token
-  TOI_DON_HANGS: "/api/tai-khoan/donhangs",
-  TOI_GIO_HANG: "/api/toi/giohang",
-  TOI_GIO_HANG_ITEM: (id: string | number) => `/api/toi/giohang/${id}`,
+  TOI_DON_HANGS: "/api/v1/don-hang",
+  TOI_GIO_HANG: "/api/v1/gio-hang",
+  TOI_GIO_HANG_ITEM: (id: string | number) => `/api/v1/gio-hang/${id}`,
   TOI_THONG_BAOS: "/api/tai-khoan/thongbaos",
   TOI_DIA_CHIS: "/api/tai-khoan/diachis",
   TOI_DIA_CHI_ITEM: (id: string | number) => `/api/tai-khoan/diachis/${id}`,

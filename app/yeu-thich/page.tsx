@@ -52,7 +52,7 @@ export default function WishlistPage() {
     try {
       const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
         headers: getAuthHeaders(),
-        credentials: 'include',
+        // credentials: 'include',
       });
       if (!res.ok) throw new Error(`Fav API ${res.status}`);
       const j = await res.json();
@@ -85,7 +85,7 @@ export default function WishlistPage() {
       const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
         method: 'POST',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        credentials: 'include',
+        // credentials: 'include',
         body: JSON.stringify({ id_sanpham: productId })
       });
       if (!res.ok) throw new Error('Add fav failed');
@@ -122,7 +122,7 @@ export default function WishlistPage() {
       const res = await fetch(`${API}/api/tai-khoan/yeuthichs/${favId}`, {
         method: 'PATCH',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        credentials: 'include',
+        // credentials: 'include',
         body: JSON.stringify({ trangthai: "Tạm ẩn" })
       });
       if (!res.ok) {

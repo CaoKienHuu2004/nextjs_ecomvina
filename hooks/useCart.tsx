@@ -545,7 +545,7 @@ export function useCart() {
     try {
       let res: Response;
       try {
-        res = await fetch(`${API}/api/tai-khoan/giohang`, {
+        res = await fetch(`${API}/api/v1/gio-hang`, {
           headers: getAuthHeaders(),
           cache: "no-store",
         });
@@ -623,10 +623,10 @@ export function useCart() {
     setLoading(true);
     try {
       for (const item of localItems) {
-        await fetch(`${API}/api/tai-khoan/giohang`, {
+        await fetch(`${API}/api/v1/gio-hang/them`, {
           method: "POST",
           headers: getAuthHeaders(),
-          credentials: "include",
+          // credentials: "include",
           body: JSON.stringify({
             id_bienthe: String(item.id_bienthe),
             // include id_giohang if we stored a local cart-row id (local_...) or server row id
@@ -734,11 +734,11 @@ export function useCart() {
         };
         if (programId) requestBody.id_chuongtrinh = Number(programId);
 
-        const cartUrl = `${API}/api/tai-khoan/giohang`;
+        const cartUrl = `${API}/api/v1/gio-hang/them`;
         const res = await fetch(cartUrl, {
           method: "POST",
           headers: getAuthHeaders(),
-          credentials: "include",
+          // credentials: "include",
           body: JSON.stringify(requestBody),
         });
 
@@ -836,7 +836,7 @@ export function useCart() {
     const hasToken = hasValidToken();
     if (hasToken) {
       try {
-        await fetch(`${API}/api/tai-khoan/giohang/${id_giohang}`, {
+        await fetch(`${API}/api/v1/gio-hang/${id_giohang}`, {
           method: "PUT",
           headers: getAuthHeaders(),
           body: JSON.stringify({ soluong: soluong }),
@@ -865,7 +865,7 @@ export function useCart() {
     const hasToken = hasValidToken();
     if (hasToken) {
       try {
-        await fetch(`${API}/api/tai-khoan/giohang/${id_giohang}`, {
+        await fetch(`${API}/api/v1/gio-hang/xoa/${id_giohang}`, {
           method: "DELETE",
           headers: getAuthHeaders(),
         });

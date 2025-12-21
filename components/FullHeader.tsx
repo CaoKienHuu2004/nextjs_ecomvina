@@ -60,7 +60,8 @@ export default function FullHeader({
   // wishlist count
   const { count: wishlistCount } = useWishlist();
   // auth state
-  const { user, isLoggedIn, logout } = useAuth();
+  const { user, isLoggedIn, logout, token } = useAuth();
+  const headers = token ? { Accept: 'application/json', Authorization: `Bearer ${token}` } : { Accept: 'application/json' };
 
 
   // ---- Danh mục (All Categories) ----
@@ -805,7 +806,8 @@ export default function FullHeader({
                               </span>
                             )}
                             <span className="text d-md-flex d-none">
-                              {user?.hoten || "Tài Khoản"}
+                              {/* {user?.hoten || "Tài Khoản"} */}
+                              {isLoggedIn && user ? (user.hoten || user.username) : "Tài khoản"}
                             </span>
                             <span className="arrow-icon">
                               <i className="ph ph-caret-down" />

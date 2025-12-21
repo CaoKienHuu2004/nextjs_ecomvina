@@ -126,9 +126,9 @@ export default function HoanTatThanhToanPage() {
         if (token) headers.Authorization = `Bearer ${token}`;
 
         // 1) Try status endpoint first (existing)
-        const res = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}/status`, {
+        const res = await fetch(`${API}/api/v1/don-hang/${orderId}/status`, {
           headers,
-          credentials: "include",
+          // credentials: "include",
         });
         const json = await res.json().catch(() => ({}));
 
@@ -142,9 +142,9 @@ export default function HoanTatThanhToanPage() {
         // 2) If status endpoint returns only status text, try fetching full detail
         if (json.status && (json.payment_status || json.order_status)) {
           try {
-            const res2 = await fetch(`${API}/api/tai-khoan/donhangs/${orderId}`, {
+            const res2 = await fetch(`${API}/api/v1/don-hang/${orderId}`, {
               headers,
-              credentials: "include",
+              // credentials: "include",
             });
             const json2 = await res2.json().catch(() => ({}));
             if (json2.status && json2.data) {
