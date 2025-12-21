@@ -209,6 +209,7 @@ export default function BannerTwo() {
                         border: "none",
                       }}
                       onClick={() => swiperRef.current?.slidePrev()}
+                      aria-label="Slide trước"
                     >
                       <i className="ph-bold ph-caret-left"></i>
                     </button>
@@ -224,6 +225,7 @@ export default function BannerTwo() {
                         border: "none",
                       }}
                       onClick={() => swiperRef.current?.slideNext()}
+                      aria-label="Slide tiếp theo"
                     >
                       <i className="ph-bold ph-caret-right"></i>
                     </button>

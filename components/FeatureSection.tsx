@@ -78,7 +78,7 @@ export default function FeatureSection() {
                       key={idx}
                       className="slick-slide"
                       data-slick-index={idx - categories.length}
-                      aria-hidden={isHidden ? 'true' : 'false'}
+                      {...(isHidden && { 'aria-hidden': true })}
                     >
                       <div>
                         <div
