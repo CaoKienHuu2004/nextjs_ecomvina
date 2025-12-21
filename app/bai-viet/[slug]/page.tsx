@@ -3,7 +3,7 @@
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import FullHeader from '@/components/FullHeader';
-import { BlogPost, fetchBlogPosts } from '@/lib/api';
+import { BlogPost, fetchBlogPosts, fetchBlogDetail, type BlogDetailData } from '@/lib/api';
 
 const categories = [
     { name: 'Gaming', count: 12 },
@@ -20,28 +20,34 @@ export default function BlogDetailSlugPage({ params }: { params: Promise<{ slug:
     const slug = resolvedParams.slug;
 
     const [posts, setPosts] = useState<BlogPost[]>([]);
-    const [currentPost, setCurrentPost] = useState<BlogPost | null>(null);
+    const [currentPost, setCurrentPost] = useState<BlogDetailData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
-        const loadPosts = async () => {
+        const loadData = async () => {
             try {
                 setLoading(true);
-                const data = await fetchBlogPosts();
-                setPosts(data);
 
-                // Tìm bài viết theo slug
-                const found = data.find((p) => p.slug === slug);
-                setCurrentPost(found || null);
+                // Fetch blog detail from new API
+                const detailResponse = await fetchBlogDetail(slug);
+                if (detailResponse.status === 200 && detailResponse.data) {
+                    setCurrentPost(detailResponse.data);
+                } else {
+                    setCurrentPost(null);
+                }
+
+                // Also fetch all posts for sidebar
+                const allPosts = await fetchBlogPosts();
+                setPosts(allPosts);
             } catch (error) {
-                console.error('Error loading blog posts:', error);
+                console.error('Error loading blog detail:', error);
                 setCurrentPost(null);
             } finally {
                 setLoading(false);
             }
         };
 
-        loadPosts();
+        loadData();
     }, [slug]);
 
     const recentPosts = posts.filter(p => p.slug !== slug).slice(0, 4);
@@ -131,7 +137,7 @@ export default function BlogDetailSlugPage({ params }: { params: Promise<{ slug:
                                                         <i className="ph ph-calendar-dots"></i>
                                                     </span>
                                                     <span className="text-sm text-gray-500">
-                                                       {(currentPost as any).date || new Date().toLocaleDateString('vi-VN')}
+                                                        {currentPost.created_at ? new Date(currentPost.created_at).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN')}
                                                     </span>
                                                 </div>
                                                 <div className="flex-align flex-wrap gap-8">
@@ -142,6 +148,16 @@ export default function BlogDetailSlugPage({ params }: { params: Promise<{ slug:
                                                         {currentPost.luotxem || 0} Lượt xem
                                                     </span>
                                                 </div>
+                                                {currentPost.nguoidung && (
+                                                    <div className="flex-align flex-wrap gap-8">
+                                                        <span className="text-lg text-main-600">
+                                                            <i className="ph ph-user"></i>
+                                                        </span>
+                                                        <span className="text-sm text-gray-500">
+                                                            {currentPost.nguoidung.hoten}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div

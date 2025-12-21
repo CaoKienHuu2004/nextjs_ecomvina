@@ -6,7 +6,7 @@ import Link from "next/link";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { fetchProductDetail, type ProductDetail, type SimilarProduct } from "@/lib/api";
+import { fetchProductDetail, fetchProductReviews, type ProductDetail, type SimilarProduct, type ProductReviewItem, type ProductReviewStats } from "@/lib/api";
 import Image from "next/image";
 import { useCart } from "@/hooks/useCart";
 import Cookies from "js-cookie";
@@ -48,6 +48,13 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [favLoading, setFavLoading] = useState(false);
     const [favoriteId, setFavoriteId] = useState<number | null>(null);
+
+    // Reviews state from new API
+    const [reviews, setReviews] = useState<ProductReviewItem[]>([]);
+    const [reviewStats, setReviewStats] = useState<ProductReviewStats | null>(null);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
+    const [reviewsPage, setReviewsPage] = useState(1);
+    const [reviewsTotalPages, setReviewsTotalPages] = useState(1);
 
     // Lấy biến thể đang chọn (hoặc biến thể đầu tiên nếu chưa chọn)
     const selectedVariant = product?.bienthe_khichon_loaibienthe_themvaogio?.find(
@@ -265,11 +272,35 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
     // Lấy rating
     const getRating = () => {
+        if (reviewStats) {
+            return reviewStats.diem_trung_binh || 0;
+        }
         if (product?.rating) {
             return product.rating.average || 0;
         }
         return 0;
     };
+
+    // Fetch reviews from new API
+    useEffect(() => {
+        if (!slug) return;
+
+        const loadReviews = async () => {
+            setReviewsLoading(true);
+            try {
+                const response = await fetchProductReviews(slug, reviewsPage);
+                setReviews(response.data.data);
+                setReviewStats(response.thong_ke);
+                setReviewsTotalPages(response.data.last_page);
+            } catch (err) {
+                console.error("Failed to fetch reviews:", err);
+            } finally {
+                setReviewsLoading(false);
+            }
+        };
+
+        loadReviews();
+    }, [slug, reviewsPage]);
 
     if (loading) {
         return (
@@ -692,8 +723,14 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                         <div className="row g-4 justify-content-center">
                             <div className="col-lg-6">
                                 <h6 className="mb-24 title">Đánh giá về sản phẩm</h6>
-                                {product?.danh_gia && product.danh_gia.length > 0 ? (
-                                    product.danh_gia.map((review) => (
+                                {reviewsLoading ? (
+                                    <div className="text-center py-4">
+                                        <div className="spinner-border spinner-border-sm text-main-600" role="status">
+                                            <span className="visually-hidden">Đang tải...</span>
+                                        </div>
+                                    </div>
+                                ) : reviews.length > 0 ? (
+                                    reviews.map((review) => (
                                         <div key={review.id} className="gap-24 border-gray-100 d-flex align-items-start pb-44 border-bottom mb-44">
                                             <div className="flex-shrink-0 w-52 h-52 bg-main-100 rounded-circle flex-center">
                                                 <span className="text-main-600 fw-bold text-lg">
@@ -723,6 +760,28 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                 ) : (
                                     <p className="text-gray-500">Chưa có đánh giá nào cho sản phẩm này.</p>
                                 )}
+                                {/* Pagination for reviews */}
+                                {reviewsTotalPages > 1 && (
+                                    <div className="d-flex justify-content-center gap-8 mt-24">
+                                        <button
+                                            className="btn btn-outline-main-600 btn-sm"
+                                            disabled={reviewsPage <= 1}
+                                            onClick={() => setReviewsPage(p => Math.max(1, p - 1))}
+                                        >
+                                            Trước
+                                        </button>
+                                        <span className="d-flex align-items-center px-12">
+                                            Trang {reviewsPage} / {reviewsTotalPages}
+                                        </span>
+                                        <button
+                                            className="btn btn-outline-main-600 btn-sm"
+                                            disabled={reviewsPage >= reviewsTotalPages}
+                                            onClick={() => setReviewsPage(p => Math.min(reviewsTotalPages, p + 1))}
+                                        >
+                                            Sau
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                             <div className="col-lg-6">
                                 <div className="ms-xxl-5">
@@ -730,11 +789,11 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                     <div className="flex-wrap d-flex gap-44 justify-content-center">
                                         <div className="flex-shrink-0 px-40 text-center border border-gray-100 rounded-8 py-52 flex-center flex-column">
                                             <h2 className="mb-6 text-main-600">
-                                                {(product?.rating && 'average' in product.rating) ? product.rating.average.toFixed(1) : '0.0'}
+                                                {reviewStats ? reviewStats.diem_trung_binh.toFixed(1) : '0.0'}
                                             </h2>
                                             <div className="gap-8 flex-center">
                                                 {[1, 2, 3, 4, 5].map((star) => {
-                                                    const avg = (product?.rating && 'average' in product.rating) ? product.rating.average : 0;
+                                                    const avg = reviewStats?.diem_trung_binh || 0;
                                                     return (
                                                         <span
                                                             key={star}
@@ -746,12 +805,13 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 })}
                                             </div>
                                             <span className="mt-16 text-gray-500">Điểm đánh giá trung bình</span>
+                                            <span className="text-gray-400 text-sm">({reviewStats?.tong_so_danh_gia || 0} đánh giá)</span>
                                         </div>
                                         <div className="px-24 py-40 border border-gray-100 rounded-8 flex-grow-1">
                                             {[5, 4, 3, 2, 1].map((starLevel) => {
-                                                const ratingData = product?.rating && 'sao_5' in product.rating ? product.rating : null;
-                                                const count = ratingData ? ratingData[`sao_${starLevel}` as keyof typeof ratingData] as number : 0;
-                                                const total = ratingData ? ratingData.count : 0;
+                                                const starKey = `${starLevel}_sao` as '5_sao' | '4_sao' | '3_sao' | '2_sao' | '1_sao';
+                                                const count = reviewStats?.chi_tiet_sao?.[starKey] || 0;
+                                                const total = reviewStats?.tong_so_danh_gia || 0;
                                                 const percentage = total > 0 ? (count / total) * 100 : 0;
 
                                                 return (

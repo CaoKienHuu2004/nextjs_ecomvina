@@ -1036,6 +1036,95 @@ export async function fetchHeaderData(): Promise<HeaderDataResponse['data']> {
   return json.data;
 }
 
+// ============================================
+// đanh gia san pham
+// ============================================
+export interface ProductReviewItem {
+  id: number;
+  hoten: string;
+  diem: number;
+  noidung: string;
+  created_at?: string;
+}
+
+export interface ProductReviewStats {
+  diem_trung_binh: number;
+  tong_so_danh_gia: number;
+  chi_tiet_sao: {
+    '5_sao': number;
+    '4_sao': number;
+    '3_sao': number;
+    '2_sao': number;
+    '1_sao': number;
+  };
+}
+
+export interface ProductReviewsResponse {
+  status: number;
+  thong_ke: ProductReviewStats;
+  data: {
+    current_page: number;
+    data: ProductReviewItem[];
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+/**
+ * Fetch product reviews from API
+ * @param slug - Product slug
+ * @param page - Page number (default 1)
+ * @returns Promise with reviews data and statistics
+ */
+export async function fetchProductReviews(slug: string, page: number = 1): Promise<ProductReviewsResponse> {
+  const url = `https://sieuthivina.com/api/v1/san-pham/${slug}/danh-gia?page=${page}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Product Reviews API error ${res.status}`);
+  return res.json();
+}
+
+// ============================================
+// bai viet 
+// ============================================
+export interface BlogDetailAuthor {
+  id: number;
+  username: string;
+  hoten: string;
+  avatar?: string;
+}
+
+export interface BlogDetailData {
+  id: number;
+  id_nguoidung: number;
+  tieude: string;
+  slug: string;
+  noidung: string;
+  luotxem: number;
+  hinhanh: string;
+  trangthai: string;
+  created_at: string;
+  updated_at: string;
+  nguoidung?: BlogDetailAuthor;
+}
+
+export interface BlogDetailResponse {
+  status: number;
+  data: BlogDetailData;
+}
+
+/**
+ * Fetch blog detail by slug from API
+ * @param slug - Blog post slug
+ * @returns Promise with blog detail data
+ */
+export async function fetchBlogDetail(slug: string): Promise<BlogDetailResponse> {
+  const url = `https://sieuthivina.com/api/v1/bai-viet/${slug}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Blog Detail API error ${res.status}`);
+  return res.json();
+}
+
 interface V1SearchSidebar {
   danhsachdanhmuc: Array<{ id: number; ten: string; slug: string }>;
   danhsachthuonghieu: Array<{ id: number; ten: string; slug: string }>;
