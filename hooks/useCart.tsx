@@ -5,6 +5,8 @@ import Cookies from "js-cookie";
 
 const CART_STORAGE_KEY = "marketpro_cart";
 const VOUCHER_STORAGE_KEY = "marketpro_applied_voucher";
+const CART_PAYLOAD_KEY = "marketpro_cart_payload";
+const DEFAULT_VOUCHER_CODE = "";
 
 // ========================================================================
 // 1. TYPE Definitions
@@ -594,11 +596,11 @@ export function useCart() {
         });
       } else {
         // Guest: ask server to "materialize" local cart (POST cart_local => server computes totals)
-        const local = loadLocalCart().map(i => ({ id_bienthe: i.id_bienthe, soluong: i.soluong }));
+        const payload = loadLocalCartPayload();
         res = await fetch(`${API}/api/v1/gio-hang`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ cart_local: local, voucher_code: "" }),
+          body: JSON.stringify(payload),
           cache: "no-store",
         });
       }
@@ -657,8 +659,35 @@ export function useCart() {
 
   const saveLocalCart = useCallback((cart: CartItem[]) => {
     if (typeof window === "undefined") return;
-    try { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); } catch { }
+    try { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); 
+      try {
+        const payload = buildCartLocalPayload(cart);
+        localStorage.setItem(CART_PAYLOAD_KEY, JSON.stringify(payload));
+      } catch {}
+    } catch { }
   }, []);
+
+  const buildCartLocalPayload = useCallback((cart: CartItem[]) => {
+    return {
+      cart_local: (cart || []).map(i => ({
+        id_bienthe: Number(i.id_bienthe) || i.id_bienthe,
+        soluong: Number(i.soluong) || 0
+      })),
+      voucher_code: (appliedVoucher && (appliedVoucher.magiamgia || appliedVoucher.code)) ? String(appliedVoucher.magiamgia ?? appliedVoucher.code) : DEFAULT_VOUCHER_CODE
+    };
+  }, [appliedVoucher]);
+
+  const loadLocalCartPayload = useCallback(() => {
+    if (typeof window === "undefined") return { cart_local: [], voucher_code: DEFAULT_VOUCHER_CODE };
+    try {
+      const raw = localStorage.getItem(CART_PAYLOAD_KEY);
+      if (!raw) return { cart_local: [], voucher_code: DEFAULT_VOUCHER_CODE };
+      return JSON.parse(raw);
+    } catch {
+      // fallback build from current local cart
+      return buildCartLocalPayload(loadLocalCart());
+    }
+  }, [buildCartLocalPayload, loadLocalCart]);
 
   const clearLocalCart = useCallback(() => {
     if (typeof window === "undefined") return;
