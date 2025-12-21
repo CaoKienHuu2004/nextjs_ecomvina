@@ -43,7 +43,7 @@ export type AuthContextType = {
   // 2. Sử dụng Type RegisterPayload thay vì any
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
-  updateProfile: (payload: Partial<AuthUser>) => Promise<AuthUser | null>;
+  updateProfile: (payload: Partial<AuthUser> | FormData) => Promise<AuthUser | null>;
   refreshProfile: () => Promise<AuthUser | null>;
   setUser: (u: AuthUser | null) => void;
   changePassword: (current_password: string, new_password: string, new_password_confirmation: string) => Promise<void>;
@@ -65,9 +65,13 @@ export function AuthProvider({
   const router = useRouter();
   const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
+  const REFRESH_PROFILE_MIN_INTERVAL_MS = Number(process.env.NEXT_PUBLIC_PROFILE_REFRESH_INTERVAL_MS) || 300000;//300s
+  const lastRefreshRef = React.useRef<number>(0);
+
   const changePassword = useCallback(async (current_password: string, new_password: string, new_password_confirmation: string) => {
     const t = Cookies.get(TOKEN_KEY) || token;
     if (!t) throw new Error("Chưa đăng nhập");
+    
     const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat-mat-khau`, {
       method: "PATCH",
       headers: {
@@ -136,6 +140,12 @@ export function AuthProvider({
 
   // Public: refreshProfile - lấy dữ liệu user mới nhất từ server (dùng cookie/token)
   const refreshProfile = useCallback(async (): Promise<AuthUser | null> => {
+    const now = Date.now();
+    // if called too frequently, return current cached user immediately
+    if (now - lastRefreshRef.current < REFRESH_PROFILE_MIN_INTERVAL_MS) {
+      return user;
+    }
+    lastRefreshRef.current = now;
     try {
       const t = Cookies.get(TOKEN_KEY) || token;
       const headers: Record<string, string> = { Accept: "application/json" };
@@ -271,20 +281,32 @@ export function AuthProvider({
     }
   }, [API]);
   // --- Update profile ---
-  const updateProfile = useCallback(async (payload: Partial<AuthUser>) => {
+  const updateProfile = useCallback(async (payload: Partial<AuthUser> | FormData): Promise<AuthUser | null> => {
     try {
       const t = Cookies.get(TOKEN_KEY) || token;
       if (!t) throw new Error("Chưa đăng nhập");
-      const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat`, {
-        method: "PUT",
+      
+      const isForm = payload instanceof FormData;
+      // Server accepts POST only — always use POST. Send FormData as multipart, JSON as application/json.
+      const method = "POST";
+      const url = `${API}/api/v1/thong-tin-ca-nhan/cap-nhat`;
+      const options: RequestInit = {
+        method,
         headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${t}`,
+          Accept: "application/json",
+          Authorization: `Bearer ${t}`,
         },
         credentials: "include",
-        body: JSON.stringify(payload),
-      });
+      };
+
+      if (isForm) {
+        options.body = payload as FormData;
+        // do NOT set Content-Type header; browser will set multipart boundary
+      } else {
+        options.headers = { ...options.headers, "Content-Type": "application/json" };
+        options.body = JSON.stringify(payload as Partial<AuthUser>);
+      }
+      const res = await fetch(url, options);
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.message ?? "Cập nhật thất bại");
       const returned = j.user ?? j.data ?? j ?? payload;

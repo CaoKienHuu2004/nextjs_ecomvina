@@ -41,7 +41,7 @@ type CartRow = {
 };
 
 type Address = {
-  id: number;
+  id?: number;
   hoten: string;
   sodienthoai: string;
   diachi: string;
@@ -225,7 +225,7 @@ export default function Page() {
   useEffect(() => {
     let alive = true;
     // seed profile from useAuth.user so UI updates immediately after login
-    if (user) setProfile((user as AuthUser) ?? null);
+    if (user) setProfile(normalizeUser(user) ?? null);
 
     // refresh detailed profile from server when logged in
     if (!isLoggedIn) return () => { alive = false; };
@@ -309,10 +309,10 @@ export default function Page() {
       const formData = new FormData(formEl);
       const fd = new FormData();
 
-      const hoten = String(formData.get("name") || "");
-      const sodienthoai = String(formData.get("phone") || formData.get("sodienthoai") || "");
-      const ngaysinh = String(formData.get("birthday") || formData.get("ngaysinh") || "");
-      const gioitinh = String(formData.get("gender") || formData.get("gioitinh") || "");
+      const hoten = String(formData.get("hoten") || "");
+      const sodienthoai = String(formData.get("sodienthoai") || "");
+      const ngaysinh = String(formData.get("ngaysinh") || "");
+      const gioitinh = String(formData.get("gioitinh") || "");
       const email = String(formData.get("email") || "");
       const tinhthanh = String(formData.get("address_city") || formData.get("tinhthanh") || "");
       const diachi = String(formData.get("address_street") || formData.get("address") || "");
@@ -333,39 +333,26 @@ export default function Page() {
       if (avatarFile) fd.append("avatar", avatarFile);
 
       // send as multipart/form-data (let browser set Content-Type)
-      const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: fd,
-      });
-
-      if (!res.ok) throw new Error("Cập nhật thất bại");
-      const j = (await res.json().catch(() => null)) as unknown;
-      // normalize response safely without using `any`
-      const rawUser = isRecord(j) ? ((j.user ?? j.data ?? j) as unknown) : j;
-      const newProfile = (isRecord(rawUser) ? (rawUser as AuthUser) : null);
-      if (newProfile) setProfile(newProfile);
+      const updated = await updateProfile(fd);
+      if (!updated) throw new Error("Cập nhật thất bại");
+      const normalizedUpdated = normalizeUser(updated);
+      setProfile(normalizedUpdated);
 
       // update avatar preview + persist for AccountShell/sidebar
-      if (newProfile?.avatar && typeof newProfile.avatar === "string") {
-        setAvatarPreview(String(newProfile.avatar));
-        try { localStorage.setItem("avatar", String(newProfile.avatar)); } catch { }
+      if (updated?.avatar && typeof updated.avatar === "string") {
+        setAvatarPreview(String(updated.avatar));
+        try { localStorage.setItem("avatar", String(updated.avatar)); } catch { }
       }
 
       // persist display name / username so sidebar shows immediately
-      if (newProfile?.hoten && typeof newProfile.hoten === "string") {
-        try { localStorage.setItem("fullname", String(newProfile.hoten)); } catch { }
+      if (updated?.hoten && typeof updated.hoten === "string") {
+        try { localStorage.setItem("fullname", String(updated.hoten)); } catch { }
       }
-      if (newProfile?.username && typeof newProfile.username === "string") {
-        try { localStorage.setItem("username", String(newProfile.username)); } catch { }
+      if (updated?.username && typeof updated.username === "string") {
+        try { localStorage.setItem("username", String(updated.username)); } catch { }
       }
-
       // if backend returns diachi array, remind user to add address if empty
-      const diachiArr = Array.isArray(newProfile?.diachi) ? (newProfile!.diachi as Address[]) : undefined;
+      const diachiArr = Array.isArray(normalizedUpdated?.diachi) ? (normalizedUpdated!.diachi as Address[]) : undefined;
       if (!diachiArr || diachiArr.length === 0) {
         setNotice({
           type: "success",
