@@ -1022,12 +1022,16 @@ interface V1SearchProductItem {
   id: number;
   tensanpham: string;
   slug: string;
-  hinhanh: string;
-  thuonghieu: { ten: string } | null;
+  hinhanh: Array<{ id: number; url: string }>;
+  thuonghieu: { id: number; ten: string; logo: string } | null;
+  danhmuc: Array<{ id: number; ten: string; slug: string }>;
   gia: {
     giagoc: number;
     giadagiam: number;
+    formatted_giagoc: string;
+    formatted_giadagiam: string;
   };
+  tong_luotban: number;
 }
 export async function fetchHeaderData(): Promise<HeaderDataResponse['data']> {
   const res = await fetch('https://sieuthivina.com/api/v1/header-data', { cache: 'no-store' });
@@ -1172,35 +1176,55 @@ export interface SearchProductsResponse {
  */
 export async function fetchV1SearchProducts(keyword: string): Promise<SearchProduct[]> {
   const trimmed = keyword.trim();
+  console.log('🔍 fetchV1SearchProducts called with keyword:', trimmed);
+
   if (!trimmed) {
+    console.log('⚠️ Empty keyword, returning empty array');
     return [];
   }
 
-  const url = `https://sieuthivina.com/api/v1/tim-kiem?keyword=${encodeURIComponent(trimmed)}`;
+  const url = `https://sieuthivina.com/api/v1/tim-kiem?query=${encodeURIComponent(trimmed)}`;
+  console.log('🌐 Fetching URL:', url);
+
   const response = await fetch(url, {
-    headers: { Accept: "application/json" },
+    method: 'GET',
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
     cache: "no-store",
   });
 
   if (!response.ok) {
+    console.error('❌ Search API error:', response.status);
     throw new Error(`Search API error: ${response.status}`);
   }
 
   const data: V1SearchResponse = await response.json();
+  console.log('📦 Search API response:', {
+    keyword: data.keyword,
+    results_count: data.products?.data?.length || 0,
+  });
+
   const items = data.products?.data ?? [];
 
-  return items.map(item => ({
-    id: item.id,
-    ten: item.tensanpham,
-    slug: item.slug,
-    hinh_anh: item.hinhanh,
-    thuonghieu: item.thuonghieu?.ten || "",
-    gia: {
-      current: item.gia?.giadagiam ?? 0,
-      before_discount: item.gia?.giagoc ?? 0,
-      discount_percent: 0,
-    },
-  }));
+  return items.map(item => {
+    // Extract first image URL from array
+    const imageUrl = item.hinhanh?.[0]?.url || '';
+
+    return {
+      id: item.id,
+      ten: item.tensanpham,
+      slug: item.slug,
+      hinh_anh: imageUrl,
+      thuonghieu: item.thuonghieu?.ten || "",
+      gia: {
+        current: item.gia?.giadagiam ?? 0,
+        before_discount: item.gia?.giagoc ?? 0,
+        discount_percent: 0,
+      },
+    };
+  });
 }
 
 /**

@@ -358,9 +358,9 @@ export default function ShopPage() {
             products = [];
           }
         } else if (searchQuery.trim()) {
-          // === TÌM KIẾM: Dùng fetchSearchProducts ===
+          // === TÌM KIẾM: Dùng fetchV1SearchProducts===
           try {
-            console.log('🔍 Shop - Searching with fetchSearchProducts:', searchQuery);
+            console.log('🔍 Shop - Searching with :', searchQuery);
 
             const searchResults = await fetchV1SearchProducts(searchQuery.trim());
 
