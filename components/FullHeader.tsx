@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { fetchHeaderData } from "@/lib/api";
 import SearchBoxWithSuggestions from "@/components/SearchBoxWithSuggestions";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useAuth } from "@/hooks/useAuth";
@@ -77,6 +78,8 @@ export default function FullHeader({
     children?: DanhMuc[]; // nếu API có trả con
   };
   const [cats, setCats] = useState<DanhMuc[]>([]);
+  const [searchPlaceholder, setSearchPlaceholder] = useState<string>("chẤt viỆt group....");
+  const [hotKeywords, setHotKeywords] = useState<{ tukhoa: string; luottruycap: number }[]>([]);
 
   // Render dropdown danh mục
   const renderCategoryDropdown = () => {
@@ -180,39 +183,24 @@ export default function FullHeader({
   }, []);
 
   useEffect(() => {
-    let off = false;
-    (async () => {
-      try {
-        // dùng API đã chuẩn hoá origin ở biến API
-        const res = await fetch(`${API}/api/v1/danhmucs-all`, {
-          headers,
-          cache: "no-store",
-          credentials: "include",
-        });
-        if (!res.ok) {
-          console.warn("API danhmucs-all error:", res.status);
-          if (!off) setCats([]);
-          return;
+    let alive = true;
+    fetchHeaderData()
+      .then(data => {
+        if (!alive) return;
+        setCats(data.danhmuc);
+        setSearchPlaceholder(data.tukhoa_placeholder || "chẤt viỆt group....");
+        setHotKeywords(data.tukhoa_phobien || []);
+        // nếu muốn dùng cart_auth_count: setCartCount(data.cart_auth_count);
+      })
+      .catch(err => {
+        console.error("Header API failed", err);
+        if (alive) {
+          setCats([]);
+          setHotKeywords([]);
         }
-        const json = await res.json();
-        console.log("API danhmucs-all response:", json);
-        // API trả về mảng trực tiếp hoặc trong json.data
-        let list: DanhMuc[] = [];
-        if (Array.isArray(json)) {
-          list = json;
-        } else if (Array.isArray(json?.data)) {
-          list = json.data;
-        }
-        console.log("Danh mục loaded:", list.length, "items");
-        if (!off) setCats(list);
-      } catch (err) {
-        console.warn("Lỗi fetch danh mục (có thể server không khả dụng):", err);
-        if (!off) setCats([]);
-      }
-    })();
-    return () => { off = true; };
-  }, [API]);
-
+      });
+    return () => { alive = false; };
+  }, []);
   const flagEmoji = (cc?: string | null) => {
     const code = (cc || "").trim().toUpperCase();
     if (!code || code.length !== 2) return "🌐";
@@ -327,40 +315,21 @@ export default function FullHeader({
                       <i className="ph-bold ph-magnifying-glass"></i>
                     </button>
                   </form> */}
-                  <SearchBoxWithSuggestions />
+                  <SearchBoxWithSuggestions placeholder={searchPlaceholder} />
 
-                  <div className="gap-12 mt-10 flex-align title">
-                    <Link
-                      href="#"
-                      className="text-sm text-gray-600 link hover-text-main-600 fst-italic"
-                    >
-                      Máy massage
-                    </Link>
-                    <Link
-                      href="#"
-                      className="text-sm text-gray-600 link hover-text-main-600 fst-italic"
-                    >
-                      điện gia dụng
-                    </Link>
-                    <Link
-                      href="#"
-                      className="text-sm text-gray-600 link hover-text-main-600 fst-italic"
-                    >
-                      mẹ và bé
-                    </Link>
-                    <Link
-                      href="#"
-                      className="text-sm text-gray-600 link hover-text-main-600 fst-italic"
-                    >
-                      móc khóa minecraft
-                    </Link>
-                    <Link
-                      href="#"
-                      className="text-sm text-gray-600 link hover-text-main-600 fst-italic"
-                    >
-                      điện nội thất
-                    </Link>
-                  </div>
+                  {hotKeywords.length > 0 && (
+                    <div className="gap-12 mt-10 flex-align title">
+                      {hotKeywords.map(keyword => (
+                        <Link
+                          key={keyword.tukhoa}
+                          href={`/shop?query=${encodeURIComponent(keyword.tukhoa)}`}
+                          className="text-sm text-gray-600 link hover-text-main-600 fst-italic"
+                        >
+                          {keyword.tukhoa}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -658,7 +627,7 @@ export default function FullHeader({
                         </Link>
                       </li>
                       <li className="mt-8">
-                        <SearchBoxWithSuggestions />
+                        <SearchBoxWithSuggestions placeholder={searchPlaceholder} />
                       </li>
                     </ul>
                   </div>
@@ -756,25 +725,21 @@ export default function FullHeader({
                 {/* Menu Start */}
                 <div className="header-menu w-50 d-lg-block d-none">
                   <div className="mx-20">
-                    <SearchBoxWithSuggestions />
+                    <SearchBoxWithSuggestions placeholder={searchPlaceholder} />
 
-                    <div className="gap-12 mt-10 flex-align title">
-                      <Link href="/tim-kiem?query=Sâm Ngọc Linh" className="text-sm text-gray-600 link hover-text-main-600 fst-italic">
-                        Sâm Ngọc Linh
-                      </Link>
-                      <Link href="/tim-kiem?query=Sách hán ngữ 3" className="text-sm text-gray-600 link hover-text-main-600 fst-italic">
-                        Sách hán ngữ 3
-                      </Link>
-                      <Link href="/tim-kiem?query=Móc khóa genshin" className="text-sm text-gray-600 link hover-text-main-600 fst-italic">
-                        Móc khóa genshin
-                      </Link>
-                      <Link href="/tim-kiem?query=Đồ chơi minecraft" className="text-sm text-gray-600 link hover-text-main-600 fst-italic">
-                        Đồ chơi minecraft
-                      </Link>
-                      <Link href="/tim-kiem?query=Điện nội thất" className="text-sm text-gray-600 link hover-text-main-600 fst-italic">
-                        Điện nội thất
-                      </Link>
-                    </div>
+                    {hotKeywords.length > 0 && (
+                      <div className="gap-12 mt-10 flex-align title">
+                        {hotKeywords.map(keyword => (
+                          <Link
+                            key={keyword.tukhoa}
+                            href={`/shop?query=${encodeURIComponent(keyword.tukhoa)}`}
+                            className="text-sm text-gray-600 link hover-text-main-600 fst-italic"
+                          >
+                            {keyword.tukhoa}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 {/* Menu End */}

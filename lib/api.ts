@@ -117,6 +117,18 @@ export type RegisterResponse = { success?: boolean; message?: string;[k: string]
 
 // ============================================
 // Homepage API Types & Functions
+interface HeaderCategory { id: number; ten: string; slug: string; logo: string; }
+interface HeaderHotKeyword { tukhoa: string; luottruycap: number; }
+export interface HeaderDataResponse {
+  status: number;
+  message: string;
+  data: {
+    danhmuc: HeaderCategory[];
+    tukhoa_placeholder: string;
+    tukhoa_phobien: HeaderHotKeyword[];
+    cart_auth_count: number;
+  };
+}
 // ============================================
 
 // ===== Hot Keywords =====
@@ -1016,6 +1028,12 @@ interface V1SearchProductItem {
     giagoc: number;
     giadagiam: number;
   };
+}
+export async function fetchHeaderData(): Promise<HeaderDataResponse['data']> {
+  const res = await fetch('https://sieuthivina.com/api/v1/header-data', { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Header API error ${res.status}`);
+  const json: HeaderDataResponse = await res.json();
+  return json.data;
 }
 
 interface V1SearchSidebar {
