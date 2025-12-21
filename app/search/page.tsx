@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import FullHeader from "@/components/FullHeader";
 import Link from "next/link";
-import { fetchSearchProducts, trackKeywordAccess } from "@/lib/api";
 import Image from "next/image";
 
 // Type cho sản phẩm hiển thị trên UI
@@ -44,7 +43,7 @@ export default function SearchPage() {
             setError(null);
             try {
                 // Gọi API tìm kiếm
-                const data = await fetchSearchProducts(query);
+
 
                 // Map từ SearchProduct sang DisplayProduct
                 const mappedProducts: DisplayProduct[] = data.map((item) => {
