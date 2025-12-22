@@ -396,36 +396,36 @@ export function useCart() {
   }, [isLoggedIn]);
   // --- HELPER MAP DATA ---
   const mapServerDataToCartItem = useCallback((serverItem: unknown): CartItem => {
-  const s = (serverItem ?? {}) as Record<string, any>;
+    const s = (serverItem ?? {}) as Record<string, any>;
 
-  // flat/guest response mapping (your sample)
-  if (s && (s.ten_sp || s.hinhanh || s.giaban)) {
-    const id_bienthe = s.id_bienthe ?? s.bienthe_id ?? `local_${Date.now()}`;
-    const qty = Number(s.soluong ?? 1);
-    const price = Number(s.giaban ?? s.gia ?? 0);
-    const media = s.hinhanh ?? s.mediaurl ?? "/assets/images/thumbs/product-placeholder.png";
-    const name = s.ten_sp ?? s.ten ?? "Sản phẩm";
-    const variant = s.ten_bt ?? s.loaibienthe ?? "";
+    // flat/guest response mapping (your sample)
+    if (s && (s.ten_sp || s.hinhanh || s.giaban)) {
+      const id_bienthe = s.id_bienthe ?? s.bienthe_id ?? `local_${Date.now()}`;
+      const qty = Number(s.soluong ?? 1);
+      const price = Number(s.giaban ?? s.gia ?? 0);
+      const media = s.hinhanh ?? s.mediaurl ?? "/assets/images/thumbs/product-placeholder.png";
+      const name = s.ten_sp ?? s.ten ?? "Sản phẩm";
+      const variant = s.ten_bt ?? s.loaibienthe ?? "";
 
-    return {
-      id_giohang: s.id_giohang ?? s.id ?? `local_${id_bienthe}_${Date.now()}`,
-      id_bienthe,
-      soluong: qty,
-      product: {
-        id: id_bienthe,
-        ten: name,
-        mediaurl: media,
-        gia: { current: price, before_discount: Number(s.giagoc ?? 0), discount_percent: 0 },
-        loaibienthe: variant,
-        thuonghieu: s.thuonghieu ?? undefined,
-        slug: s.slug ?? undefined,
-      },
-    };
-  }
+      return {
+        id_giohang: s.id_giohang ?? s.id ?? `local_${id_bienthe}_${Date.now()}`,
+        id_bienthe,
+        soluong: qty,
+        product: {
+          id: id_bienthe,
+          ten: name,
+          mediaurl: media,
+          gia: { current: price, before_discount: Number(s.giagoc ?? 0), discount_percent: 0 },
+          loaibienthe: variant,
+          thuonghieu: s.thuonghieu ?? undefined,
+          slug: s.slug ?? undefined,
+        },
+      };
+    }
 
-  // existing nested mapping fallback (keep original mapping here)
-  const id_giohang = (serverItem as any)?.id_giohang ?? (serverItem as any)?.id ?? `temp_${Date.now()}`;
-  const soluong = Number((serverItem as any)?.soluong ?? 1);
+    // existing nested mapping fallback (keep original mapping here)
+    const id_giohang = (serverItem as any)?.id_giohang ?? (serverItem as any)?.id ?? `temp_${Date.now()}`;
+    const soluong = Number((serverItem as any)?.soluong ?? 1);
     const bienthe = s.bienthe;
     const detail = bienthe?.detail;
     const sanpham = bienthe?.sanpham;
@@ -500,24 +500,24 @@ export function useCart() {
     }
 
     return {
-    id_giohang,
-    id_bienthe: (serverItem as any)?.id_bienthe ?? (serverItem as any)?.bienthe?.id ?? undefined,
-    soluong,
-    product: {
-      id: (serverItem as any)?.id_bienthe ?? (serverItem as any)?.bienthe?.id,
-      ten: (serverItem as any)?.bienthe?.sanpham?.ten ?? (serverItem as any)?.bienthe?.detail?.ten ?? "Sản phẩm",
-      mediaurl: (serverItem as any)?.bienthe?.sanpham?.hinhanh ?? "/assets/images/thumbs/product-placeholder.png",
-      gia: {
-        current: Number((serverItem as any)?.bienthe?.gia ?? 0),
-        before_discount: Number((serverItem as any)?.bienthe?.gia_old ?? 0),
-        discount_percent: 0,
+      id_giohang,
+      id_bienthe: (serverItem as any)?.id_bienthe ?? (serverItem as any)?.bienthe?.id ?? undefined,
+      soluong,
+      product: {
+        id: (serverItem as any)?.id_bienthe ?? (serverItem as any)?.bienthe?.id,
+        ten: (serverItem as any)?.bienthe?.sanpham?.ten ?? (serverItem as any)?.bienthe?.detail?.ten ?? "Sản phẩm",
+        mediaurl: (serverItem as any)?.bienthe?.sanpham?.hinhanh ?? "/assets/images/thumbs/product-placeholder.png",
+        gia: {
+          current: Number((serverItem as any)?.bienthe?.gia ?? 0),
+          before_discount: Number((serverItem as any)?.bienthe?.gia_old ?? 0),
+          discount_percent: 0,
+        },
+        loaibienthe: (serverItem as any)?.bienthe?.ten ?? undefined,
+        thuonghieu: (serverItem as any)?.bienthe?.sanpham?.thuonghieu ?? undefined,
+        slug: (serverItem as any)?.bienthe?.sanpham?.slug ?? undefined,
       },
-      loaibienthe: (serverItem as any)?.bienthe?.ten ?? undefined,
-      thuonghieu: (serverItem as any)?.bienthe?.sanpham?.thuonghieu ?? undefined,
-      slug: (serverItem as any)?.bienthe?.sanpham?.slug ?? undefined,
-    },
-  };
-}, []);
+    };
+  }, []);
 
   const extractCartPayload = useCallback((payload: unknown): unknown[] => {
     if (Array.isArray(payload)) return payload;
@@ -659,11 +659,12 @@ export function useCart() {
 
   const saveLocalCart = useCallback((cart: CartItem[]) => {
     if (typeof window === "undefined") return;
-    try { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); 
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
       try {
         const payload = buildCartLocalPayload(cart);
         localStorage.setItem(CART_PAYLOAD_KEY, JSON.stringify(payload));
-      } catch {}
+      } catch { }
     } catch { }
   }, []);
 
@@ -701,7 +702,7 @@ export function useCart() {
     setLoading(true);
     try {
       const payload = { cart_items: localItems.map(i => ({ id_bienthe: i.id_bienthe, soluong: i.soluong })) };
-      const res = await fetch(`${API}/api/v1/gio-hang/sync`, {
+      const res = await fetch(`${API}/api/v1/sync-gio-hang`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),

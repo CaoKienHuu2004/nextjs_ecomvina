@@ -11,7 +11,7 @@ type OrderItem = {
   soluong: number;
   dongia: number;
   bienthe?: {
-    sanpham?: { ten?: string; hinhanh?: string };
+    sanpham?: { ten?: string; slug?: string };
     loaibienthe?: { ten?: string };
   };
 };
@@ -27,25 +27,20 @@ type ServerOrder = {
   chitietdonhang?: OrderItem[];
 };
 
-type ServerGroup = {
-  label: string;
-  donhang: ServerOrder[];
-};
-
 export default function OrderLookupResult() {
   const search = useSearchParams();
   const code = search?.get("madon")?.trim() ?? "";
+  const phone = search?.get("sodienthoai")?.trim() ?? "";
 
   const [order, setOrder] = useState<ServerOrder | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
 
   const formatVND = (n?: number) =>
     typeof n === "number" ? n.toLocaleString("vi-VN") + " ₫" : "0 đ";
 
   useEffect(() => {
-    if (!code) return;
+    if (!code || !phone) return;
 
     const fetchOrder = async () => {
       setLoading(true);
@@ -54,47 +49,25 @@ export default function OrderLookupResult() {
 
       try {
         const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
-        const token = Cookies.get("access_token");
-
-        // Gọi API Public
-        // const res = await fetch(`${API}/api/web/tracuu-donhang?madon=${encodeURIComponent(code)}`, {
-        // comment token bearer va mo headers: { "Accept": "application/json" }, neu khong dung auth
-        const res = await fetch(`${API}/web/tracuu-donhang?madon=${encodeURIComponent(code)}`, {
-          headers: { "Accept": "application/json" },
-          // headers: {
-          //     "Authorization": `Bearer ${token}`,
-          // },
+        const res = await fetch(`${API}/api/v1/don-hang/tra-cuu`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify({
+            madon: code,
+            sodienthoai: phone
+          }),
           cache: "no-store"
         });
 
-        if (res.ok) {
-          const json = await res.json();
-          // API trả về danh sách nhóm (ApiGroup[]), ta cần tìm đơn hàng trong đó
-          const groups = (Array.isArray(json) ? json : json.data || []) as ServerGroup[];
+        const json = await res.json();
 
-          let found: ServerOrder | null = null;
-
-          // Duyệt qua các nhóm để tìm mã đơn khớp
-          for (const group of groups) {
-            if (group.donhang) {
-              const match = group.donhang.find(o =>
-                o.madon?.toLowerCase() === code.toLowerCase() ||
-                String(o.id) === code
-              );
-              if (match) {
-                found = match;
-                break;
-              }
-            }
-          }
-
-          if (found) {
-            setOrder(found);
-          } else {
-            setError("Không tìm thấy đơn hàng với mã này.");
-          }
+        if (res.ok && json.data) {
+          setOrder(json.data);
         } else {
-          setError("Không tìm thấy đơn hàng hoặc lỗi hệ thống.");
+          setError(json.message || "Không tìm thấy đơn hàng hoặc thông tin số điện thoại không khớp.");
         }
       } catch (err) {
         console.error(err);
@@ -105,7 +78,7 @@ export default function OrderLookupResult() {
     };
 
     fetchOrder();
-  }, [code]);
+  }, [code, phone]);
 
   if (!code) return null;
 
@@ -124,88 +97,123 @@ export default function OrderLookupResult() {
       )}
 
       {order && (
-        <div className="p-16 bg-white border border-gray-100 shadow-sm rounded-12">
-          {/* Header đơn hàng */}
-          <div className="flex-wrap gap-12 d-flex justify-content-between align-items-start">
-            <div className="gap-12 d-flex flex-grow-1">
-              {/* Ảnh đại diện (Sản phẩm đầu tiên) */}
-              <div className="flex-shrink-0 overflow-hidden border rounded-8" style={{ width: 72, height: 72 }}>
-                <Image
-                  src={order.chitietdonhang?.[0]?.bienthe?.sanpham?.hinhanh || "/assets/images/thumbs/default.png"}
-                  alt="Product"
-                  width={72}
-                  height={72}
-                  className="w-100 h-100 object-fit-cover"
-                />
+        <div className="col-lg-12">
+          <div className="border border-gray-200 p-20 rounded-8">
+            {/* Header */}
+            <div className="row border-bottom border-gray-200 pb-16 mb-16">
+              <div className="col-lg-4 text-sm text-start">
+                <span className="fw-semibold text-sm text-gray-600">Mã đơn hàng:</span>{" "}
+                <span className="fst-italic fw-semibold">#{order.madon}</span>
               </div>
-
-              {/* Thông tin chính */}
-              <div>
-                <div className="gap-8 mb-1 d-flex align-items-center">
-                  <span className="fw-bold text-heading">#{order.madon}</span>
-                  <span className="px-8 py-2 text-xs badge bg-info-50 text-info-600 rounded-pill">
-                    {order.trangthai}
-                  </span>
-                </div>
-                <div className="mb-2 text-sm text-gray-500">
-                  {order.created_at ? new Date(order.created_at).toLocaleDateString("vi-VN") : ""}
-                </div>
-
-                {/* Tên sản phẩm đầu tiên */}
-                {order.chitietdonhang?.[0] && (
-                  <div className="text-sm text-gray-900 fw-medium line-clamp-1">
-                    {order.chitietdonhang[0].bienthe?.sanpham?.ten || "Sản phẩm"}
-                  </div>
-                )}
+              <div className="col-lg-4 text-sm text-center">
+                <span className="fw-semibold text-sm text-gray-600">Trạng thái:</span>{" "}
+                <span className="fst-italic text-warning-600">{order.trangthai}</span>
               </div>
-            </div>
-
-            {/* Tổng tiền & Actions */}
-            <div className="text-end">
-              <div className="text-sm text-gray-500">Tổng cộng</div>
-              <div className="mb-12 text-lg fw-bold text-main-600">
-                {formatVND(order.thanhtien ?? order.tamtinh)}
-              </div>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-main-two rounded-pill"
-                onClick={() => setExpanded(!expanded)}
-              >
-                {expanded ? "Thu gọn" : "Xem chi tiết"}
-              </button>
-            </div>
-          </div>
-
-          {/* Chi tiết mở rộng */}
-          {expanded && (
-            <div className="pt-16 mt-16 border-gray-100 border-top">
-              <h6 className="mb-12 text-sm fw-bold">Danh sách sản phẩm</h6>
-              <div className="gap-12 d-flex flex-column">
-                {order.chitietdonhang?.map((item, idx) => {
-                  const sp = item.bienthe?.sanpham || {};
-                  return (
-                    <div key={idx} className="p-8 d-flex justify-content-between align-items-center bg-gray-50 rounded-8">
-                      <div className="gap-12 d-flex align-items-center">
-                        <span className="text-sm text-gray-500 fw-medium">x{item.soluong}</span>
-                        <span className="text-sm text-gray-900 line-clamp-1" style={{ maxWidth: 200 }}>
-                          {sp.ten || "Sản phẩm"}
-                        </span>
-                      </div>
-                      <span className="text-sm text-gray-900 fw-bold">
-                        {formatVND(item.dongia)}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="mt-12 text-sm text-end">
-                <span className="text-gray-500 me-2">Thanh toán:</span>
-                <span className={`fw-bold ${order.trangthaithanhtoan?.includes("Đã") ? "text-success-600" : "text-warning-600"}`}>
-                  {order.trangthaithanhtoan || "Chưa thanh toán"}
+              <div className="col-lg-4 text-sm text-end">
+                <span className="fw-semibold text-sm text-gray-600">Ngày đặt:</span>{" "}
+                <span className="fst-italic">
+                  {order.created_at ? (() => {
+                    const date = new Date(order.created_at);
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = date.getFullYear();
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    return `${day}/${month}/${year} - ${hours}:${minutes}`;
+                  })() : ""}
                 </span>
               </div>
             </div>
-          )}
+
+            {/* Tiêu đề */}
+            <div className="flex-align gap-8 flex-between">
+              <span className="text-md text-gray-900 fw-semibold flex-align gap-8 mb-10">
+                <i className="ph-bold ph-shopping-cart text-main-600 text-lg"></i> Chi tiết đơn hàng
+              </span>
+            </div>
+
+            {/* Danh sách sản phẩm */}
+            {order.chitietdonhang?.map((item, idx) => {
+              const sp = item.bienthe?.sanpham || {};
+              const variant = item.bienthe?.loaibienthe?.ten || "";
+
+              // ✅ Xây dựng URL ảnh từ SLUG
+              const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
+              const imageUrl = sp.slug
+                ? `${API}/assets/client/images/thumbs/${sp.slug}-1.webp`
+                : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Crect fill='%23f3f4f6' width='90' height='90'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='12'%3EKhông có ảnh%3C/text%3E%3C/svg%3E";
+              // 🔍 DEBUG: Kiểm tra URL ảnh
+              console.log('🖼️ slug:', sp.slug);
+              console.log('🖼️ imageUrl:', imageUrl);
+
+
+              return (
+                <div key={idx} className="py-6 px-5">
+                  <div className="d-flex align-items-center gap-12">
+                    <a href="#" className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: "90px", maxHeight: "90px", width: "100%", height: "100%" }}>
+                      <Image
+                        src={imageUrl}
+                        alt={sp.ten || "Sản phẩm"}
+                        width={90}
+                        height={90}
+                        className="w-100 rounded-8"
+                        style={{ objectFit: "contain" }}
+                        unoptimized={true}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Crect fill='%23f3f4f6' width='90' height='90'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='12'%3ELỗi ảnh%3C/text%3E%3C/svg%3E";
+                        }}
+                      />
+                    </a>
+                    <div className="text-start w-100">
+                      <h6 className="title text-md fw-semibold mb-0">
+                        <a
+                          href="#"
+                          className="link text-line-2"
+                          title={sp.ten || "Sản phẩm"}
+                          style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "500px", display: "inline-block" }}
+                        >
+                          {sp.ten || "Sản phẩm"}
+                        </a>
+                      </h6>
+                      {variant && (
+                        <div className="flex-align gap-16 mb-6">
+                          <a href="#" className="btn bg-gray-50 text-heading text-xs py-4 px-6 rounded-8 flex-center gap-8 fw-medium">
+                            {variant}
+                          </a>
+                        </div>
+                      )}
+                      <div className="product-card__price mb-6">
+                        <div className="flex-align gap-24">
+                          <span className="text-heading text-sm fw-medium">Số lượng: {item.soluong}</span>
+                          <span className="text-main-600 text-md fw-semibold">{formatVND(item.dongia)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Footer */}
+            <div className="row border-top border-gray-200 pt-16 mt-16">
+              <div className="col-lg-4 text-sm text-start">
+                <div className="fw-semibold text-sm text-gray-600">
+                  <span className="pe-10">Phương thức thanh toán:</span>
+                </div>
+                <span className="fw-medium text-gray-900 text-sm">
+                  {order.trangthaithanhtoan || "Thanh toán khi nhận hàng"}
+                </span>
+              </div>
+              <div className="col-lg-4 text-sm text-center"></div>
+              <div className="col-lg-4 text-sm text-end">
+                <div className="fw-semibold text-sm text-gray-600">Tổng giá trị đơn hàng:</div>
+                <span className="fw-semibold text-main-600 text-lg">
+                  {formatVND(order.thanhtien ?? order.tamtinh)}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

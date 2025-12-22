@@ -6,13 +6,19 @@ import { useRouter } from "next/navigation";
 const OrderLookupForm = () => {
   const router = useRouter();
   const [searchMadon, setSearchMadon] = useState("");
+  const [searchSodienthoai, setSearchSodienthoai] = useState("");
 
   const handleSearch = (ev: React.FormEvent) => {
     ev.preventDefault();
-    const code = (searchMadon || "").trim();
-    if (!code) return;
+    const madon = (searchMadon || "").trim();
+    const sodienthoai = (searchSodienthoai || "").trim();
 
-    router.push(`/tra-cuu-don-hang?madon=${encodeURIComponent(code)}`);
+    if (!madon || !sodienthoai) {
+      alert("Vui lòng nhập cả mã đơn hàng và số điện thoại");
+      return;
+    }
+
+    router.push(`/tra-cuu-don-hang?madon=${encodeURIComponent(madon)}&sodienthoai=${encodeURIComponent(sodienthoai)}`);
   };
 
   return (
@@ -29,7 +35,16 @@ const OrderLookupForm = () => {
         name="madon"
         value={searchMadon}
         onChange={(e) => setSearchMadon(e.target.value)}
-        placeholder="Nhập mã đơn hàng (VD: VNA12345)... "
+        placeholder="Nhập mã đơn hàng (VD: STV25122151)..."
+        className="px-16 py-12 text-sm text-gray-900 border-gray-300 common-input w-100 rounded-4"
+        autoComplete="off"
+      />
+      <input
+        id="sodienthoai"
+        name="sodienthoai"
+        value={searchSodienthoai}
+        onChange={(e) => setSearchSodienthoai(e.target.value)}
+        placeholder="Nhập số điện thoại (VD: 0987654321)..."
         className="px-16 py-12 text-sm text-gray-900 border-gray-300 common-input w-100 rounded-4"
         autoComplete="off"
       />
