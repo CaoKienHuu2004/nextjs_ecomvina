@@ -275,11 +275,15 @@ export default function TopDealsSection({
                   spaceBetween={SLIDE_GAP}
                   slidesPerView={VISIBLE_COUNT}
                   slidesPerGroup={1}
-                  autoplay={items.length > VISIBLE_COUNT ? {
-                    delay: 3000,
-                    disableOnInteraction: false,
-                    pauseOnMouseEnter: true,
-                  } : false}
+                  autoplay={
+                    items.length > VISIBLE_COUNT
+                      ? {
+                        delay: 3000,
+                        disableOnInteraction: false,
+                        pauseOnMouseEnter: true,
+                      }
+                      : false
+                  }
                   navigation={{ prevEl: prevRef.current, nextEl: nextRef.current }}
                   onBeforeInit={(swiper) => {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -301,13 +305,28 @@ export default function TopDealsSection({
                     const sold = product?.sold ?? 0;
                     const originalPrice = product?.original_price ?? 0;
                     const price = product?.selling_price ?? 0;
-                    const href = product?.slug ? `/product-details/${encodeURIComponent(String(product.slug))}?category=${encodeURIComponent("Top deal • Siêu rẻ")}` : `/product-details/${String(product?.id ?? "")}?category=${encodeURIComponent("Top deal • Siêu rẻ")}`;
+                    const href =
+                      product?.slug
+                        ? `/product-details/${encodeURIComponent(String(product.slug))}?category=${encodeURIComponent("Top deal • Siêu rẻ")}`
+                        : `/product-details/${String(product?.id ?? "")}?category=${encodeURIComponent("Top deal • Siêu rẻ")}`;
                     const discount =
-                      product?.discount_percent ?? (originalPrice ? Math.max(0, Math.round(((originalPrice - price) / originalPrice) * 100)) : 0);
+                      product?.discount_percent ??
+                      (originalPrice ? Math.max(0, Math.round(((originalPrice - price) / originalPrice) * 100)) : 0);
+                    const normalizedName = (product?.ten ?? "").trim().toLowerCase();
+                    const normalizedSlug = (product?.slug ?? "").trim().toLowerCase();
+                    const isCaPheSamCanada =
+                      normalizedName.includes("cà phê sâm canada") || normalizedSlug.includes("ca-phe-sam-canada");
+                    const priceClass = ["product-card__price", !isCaPheSamCanada && "mt-6"]
+                      .filter(Boolean)
+                      .join(" ");
+                    const ariaLabel = name || "Sản phẩm";
 
                     return (
                       <SwiperSlide key={String(product.id)} className="flex-shrink-0" style={{ width: SLIDE_WIDTH }}>
-                        <div className="bg-white product-card hover-card-shadows rounded-10 position-relative transition-2" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                        <div
+                          className="bg-white product-card hover-card-shadows rounded-10 position-relative transition-2"
+                          style={{ display: "flex", flexDirection: "column", height: "100%" }}
+                        >
                           <div
                             role="button"
                             tabIndex={0}
@@ -316,14 +335,19 @@ export default function TopDealsSection({
                               if (e.key === "Enter") navigateTo(href);
                             }}
                             className="thumbhover flex-center rounded-10 position-relative bg-gray-50 w-100"
-                            aria-label={name}
+                            aria-label={ariaLabel}
                             style={{ height: 260, overflow: "hidden" }}
                           >
                             <span className="px-8 py-4 text-sm text-white product-card__badge bg-main-600 position-absolute inset-inline-start-0 inset-block-start-0 rounded-tl-10 rounded-br-10">
                               Giảm {discount}%
                             </span>
                             {/* image fills entire slide area (width 100%) */}
-                            <img src={image} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={handleImgError} />
+                            <img
+                              src={image}
+                              alt={ariaLabel}
+                              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                              onError={handleImgError}
+                            />
                           </div>
 
                           <div className="px-12 pb-12 mt-4 product-card__content w-100" style={{ flex: "1 0 auto" }}>
@@ -366,7 +390,7 @@ export default function TopDealsSection({
                               </div>
                             </div>
 
-                            <div className="mt-6 product-card__price">
+                            <div className={priceClass} style={isCaPheSamCanada ? { marginTop: 25 } : undefined}>
                               {originalPrice ? (
                                 <span className="text-xs text-gray-400 fw-semibold text-decoration-line-through me-2">
                                   {originalPrice.toLocaleString("vi-VN")} ₫
@@ -375,7 +399,6 @@ export default function TopDealsSection({
                               <span className="text-heading text-md fw-semibold">{price.toLocaleString("vi-VN")} ₫</span>
                             </div>
                           </div>
-
                         </div>
                       </SwiperSlide>
                     );
@@ -386,7 +409,6 @@ export default function TopDealsSection({
           </div>
         </div>
       </section>
-
     </>
   );
 }
