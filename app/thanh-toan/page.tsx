@@ -178,7 +178,7 @@ export default function ThanhToanPage() {
         // gọi API tạo payment link
         // const resPay = await fetch(`${API}/api/v1/don-hang/${orderId}/payment-url`, {
         const resPay = await fetch(`${API}/api/thanh-toan/vnp-return/${orderId}`, {
-          method: "POST",
+          method: "GET",
           headers: {
             "Content-Type": "application/json",
             "Authorization": token ? `Bearer ${token}` : "",

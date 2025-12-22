@@ -94,9 +94,30 @@ export default function Page(): JSX.Element {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [editing, setEditing] = useState<Address | null>(null);
-  
+
   // State tạm để lưu ID tỉnh đang chọn trong form (vì Address chỉ lưu tên)
   const [selectedProvinceId, setSelectedProvinceId] = useState<number | string>("");
+
+  const [provinces, setProvinces] = useState<Tinh[]>([]);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch("https://sieuthivina.com/api/v1/provinces", { headers: { Accept: "application/json" } });
+        if (!mounted) return;
+        if (res.ok) {
+          const json = await res.json();
+          const data = Array.isArray(json) ? json : (json.data || []);
+          setProvinces(data);
+        } else {
+          setProvinces(PROVINCES_FALLBACK);
+        }
+      } catch {
+        if (mounted) setProvinces(PROVINCES_FALLBACK);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // Hàm lấy token
   const getToken = () => Cookies.get("access_token");
@@ -108,7 +129,7 @@ export default function Page(): JSX.Element {
       const token = getToken();
       if (!token) return;
 
-      const res = await fetch("https://sieuthivina.cloud/api/tai-khoan/diachis", {
+      const res = await fetch("https://sieuthivina.com/api/v1/dia-chi", {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Accept": "application/json"
@@ -137,7 +158,7 @@ export default function Page(): JSX.Element {
     if (!confirm("Bạn có chắc muốn xóa địa chỉ này không?")) return;
 
     try {
-      const res = await fetch(`https://sieuthivina.cloud/api/tai-khoan/diachis/${id}`, {
+      const res = await fetch(`https://sieuthivina.com/api/v1/dia-chi/${id}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${getToken()}`,
@@ -160,7 +181,7 @@ export default function Page(): JSX.Element {
   // 4. SET DEFAULT: Đặt mặc định
   const handleSetDefault = async (id: number) => {
     try {
-      const res = await fetch(`https://sieuthivina.cloud/api/tai-khoan/diachis/${id}/macdinh`, {
+      const res = await fetch(`https://sieuthivina.com/api/v1/dia-chi/macdinh/${id}`, {
         method: "PATCH",
         headers: {
           "Authorization": `Bearer ${getToken()}`,
@@ -194,14 +215,15 @@ export default function Page(): JSX.Element {
   const handleEdit = (a: Address) => {
     setEditing({ ...a });
     // Tìm ID tỉnh dựa vào tên tỉnh (reverse lookup) để hiển thị đúng trên Select
-    const foundProvince = PROVINCES_FALLBACK.find(p => p.ten === a.tinhthanh);
+    const list = provinces.length ? provinces : PROVINCES_FALLBACK;
+    const foundProvince = list.find(p => p.ten === a.tinhthanh);
     setSelectedProvinceId(foundProvince ? foundProvince.id : "");
   };
 
   // 5. SAVE: Lưu (Thêm hoặc Sửa)
   const handleSaveEdit = async () => {
     if (!editing) return;
-    
+
     // Validate cơ bản
     if (!editing.ten_nguoinhan || !editing.sodienthoai || !editing.diachi || !editing.tinhthanh) {
       alert("Vui lòng điền đầy đủ thông tin (bao gồm Tỉnh/Thành)");
@@ -209,10 +231,10 @@ export default function Page(): JSX.Element {
     }
 
     const isEdit = editing.id !== 0;
-    const url = isEdit 
-      ? `https://sieuthivina.cloud/api/tai-khoan/diachis/${editing.id}` 
-      : `https://sieuthivina.cloud/api/tai-khoan/diachis`;
-    
+    const url = isEdit
+      ? `https://sieuthivina.com/api/v1/dia-chi/${editing.id}`
+      : `https://sieuthivina.com/api/v1/dia-chi`;
+
     const method = isEdit ? "PUT" : "POST";
 
     try {
@@ -228,7 +250,7 @@ export default function Page(): JSX.Element {
           sodienthoai: editing.sodienthoai,
           diachi: editing.diachi,
           tinhthanh: editing.tinhthanh,
-          trangthai: editing.trangthai || "Khác" 
+          trangthai: editing.trangthai || "Khác"
           // Nếu thêm mới, có thể gửi kèm trạng thái nếu user muốn (tuỳ logic UI)
         })
       });
@@ -251,117 +273,117 @@ export default function Page(): JSX.Element {
       <AccountShell title="Sổ địa chỉ" current="addresses">
         {!editing && (
           <>
-          <div className="flex-between gap-16 flex-wrap mb-20 ">
-            <h6 className="mb-0 text-gray-900">Sổ địa chỉ</h6>
-            <div className="position-relative flex-align gap-16 flex-wrap">
-              <button type="button" className="w-44 h-44 d-lg-none d-flex flex-center border border-gray-100 rounded-6 text-2xl sidebar-btn">
-                <i className="ph-bold ph-folder-user" />
-              </button>
-            </div>
-          </div>
-
-          <div className="border border-gray-100 rounded-8 p-16">
-            <a
-              role="button"
-              onClick={handleAdd}
-              className="w-100 border-dashed border-2 border-info-300 bg-info-50 hover-bg-info-100 text-main-900 rounded-4 px-20 py-12 mb-10 d-flex justify-content-center align-items-center"
-            >
-              <div className="text-center">
-                <div className="flex-align flex-center gap-12">
-                  <i className="ph-bold ph-plus text-xl fw-bold text-info-600" />
-                  <span className="fw-medium text-info-600 text-md pe-10 pb-0 mb-0">Thêm địa chỉ giao hàng</span>
-                </div>
+            <div className="flex-wrap gap-16 mb-20 flex-between ">
+              <h6 className="mb-0 text-gray-900">Sổ địa chỉ</h6>
+              <div className="flex-wrap gap-16 position-relative flex-align">
+                <button type="button" className="text-2xl border border-gray-100 w-44 h-44 d-lg-none d-flex flex-center rounded-6 sidebar-btn">
+                  <i className="ph-bold ph-folder-user" />
+                </button>
               </div>
-            </a>
+            </div>
 
-            {/* danh sách địa chỉ (ẩn khi đang editing) */}
-            {!editing && (
-              <div className="row gy-2">
-                {loading ? (
-                  <div className="col-12 py-20 text-center">Đang tải...</div>
-                ) : addresses.length === 0 ? (
-                  <div className="col-12 py-24 text-center text-muted">
-                    Chưa có địa chỉ. Thêm địa chỉ giao hàng để sử dụng khi đặt hàng.
+            <div className="p-16 border border-gray-100 rounded-8">
+              <a
+                role="button"
+                onClick={handleAdd}
+                className="px-20 py-12 mb-10 border-2 border-dashed w-100 border-info-300 bg-info-50 hover-bg-info-100 text-main-900 rounded-4 d-flex justify-content-center align-items-center"
+              >
+                <div className="text-center">
+                  <div className="gap-12 flex-align flex-center">
+                    <i className="text-xl ph-bold ph-plus fw-bold text-info-600" />
+                    <span className="pb-0 mb-0 fw-medium text-info-600 text-md pe-10">Thêm địa chỉ giao hàng</span>
                   </div>
-                ) : (
-                  addresses
-                    .sort((a, b) => (a.trangthai === "Mặc định" ? -1 : 1))
-                    .map((a) => {
-                      const isDefault = a.trangthai === "Mặc định";
-                      return (
-                        <div key={a.id} className="col-lg-12 col-xl-12">
-                          <div className="border border-gray-200 box-shadow-sm text-main-900 rounded-4 px-20 py-16 mb-10">
-                            <div className="d-flex flex-align flex-between gap-24">
-                              <div className="flex-align gap-12">
-                                <div>
-                                  <div className="fw-semibold text-gray-900 text-md">{a.ten_nguoinhan}</div>
-                                  <div className="fw-semibold text-gray-900 text-md">{a.sodienthoai}</div>
-                                </div>
-                                {isDefault && (
-                                  <span className="fw-medium text-xs text-success-700 bg-success-100 px-6 py-2 rounded-4 flex-align gap-8">
-                                    Mặc định
-                                  </span>
-                                )}
-                              </div>
+                </div>
+              </a>
 
-                              <div className="d-flex flex-align gap-24 pt-10">
-                                <div className="flex-align gap-4">
-                                  <i className="ph-bold ph-pencil-simple text-main-600" />
-                                  <a role="button" onClick={() => handleEdit(a)} className="text-sm text-main-600 rounded-4 py-6 w-100 transition-1 gap-8">
-                                    Chỉnh sửa
-                                  </a>
-                                </div>
-
-                                <div className={`flex-align gap-4 ${isDefault ? "opacity-50" : ""}`}>
-                                  <i className="ph-bold ph-trash text-main-600" />
-                                  <span role="button" onClick={() => !isDefault && handleDelete(a.id)} className="text-sm text-main-600 rounded-4 py-6 w-100 transition-1 gap-8">
-                                    Xóa
-                                  </span>
+              {/* danh sách địa chỉ (ẩn khi đang editing) */}
+              {!editing && (
+                <div className="row gy-2">
+                  {loading ? (
+                    <div className="py-20 text-center col-12">Đang tải...</div>
+                  ) : addresses.length === 0 ? (
+                    <div className="py-24 text-center col-12 text-muted">
+                      Chưa có địa chỉ. Thêm địa chỉ giao hàng để sử dụng khi đặt hàng.
+                    </div>
+                  ) : (
+                    addresses
+                      .sort((a, b) => (a.trangthai === "Mặc định" ? -1 : 1))
+                      .map((a) => {
+                        const isDefault = a.trangthai === "Mặc định";
+                        return (
+                          <div key={a.id} className="col-lg-12 col-xl-12">
+                            <div className="px-20 py-16 mb-10 border border-gray-200 box-shadow-sm text-main-900 rounded-4">
+                              <div className="gap-24 d-flex flex-align flex-between">
+                                <div className="gap-12 flex-align">
+                                  <div>
+                                    <div className="text-gray-900 fw-semibold text-md">{a.ten_nguoinhan}</div>
+                                    <div className="text-gray-900 fw-semibold text-md">{a.sodienthoai}</div>
+                                  </div>
+                                  {isDefault && (
+                                    <span className="gap-8 px-6 py-2 text-xs fw-medium text-success-700 bg-success-100 rounded-4 flex-align">
+                                      Mặc định
+                                    </span>
+                                  )}
                                 </div>
 
-                                {!isDefault && (
-                                  <div className="flex-align gap-4">
-                                    <i className="ph-bold ph-check text-main-600" />
-                                    <a role="button" onClick={() => handleSetDefault(a.id)} className="text-sm text-main-600 rounded-4 py-6 w-100 transition-1 gap-8">
-                                      Thiết lập mặc định
+                                <div className="gap-24 pt-10 d-flex flex-align">
+                                  <div className="gap-4 flex-align">
+                                    <i className="ph-bold ph-pencil-simple text-main-600" />
+                                    <a role="button" onClick={() => handleEdit(a)} className="gap-8 py-6 text-sm text-main-600 rounded-4 w-100 transition-1">
+                                      Chỉnh sửa
                                     </a>
                                   </div>
-                                )}
-                              </div>
-                            </div>
 
-                            <div className="d-flex flex-align gap-24 pt-10">
-                              <div className="flex-align gap-12">
-                                <span className="fw-medium text-gray-900 text-sm">Địa chỉ: {a.diachi}</span>
-                              </div>
-                            </div>
+                                  <div className={`flex-align gap-4 ${isDefault ? "opacity-50" : ""}`}>
+                                    <i className="ph-bold ph-trash text-main-600" />
+                                    <span role="button" onClick={() => !isDefault && handleDelete(a.id)} className="gap-8 py-6 text-sm text-main-600 rounded-4 w-100 transition-1">
+                                      Xóa
+                                    </span>
+                                  </div>
 
-                            <div className="d-flex flex-align gap-24 pt-10">
-                              <div className="flex-align gap-4 opacity-70">
-                                <i className="ph-bold ph-map-pin-area text-main-600" />
-                                <span className="text-sm text-gray-900">{a.tinhthanh}</span>
+                                  {!isDefault && (
+                                    <div className="gap-4 flex-align">
+                                      <i className="ph-bold ph-check text-main-600" />
+                                      <a role="button" onClick={() => handleSetDefault(a.id)} className="gap-8 py-6 text-sm text-main-600 rounded-4 w-100 transition-1">
+                                        Thiết lập mặc định
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="gap-24 pt-10 d-flex flex-align">
+                                <div className="gap-12 flex-align">
+                                  <span className="text-sm text-gray-900 fw-medium">Địa chỉ: {a.diachi}</span>
+                                </div>
+                              </div>
+
+                              <div className="gap-24 pt-10 d-flex flex-align">
+                                <div className="gap-4 flex-align opacity-70">
+                                  <i className="ph-bold ph-map-pin-area text-main-600" />
+                                  <span className="text-sm text-gray-900">{a.tinhthanh}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })
-                )}
-              </div>
-            )}
-          </div>
+                        );
+                      })
+                  )}
+                </div>
+              )}
+            </div>
           </>
         )}
 
         {/* Form Sửa / Thêm (Modal hoặc Drawer) */}
         {editing && (
-          <div> {/*  className="border border-gray-100 rounded-8 p-16 mb-16" */}
-            <div className="flex-between gap-16 flex-wrap mb-12">
+          <div> {/*  className="p-16 mb-16 border border-gray-100 rounded-8" */}
+            <div className="flex-wrap gap-16 mb-12 flex-between">
               <h6 className="mb-0 text-gray-900">{editing.id === 0 ? "Thêm địa chỉ giao hàng" : "Cập nhật địa chỉ"}</h6>
-              <div className="position-relative flex-align gap-16 flex-wrap">
+              <div className="flex-wrap gap-16 position-relative flex-align">
                 <button
                   type="button"
-                  className="w-44 h-44 d-lg-none d-flex flex-center border border-gray-100 rounded-6 text-2xl sidebar-btn"
+                  className="text-2xl border border-gray-100 w-44 h-44 d-lg-none d-flex flex-center rounded-6 sidebar-btn"
                   onClick={() => setEditing(null)}
                 >
                   <i className="ph-bold ph-x" />
@@ -369,23 +391,23 @@ export default function Page(): JSX.Element {
               </div>
             </div>
 
-            <div className="border border-gray-100 rounded-8 p-16">
+            <div className="p-16 border border-gray-100 rounded-8">
               <div className="row">
-                <div className="col-md-6 mb-24">
-                  <label className="text-neutral-900 text-md mb-8 fw-medium">Họ và tên <span className="text-danger">*</span></label>
+                <div className="mb-24 col-md-6">
+                  <label className="mb-8 text-neutral-900 text-md fw-medium">Họ và tên <span className="text-danger">*</span></label>
                   <input
                     type="text"
-                    className="placeholder-italic py-12 px-18 text-sm common-input"
+                    className="py-12 text-sm placeholder-italic px-18 common-input"
                     value={editing.ten_nguoinhan}
                     onChange={(e) => setEditing({ ...editing, ten_nguoinhan: e.target.value })}
                     placeholder="Nhập họ và tên"
                   />
                 </div>
-                <div className="col-md-6 mb-24">
-                  <label className="text-neutral-900 text-md mb-8 fw-medium">Số điện thoại <span className="text-danger">*</span></label>
+                <div className="mb-24 col-md-6">
+                  <label className="mb-8 text-neutral-900 text-md fw-medium">Số điện thoại <span className="text-danger">*</span></label>
                   <input
                     type="tel"
-                    className="placeholder-italic py-12 px-18 text-sm common-input"
+                    className="py-12 text-sm placeholder-italic px-18 common-input"
                     value={editing.sodienthoai}
                     onChange={(e) => setEditing({ ...editing, sodienthoai: e.target.value })}
                     placeholder="Nhập số điện thoại"
@@ -394,20 +416,20 @@ export default function Page(): JSX.Element {
               </div>
 
               <div className="row">
-                <div className="col-md-6 mb-24">
-                  <label className="text-neutral-900 text-md mb-8 fw-medium">Địa chỉ <span className="text-danger">*</span></label>
+                <div className="mb-24 col-md-6">
+                  <label className="mb-8 text-neutral-900 text-md fw-medium">Địa chỉ <span className="text-danger">*</span></label>
                   <input
                     type="text"
-                    className="placeholder-italic py-12 px-18 text-sm common-input"
+                    className="py-12 text-sm placeholder-italic px-18 common-input"
                     value={editing.diachi}
                     onChange={(e) => setEditing({ ...editing, diachi: e.target.value })}
                     placeholder="Nhập địa chỉ giao hàng"
                   />
                 </div>
-                <div className="col-md-6 mb-24">
-                  <label className="text-neutral-900 text-md mb-8 fw-medium">Tỉnh thành <span className="text-danger">*</span></label>
+                <div className="mb-24 col-md-6">
+                  <label className="mb-8 text-neutral-900 text-md fw-medium">Tỉnh thành <span className="text-danger">*</span></label>
                   <select
-                    className="placeholder-italic common-input py-11 px-14 text-sm"
+                    className="text-sm placeholder-italic common-input py-11 px-14"
                     value={selectedProvinceId || ""}
                     onChange={(e) => {
                       const val = Number(e.target.value);
@@ -417,7 +439,7 @@ export default function Page(): JSX.Element {
                     }}
                   >
                     <option value="">-- Chọn Tỉnh/Thành --</option>
-                    {PROVINCES_FALLBACK.map((t) => (
+                    {(provinces.length ? provinces : PROVINCES_FALLBACK).map((t) => (
                       <option key={t.id} value={t.id}>{t.ten}</option>
                     ))}
                   </select>
@@ -425,7 +447,7 @@ export default function Page(): JSX.Element {
               </div>
 
               <div className="row">
-                <div className="col-md-6 mb-24">
+                <div className="mb-24 col-md-6">
                   <div className="form-check common-check">
                     <input
                       className="form-check-input"
@@ -435,26 +457,26 @@ export default function Page(): JSX.Element {
                       onChange={(e) => setEditing({ ...editing, trangthai: e.target.checked ? "Mặc định" : "" })}
                     />
                     <label className="form-check-label flex-grow-1" htmlFor="defaultInline">
-                      Đặt địa chỉ làm mặc định <span className="fst-italic text-xs text-gray-600 fw-normal">(Địa chỉ sẽ được đặt mặc định cho việc thanh toán và giao hàng của bạn)</span>
+                      Đặt địa chỉ làm mặc định <span className="text-xs text-gray-600 fst-italic fw-normal">(Địa chỉ sẽ được đặt mặc định cho việc thanh toán và giao hàng của bạn)</span>
                     </label>
                   </div>
                 </div>
               </div>
 
               <div className="row">
-                <div className="col-md-6 mb-24">
-                  <div className="d-flex gap-12">
+                <div className="mb-24 col-md-6">
+                  <div className="gap-12 d-flex">
                     <button
                       type="button"
                       onClick={() => { handleSaveEdit(); }}
-                      className="btn btn-main py-14 px-32"
+                      className="px-32 btn btn-main py-14"
                     >
                       {editing.id === 0 ? "Thêm địa chỉ mới" : "Lưu thay đổi"}
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditing(null)}
-                      className="btn btn-outline-secondary py-14 px-24"
+                      className="px-24 btn btn-outline-secondary py-14"
                     >
                       Hủy
                     </button>
