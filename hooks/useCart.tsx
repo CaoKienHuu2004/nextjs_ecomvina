@@ -463,7 +463,11 @@ export function useCart() {
             // Lưu thông tin hiển thị ngay lập tức (Optimistic UI)
             ten: product.ten || "Sản phẩm",
             mediaurl: product.mediaurl || product.hinhanh,
-            gia: { current: Number(product.gia?.current ?? product.gia) || 0 }
+            gia: {
+              current: (typeof product.gia === 'object' && product.gia !== null)
+                ? (product.gia.current || 0)
+                : (Number(product.gia) || 0)
+            }
           }
         });
       }
@@ -472,7 +476,7 @@ export function useCart() {
 
       fetchCart();
 
-      alert("Đã thêm vào giỏ hàng");
+      // alert("Đã thêm vào giỏ hàng");
       try {
         const cartPayload = tempItems.map((i: any) => ({
           id_bienthe: i.id_bienthe,
