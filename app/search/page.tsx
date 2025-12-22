@@ -50,8 +50,8 @@ export default function SearchPage() {
                 if (!res.ok) {
                     throw new Error("Không thể kết nối đến máy chủ");
                 }
-                const apiData = result.products?.data || [];
                 const result = await res.json();
+                const apiData = result.products?.data || [];
 
                 // 3. MAP DỮ LIỆU TỪ API SANG UI (DisplayProduct)
                 const mappedProducts: DisplayProduct[] = apiData.map((item: any) => {
