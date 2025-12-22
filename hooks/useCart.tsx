@@ -128,11 +128,11 @@ export const isVoucherInDateRange = (ngaybatdau?: string, ngayketthuc?: string):
     const startDate = new Date(ngaybatdau);
     if (now < startDate) return false; // Chưa đến ngày
   }
-  
+
   if (ngayketthuc) {
     const endDate = new Date(ngayketthuc);
     // Đặt giờ kết thúc là cuối ngày (23:59:59) để voucher vẫn dùng được trong ngày hết hạn
-    endDate.setHours(23, 59, 59, 999); 
+    endDate.setHours(23, 59, 59, 999);
     if (now > endDate) return false; // Đã quá hạn
   }
 
@@ -144,10 +144,10 @@ export const isVoucherInDateRange = (ngaybatdau?: string, ngayketthuc?: string):
 
 export function useCart() {
   const { isLoggedIn } = useAuth();
-  
+
   const [items, setItems] = useState<CartItem[]>([]);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
-  
+
   const [summary, setSummary] = useState<CartSummary>({
     tamtinh: 0,
     tietkiem: 0,
@@ -159,7 +159,7 @@ export function useCart() {
   const [availableVouchers, setAvailableVouchers] = useState<Coupon[]>([]);
   const [appliedVoucher, setAppliedVoucher] = useState<Coupon | null>(null);
   const [loading, setLoading] = useState(false);
-  
+
   const isMountedRef = useRef(true);
   const hasSyncedRef = useRef(false);
   const emitTimeoutRef = useRef<number | null>(null);
@@ -221,7 +221,7 @@ export function useCart() {
       // Lưu toàn bộ item vào storage chính
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
       // Lưu payload tối giản để gửi lên API
-      const payload = { 
+      const payload = {
         cart_local: cartItems.map(i => ({ id_bienthe: i.id_bienthe, soluong: i.soluong }))
       };
       localStorage.setItem(CART_PAYLOAD_KEY, JSON.stringify(payload));
@@ -236,10 +236,10 @@ export function useCart() {
 
     // [FIX]: Luôn ưu tiên tạo ID dựa trên id_bienthe nếu là Guest để khớp với LocalStorage
     const fallbackId = `local_${bt.id}`;
-    
+
     return {
       // Nếu có id_giohang từ DB (User) thì lấy, nếu ko (Guest) thì lấy id_giohang server gửi về hoặc fallback
-      id_giohang: serverItem.id_giohang ?? serverItem.id ?? fallbackId, 
+      id_giohang: serverItem.id_giohang ?? serverItem.id ?? fallbackId,
       id_bienthe: bt.id || serverItem.id_bienthe,
       soluong: serverItem.soluong,
       thanhtien: serverItem.thanhtien,
@@ -250,7 +250,7 @@ export function useCart() {
         gia: {
           current: bt.giadagiam ?? bt.giaban ?? 0,
           before_discount: bt.giagoc ?? 0,
-          discount_percent: 0 
+          discount_percent: 0
         },
         loaibienthe: bt.loaibienthe?.ten || "",
         thuonghieu: sp.thuonghieu?.ten || "",
@@ -264,19 +264,19 @@ export function useCart() {
   // ========================================================================
   const fetchCart = useCallback(async (codeOverride?: string) => {
     if (!isMountedRef.current) return;
-    
+
     try {
       const hasToken = hasValidToken();
       let currentCode = codeOverride;
 
       if (currentCode === undefined && typeof window !== 'undefined') {
-          const savedRaw = localStorage.getItem(VOUCHER_STORAGE_KEY);
-          if (savedRaw) {
-              try {
-                  const saved = JSON.parse(savedRaw);
-                  currentCode = saved.code || saved.magiamgia || "";
-              } catch (e) { currentCode = ""; }
-          }
+        const savedRaw = localStorage.getItem(VOUCHER_STORAGE_KEY);
+        if (savedRaw) {
+          try {
+            const saved = JSON.parse(savedRaw);
+            currentCode = saved.code || saved.magiamgia || "";
+          } catch (e) { currentCode = ""; }
+        }
       }
 
       // [QUAN TRỌNG]: Luôn load lại local storage mới nhất ngay thời điểm gọi API
@@ -294,12 +294,12 @@ export function useCart() {
 
       if (!res.ok) throw new Error(`API Error: ${res.status}`);
       const j = await res.json();
-      
+
       if (j.status === 200 && j.data) {
         const svData = j.data;
         const rawItems = Array.isArray(svData.items) ? svData.items : [];
         const mappedItems = rawItems.map(mapServerItemToLocal);
-        
+
         const rawGifts = Array.isArray(svData.gifts) ? svData.gifts : [];
         const mappedGifts = rawGifts.map((g: any) => ({
           id_bienthe: g.id_bienthe,
@@ -317,40 +317,40 @@ export function useCart() {
         if (svData.summary) {
           setSummary(svData.summary);
           if (svData.summary.voucher_info) {
-             const vInfo = svData.summary.voucher_info;
-             setAppliedVoucher({
-                 id: vInfo.id,
-                 code: String(vInfo.magiamgia || vInfo.code || ""),
-                 magiamgia: vInfo.magiamgia,
-                 giatri: vInfo.giatri,
-                 mota: vInfo.mota,
-                 min_order_value: vInfo.dieukien,
-                 condition_type: parseVoucherCondition(vInfo.dieukien, vInfo.mota).type
-             });
+            const vInfo = svData.summary.voucher_info;
+            setAppliedVoucher({
+              id: vInfo.id,
+              code: String(vInfo.magiamgia || vInfo.code || ""),
+              magiamgia: vInfo.magiamgia,
+              giatri: vInfo.giatri,
+              mota: vInfo.mota,
+              min_order_value: vInfo.dieukien,
+              condition_type: parseVoucherCondition(vInfo.dieukien, vInfo.mota).type
+            });
           }
         }
 
         if (Array.isArray(svData.available_vouchers)) {
-           const mappedVouchers = svData.available_vouchers.map((v: any) => ({
-               id: v.id,
-               code: String(v.magiamgia || v.code || ""),
-               magiamgia: v.magiamgia,
-               giatri: v.giatri,
-               mota: v.mota,
-               dieukien: v.dieukien,
-               ngaybatdau: v.ngaybatdau,
-               ngayketthuc: v.ngayketthuc,
-               trangthai: v.trangthai,
-               condition_type: parseVoucherCondition(v.dieukien, v.mota).type
-           }));
-           setAvailableVouchers(mappedVouchers);
+          const mappedVouchers = svData.available_vouchers.map((v: any) => ({
+            id: v.id,
+            code: String(v.magiamgia || v.code || ""),
+            magiamgia: v.magiamgia,
+            giatri: v.giatri,
+            mota: v.mota,
+            dieukien: v.dieukien,
+            ngaybatdau: v.ngaybatdau,
+            ngayketthuc: v.ngayketthuc,
+            trangthai: v.trangthai,
+            condition_type: parseVoucherCondition(v.dieukien, v.mota).type
+          }));
+          setAvailableVouchers(mappedVouchers);
         }
 
         if (isMountedRef.current) {
           setItems(mappedItems);
           setGifts(mappedGifts);
         }
-        
+
         const totalQty = mappedItems.reduce((acc: number, item: CartItem) => acc + item.soluong, 0);
         emitCartUpdated({ count: totalQty });
       }
@@ -358,10 +358,10 @@ export function useCart() {
     } catch (e) {
       console.error("Lỗi load giỏ hàng:", e);
       if (!hasValidToken()) {
-          const rawLocal = localStorage.getItem(CART_STORAGE_KEY);
-          if (rawLocal && isMountedRef.current) {
-              setItems(JSON.parse(rawLocal));
-          }
+        const rawLocal = localStorage.getItem(CART_STORAGE_KEY);
+        if (rawLocal && isMountedRef.current) {
+          setItems(JSON.parse(rawLocal));
+        }
       }
     } finally {
       if (isMountedRef.current) setLoading(false);
@@ -386,14 +386,14 @@ export function useCart() {
   useEffect(() => {
     const initCart = async () => {
       if (hasValidToken()) {
-         if (!hasSyncedRef.current) {
-             hasSyncedRef.current = true;
-             await syncLocalToServer();
-         } else {
-             await fetchCart();
-         }
+        if (!hasSyncedRef.current) {
+          hasSyncedRef.current = true;
+          await syncLocalToServer();
+        } else {
+          await fetchCart();
+        }
       } else {
-         await fetchCart();
+        await fetchCart();
       }
     };
     initCart();
@@ -403,10 +403,18 @@ export function useCart() {
   // 4. ACTIONS
   // ========================================================================
 
+  // ----------------------------------------------------------------------
+  // HÀM 2: THÊM VÀO GIỎ (ADD) - ĐÃ SỬA LỖI GUEST
+  // ----------------------------------------------------------------------
   const addToCart = useCallback(async (product: AddToCartInput, soluong = 1, id_chuongtrinh?: number | string) => {
+    // Lấy ID biến thể (ưu tiên id_bienthe truyền vào, nếu không có thì lấy id product)
     const id_bienthe = product.id_bienthe ?? product.id;
-    if (!id_bienthe) return;
+    if (!id_bienthe) {
+      console.error("Thiếu id_bienthe", product);
+      return;
+    }
 
+    // --- CASE A: ĐÃ ĐĂNG NHẬP (USER) ---
     if (hasValidToken()) {
       try {
         const body: any = { id_bienthe, soluong };
@@ -417,165 +425,186 @@ export function useCart() {
           headers: getAuthHeaders(),
           body: JSON.stringify(body),
         });
+
+        // Nếu token hết hạn (401), có thể cân nhắc xử lý logout tại đây
         if (res.ok) {
-           fetchCart();
-           alert("Đã thêm vào giỏ hàng");
+          fetchCart(); // Load lại giỏ hàng server
+          alert("Đã thêm vào giỏ hàng");
         } else {
-           const err = await res.json();
-           alert(err.message || "Không thể thêm vào giỏ");
+          const err = await res.json().catch(() => ({}));
+          alert(err.message || "Không thể thêm vào giỏ (User)");
         }
-      } catch (e) { console.error(e); }
-    } else {
-      // Guest logic
+      } catch (e) {
+        console.error(e);
+        alert("Lỗi kết nối khi thêm giỏ hàng");
+      }
+    }
+
+    // --- CASE B: KHÁCH VÃNG LAI (GUEST) ---
+    else {
+      // 1. Chuẩn bị dữ liệu LocalStorage
       const localItems = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
+
+      // Tìm xem sản phẩm đã có trong local chưa (so sánh id_bienthe)
       const existIdx = localItems.findIndex((i: any) => String(i.id_bienthe) === String(id_bienthe));
+
       const tempItems = [...localItems];
       if (existIdx > -1) {
-          tempItems[existIdx].soluong = Number(tempItems[existIdx].soluong) + soluong;
+        // Cộng dồn số lượng
+        tempItems[existIdx].soluong = Number(tempItems[existIdx].soluong) + soluong;
       } else {
-          tempItems.push({
-             id_giohang: `local_${id_bienthe}`, // Dùng ID đơn giản để dễ match
-             id_bienthe,
-             soluong,
-             product: { 
-                 ten: product.ten || "Sản phẩm", 
-                 mediaurl: product.mediaurl || product.hinhanh,
-                 gia: { current: Number(product.gia) || 0 }
-             }
-          });
+        // Thêm mới
+        const uniq = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+        tempItems.push({
+          id_giohang: `local_${id_bienthe}_${uniq}`, // ID giả cho React key
+          id_bienthe: Number(id_bienthe),
+          soluong: Number(soluong),
+          product: {
+            // Lưu thông tin hiển thị ngay lập tức (Optimistic UI)
+            ten: product.ten || "Sản phẩm",
+            mediaurl: product.mediaurl || product.hinhanh,
+            gia: { current: Number(product.gia?.current ?? product.gia) || 0 }
+          }
+        });
       }
 
-      // Check stock với BE
+      saveLocalCart(tempItems);
+
+      fetchCart();
+
+      alert("Đã thêm vào giỏ hàng");
       try {
-         const res = await fetch(`${API}/api/v1/gio-hang/them`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-                id_bienthe, 
-                soluong, 
-                cart_local: tempItems.map(i => ({ id_bienthe: i.id_bienthe, soluong: i.soluong })) 
-            })
-         });
-         
-         const j = await res.json();
-         if (j.status === 200 || j.status === 201) {
-             saveLocalCart(tempItems); // Lưu xong thì fetch lại
-             fetchCart();
-             alert("Đã thêm vào giỏ hàng");
-         } else {
-             alert(j.message || "Sản phẩm không đủ số lượng");
-         }
-      } catch (e) { console.error(e); }
+        const cartPayload = tempItems.map((i: any) => ({
+          id_bienthe: i.id_bienthe,
+          soluong: i.soluong
+        }));
+
+        const res = await fetch(`${API}/api/v1/gio-hang/them`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({
+            id_bienthe,
+            soluong,
+            cart_local: cartPayload
+          })
+        });
+
+        const j = await res.json().catch(() => ({}));
+        if (res.status === 400 || res.status === 422) {
+          console.warn("Lỗi thêm giỏ hàng guest:", j);
+        }
+      } catch (e) {
+        console.warn("Không gọi được API check tồn kho guest:", e);
+      }
     }
   }, [API, hasValidToken, getAuthHeaders, fetchCart, saveLocalCart]);
 
   // [SỬA LỖI CHÍNH]: Hàm updatesoluong cho Guest
   const updatesoluong = useCallback(async (id_giohang: number | string, soluong: number) => {
-      if (soluong < 1) return;
-      
-      // 1. Optimistic update (trên UI)
-      setItems(prev => prev.map(i => i.id_giohang === id_giohang ? { ...i, soluong } : i));
+    if (soluong < 1) return;
 
-      // 2. Debounce & Update Storage/API
-      if (emitTimeoutRef.current) clearTimeout(emitTimeoutRef.current);
-      
-      emitTimeoutRef.current = window.setTimeout(() => {
-          if (hasValidToken()) {
-              fetchCart();
+    // 1. Optimistic update (trên UI)
+    setItems(prev => prev.map(i => i.id_giohang === id_giohang ? { ...i, soluong } : i));
+
+    // 2. Debounce & Update Storage/API
+    if (emitTimeoutRef.current) clearTimeout(emitTimeoutRef.current);
+
+    emitTimeoutRef.current = window.setTimeout(() => {
+      if (hasValidToken()) {
+        fetchCart();
+      } else {
+        // --- SỬA LỖI GUEST ---
+        // Tìm item trong state hiện tại để lấy ra id_bienthe
+        const currentItem = items.find(i => i.id_giohang === id_giohang);
+
+        if (currentItem) {
+          const localItems = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
+
+          // QUAN TRỌNG: Tìm trong localStorage bằng id_bienthe, KHÔNG dùng id_giohang vì id_giohang có thể lệch
+          const idx = localItems.findIndex((i: any) => String(i.id_bienthe) === String(currentItem.id_bienthe));
+
+          if (idx > -1) {
+            localItems[idx].soluong = soluong;
+            saveLocalCart(localItems);
+            // Gọi fetchCart để BE tính toán lại giá/quà dựa trên localStorage mới
+            fetchCart();
           } else {
-              // --- SỬA LỖI GUEST ---
-              // Tìm item trong state hiện tại để lấy ra id_bienthe
-              const currentItem = items.find(i => i.id_giohang === id_giohang);
-              
-              if (currentItem) {
-                  const localItems = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
-                  
-                  // QUAN TRỌNG: Tìm trong localStorage bằng id_bienthe, KHÔNG dùng id_giohang vì id_giohang có thể lệch
-                  const idx = localItems.findIndex((i: any) => String(i.id_bienthe) === String(currentItem.id_bienthe));
-                  
-                  if (idx > -1) {
-                      localItems[idx].soluong = soluong;
-                      saveLocalCart(localItems);
-                      // Gọi fetchCart để BE tính toán lại giá/quà dựa trên localStorage mới
-                      fetchCart();
-                  } else {
-                    console.warn("Không tìm thấy item trong LocalStorage để update", currentItem);
-                  }
-              }
+            console.warn("Không tìm thấy item trong LocalStorage để update", currentItem);
           }
-      }, 500); 
+        }
+      }
+    }, 500);
   }, [hasValidToken, saveLocalCart, fetchCart, items]); // Thêm items vào dependency
 
   const removeItem = useCallback(async (id_giohang: number | string) => {
-      // Optimistic update
-      const itemToRemove = items.find(i => i.id_giohang === id_giohang);
-      setItems(prev => prev.filter(i => i.id_giohang !== id_giohang));
-      
-      if (hasValidToken()) {
-          try {
-             const idParam = itemToRemove ? itemToRemove.id_bienthe : id_giohang;
-             await fetch(`${API}/api/v1/gio-hang/xoa/${idParam}`, {
-                 method: "DELETE",
-                 headers: getAuthHeaders()
-             });
-             fetchCart(); 
-          } catch (e) { fetchCart(); }
+    // Optimistic update
+    const itemToRemove = items.find(i => i.id_giohang === id_giohang);
+    setItems(prev => prev.filter(i => i.id_giohang !== id_giohang));
+
+    if (hasValidToken()) {
+      try {
+        const idParam = itemToRemove ? itemToRemove.id_bienthe : id_giohang;
+        await fetch(`${API}/api/v1/gio-hang/xoa/${idParam}`, {
+          method: "DELETE",
+          headers: getAuthHeaders()
+        });
+        fetchCart();
+      } catch (e) { fetchCart(); }
+    } else {
+      const localItems = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
+      let newItems = [];
+
+      if (itemToRemove) {
+        newItems = localItems.filter((i: any) => String(i.id_bienthe) !== String(itemToRemove.id_bienthe));
       } else {
-          // GUEST: Xóa cũng phải dựa vào id_bienthe cho chắc chắn
-          const localItems = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
-          let newItems = [];
-          
-          if (itemToRemove) {
-             newItems = localItems.filter((i: any) => String(i.id_bienthe) !== String(itemToRemove.id_bienthe));
-          } else {
-             // Fallback nếu ko tìm thấy trong state (hiếm)
-             newItems = localItems.filter((i: any) => i.id_giohang !== id_giohang);
-          }
-          
-          saveLocalCart(newItems);
-          fetchCart(); 
+        // Fallback nếu ko tìm thấy trong state (hiếm)
+        newItems = localItems.filter((i: any) => i.id_giohang !== id_giohang);
       }
+
+      saveLocalCart(newItems);
+      fetchCart();
+    }
   }, [hasValidToken, items, getAuthHeaders, API, fetchCart, saveLocalCart]);
 
   const clearCart = useCallback(() => {
-      if (!hasValidToken()) {
-          localStorage.removeItem(CART_STORAGE_KEY);
-          localStorage.removeItem(CART_PAYLOAD_KEY);
-      }
-      setItems([]);
-      setGifts([]);
-      setSummary({ tamtinh: 0, tietkiem: 0, giamgia_voucher: 0, tonggiatri: 0, voucher_info: null });
-      emitCartUpdated({ count: 0 });
+    if (!hasValidToken()) {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem(CART_PAYLOAD_KEY);
+    }
+    setItems([]);
+    setGifts([]);
+    setSummary({ tamtinh: 0, tietkiem: 0, giamgia_voucher: 0, tonggiatri: 0, voucher_info: null });
+    emitCartUpdated({ count: 0 });
   }, [hasValidToken, emitCartUpdated]);
 
   const applyVoucher = useCallback((voucher: Coupon) => {
-      setAppliedVoucher(voucher);
-      if (typeof window !== "undefined") {
-          localStorage.setItem(VOUCHER_STORAGE_KEY, JSON.stringify(voucher));
-      }
-      fetchCart(voucher.magiamgia ? String(voucher.magiamgia) : voucher.code);
+    setAppliedVoucher(voucher);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(VOUCHER_STORAGE_KEY, JSON.stringify(voucher));
+    }
+    fetchCart(voucher.magiamgia ? String(voucher.magiamgia) : voucher.code);
   }, [fetchCart]);
 
   const removeVoucher = useCallback(() => {
-      setAppliedVoucher(null);
-      if (typeof window !== "undefined") {
-          localStorage.removeItem(VOUCHER_STORAGE_KEY);
-      }
-      fetchCart(""); 
+    setAppliedVoucher(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(VOUCHER_STORAGE_KEY);
+    }
+    fetchCart("");
   }, [fetchCart]);
-  
+
   const applyVoucherByCode = useCallback((code: string) => {
-      fetchCart(code);
+    fetchCart(code);
   }, [fetchCart]);
 
   const applyVoucherById = useCallback((id: number | string) => {
-      const v = availableVouchers.find(v => v.id === id || String(v.id) === String(id));
-      if (v) applyVoucher(v);
-      else alert("Voucher không tìm thấy hoặc chưa đủ điều kiện");
+    const v = availableVouchers.find(v => v.id === id || String(v.id) === String(id));
+    if (v) applyVoucher(v);
+    else alert("Voucher không tìm thấy hoặc chưa đủ điều kiện");
   }, [availableVouchers, applyVoucher]);
 
   const fetchVouchers = useCallback(async () => {
-      if (availableVouchers.length === 0) await fetchCart();
+    if (availableVouchers.length === 0) await fetchCart();
   }, [availableVouchers, fetchCart]);
 
   return {
@@ -594,7 +623,7 @@ export function useCart() {
     updatesoluong,
     removeItem,
     clearCart,
-    refreshCart: fetchCart, 
+    refreshCart: fetchCart,
     applyVoucher,
     removeVoucher,
     applyVoucherByCode,

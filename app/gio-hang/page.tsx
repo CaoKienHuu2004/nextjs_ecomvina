@@ -220,15 +220,17 @@ function CartPageContent() {
                         {items.length === 0 ? (
                           <tr><td colSpan={4} className="py-20 text-center">Giỏ hàng trống.</td></tr>
                         ) : (
-                          items.map((item) => {
+                          items.map((item, idx) => {
                             // Hook đã map dữ liệu chuẩn, ta chỉ việc dùng
                             const product = item.product || {};
                             const currentPrice = Number(product.gia?.current || 0);
                             const originalPrice = Number(product.gia?.before_discount || 0);
                             const itemTotal = item.thanhtien ?? (currentPrice * item.soluong); // Ưu tiên thành tiền từ BE
 
+                            const reactKey = `${String(item.id_giohang ?? `local_${item.id_bienthe}`)}_${idx}`;
+
                             return (
-                              <tr key={item.id_giohang}>
+                              <tr key={reactKey}>
                                 <td className="px-5 py-20">
                                   <div className="gap-12 d-flex align-items-center">
                                     <button
@@ -260,7 +262,7 @@ function CartPageContent() {
                                         </Link>
                                       </h6>
                                       {product.loaibienthe && (
-                                        <div className="mt-2 text-sm text-gray-500 bg-gray-50 d-inline-block px-8 py-4 rounded-4">
+                                        <div className="px-8 py-4 mt-2 text-sm text-gray-500 bg-gray-50 d-inline-block rounded-4">
                                           Phân loại: {product.loaibienthe}
                                         </div>
                                       )}
@@ -316,12 +318,12 @@ function CartPageContent() {
                         {gifts.map((gift, idx) => (
                           <tr key={`gift-${idx}`}>
                             <td className="px-5 py-10">
-                              <div className="d-flex align-items-center gap-12">
-                                <div style={{ width: '60px', height: '60px' }} className="border rounded-8 p-1">
+                              <div className="gap-12 d-flex align-items-center">
+                                <div style={{ width: '60px', height: '60px' }} className="p-1 border rounded-8">
                                   <img src={gift.hinhanh} alt="Gift" className="w-100 h-100 object-fit-contain" />
                                 </div>
                                 <div>
-                                  <div className="fw-bold text-sm text-line-1" title={gift.ten_sanpham}>{gift.ten_sanpham}</div>
+                                  <div className="text-sm fw-bold text-line-1" title={gift.ten_sanpham}>{gift.ten_sanpham}</div>
                                   <div className="text-xs text-gray-500">{gift.ten_loaibienthe}</div>
                                   <div className="text-xs text-main-two-600 fw-bold">QUÀ TẶNG 0đ</div>
                                 </div>
@@ -348,8 +350,8 @@ function CartPageContent() {
 
                   {/* 1. Voucher Đã áp dụng */}
                   {appliedVoucher && (
-                    <div className="gap-8 px-12 py-10 mt-10 border-main-600 border bg-main-50 flex-align flex-between rounded-4">
-                      <div className="text-sm d-flex flex-column overflow-hidden">
+                    <div className="gap-8 px-12 py-10 mt-10 border border-main-600 bg-main-50 flex-align flex-between rounded-4">
+                      <div className="overflow-hidden text-sm d-flex flex-column">
                         <span className="text-main-600 fw-bold">Đang dùng: {appliedVoucher.code}</span>
                         <span className="text-xs text-gray-600 text-line-1">Giảm {formatPrice(Number(appliedVoucher.giatri))}</span>
                       </div>
@@ -360,7 +362,7 @@ function CartPageContent() {
                   )}
 
                   {/* 2. Danh sách Voucher khả dụng */}
-                  <div className="mt-10 d-flex flex-column gap-10" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  <div className="gap-10 mt-10 d-flex flex-column" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                     {displayCoupons.map((voucher: any) => {
                        // Filter cơ bản ở FE để hiển thị UI (ẩn voucher hết hạn)
                        if (!isVoucherInDateRange(voucher.ngaybatdau, voucher.ngayketthuc)) return null;
@@ -373,7 +375,7 @@ function CartPageContent() {
                          <div key={voucher.id} className={`p-10 border border-dashed rounded-4 ${isEligible ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300 opacity-75'}`}>
                            <div className="d-flex justify-content-between align-items-center">
                              <div className="d-flex flex-column" style={{flex: 1, overflow: 'hidden'}}>
-                               <span className="fw-bold text-sm text-gray-900">{voucher.magiamgia || voucher.code}</span>
+                               <span className="text-sm text-gray-900 fw-bold">{voucher.magiamgia || voucher.code}</span>
                                <span className="text-xs text-gray-500">Giảm {formatPrice(Number(voucher.giatri))}</span>
                                {!isEligible && <span className="text-xs text-warning-600">Đơn từ {formatPrice(minOrderValue)}</span>}
                              </div>
@@ -390,7 +392,7 @@ function CartPageContent() {
                     })}
                     
                     {displayCoupons.length === 0 && !appliedVoucher && (
-                      <div className="text-center text-sm text-gray-500 py-10">Chưa có mã giảm giá phù hợp.</div>
+                      <div className="py-10 text-sm text-center text-gray-500">Chưa có mã giảm giá phù hợp.</div>
                     )}
                   </div>
                 </div>
@@ -407,7 +409,7 @@ function CartPageContent() {
                   </div>
 
                   {discountAmount > 0 && (
-                    <div className="gap-8 flex-between mb-20">
+                    <div className="gap-8 mb-20 flex-between">
                       <span className="text-gray-900 font-heading-two">Voucher giảm:</span>
                       <span className="text-success-600 fw-semibold">-{formatPrice(discountAmount)}</span>
                     </div>
@@ -436,7 +438,7 @@ function CartPageContent() {
                   </Link>
                 </div>
                 
-                <span className="mt-20 w-100 d-block text-center">
+                <span className="mt-20 text-center w-100 d-block">
                   <Link href="/shop" className="text-sm text-main-600 fw-medium">
                     <i className="ph-bold ph-arrow-left pe-4"></i> Tiếp tục mua sắm
                   </Link>
