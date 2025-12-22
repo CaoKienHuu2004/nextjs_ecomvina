@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useCart, parseVoucherCondition, isVoucherInDateRange, VoucherConditionType, Gia } from '@/hooks/useCart';
+import { useAuth } from '@/hooks/useAuth';
 import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData';
 import Image from 'next/image';
 import FullHeader from '@/components/FullHeader';
@@ -262,6 +263,14 @@ function CartPageContent() {
     id: 0,
     name: '',
   });
+  const { isLoggedIn } = useAuth();
+  const [debugLocalCart, setDebugLocalCart] = useState<any>(null);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('marketpro_cart') || '[]';
+      setDebugLocalCart(JSON.parse(raw));
+    } catch { setDebugLocalCart(null); }
+  }, []);
 
   // fallback home coupons (an toàn)
   const couponsFromHome: HomeCoupon[] = ((homeData?.data as { new_coupon?: HomeCoupon[] } | undefined)?.new_coupon) ?? [];
@@ -318,9 +327,69 @@ function CartPageContent() {
     }, 3000);
   };
 
+  // Dev helper: import sample guest cart JSON from public/giohang-noauth.json
+  const importGuestFromFile = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const res = await fetch('/giohang-noauth.json');
+      if (!res.ok) throw new Error('Không tìm thấy file /giohang-noauth.json in public folder');
+      const json = await res.json();
+      const data = (json && json.data) ? json.data : json;
+      const rawItems = Array.isArray(data?.items) ? data.items : [];
+
+      const mapped = rawItems.map((it: any, idx: number) => {
+        const bienthe = it.bienthe || {};
+        const id_bienthe = bienthe.id ?? it.id_bienthe ?? `file_${idx}`;
+        const soluong = Number(it.soluong ?? 1);
+        const productName = (bienthe?.sanpham?.ten) || (bienthe?.detail?.tensanpham) || it.ten_sp || it.ten || 'Sản phẩm';
+        const media = (bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh) || bienthe?.hinhanh || it.hinhanh || '/assets/images/thumbs/product-placeholder.png';
+        const currentPrice = Number(bienthe?.giadagiam ?? bienthe?.giagoc ?? it.giaban ?? it.thanhtien ?? 0);
+        const originPrice = Number(bienthe?.giagoc ?? 0);
+
+        return {
+          id_giohang: `file_${idx}_${Date.now()}`,
+          id_bienthe,
+          soluong,
+          product: {
+            id: id_bienthe,
+            ten: productName,
+            mediaurl: media,
+            gia: { current: currentPrice, before_discount: originPrice, discount_percent: 0 },
+            loaibienthe: bienthe?.loaibienthe?.ten || bienthe?.ten || '',
+            thuonghieu: bienthe?.sanpham?.thuonghieu?.ten || undefined,
+            slug: bienthe?.sanpham?.slug || undefined,
+          },
+        } as any;
+      });
+
+      // Save to localStorage keys used by the hook
+      try {
+        localStorage.setItem('marketpro_cart', JSON.stringify(mapped));
+        const payload = { cart_local: mapped.map((m: any) => ({ id_bienthe: Number(m.id_bienthe) || m.id_bienthe, soluong: Number(m.soluong) })), voucher_code: '' };
+        localStorage.setItem('marketpro_cart_payload', JSON.stringify(payload));
+      } catch (err) {
+        console.error('Lỗi khi lưu sample vào localStorage', err);
+      }
+
+      // Refresh cart to pick up imported data
+      refreshCart();
+      alert('Đã import sample guest cart vào localStorage.');
+    } catch (e: any) {
+      console.error(e);
+      alert('Import thất bại: ' + (e?.message || e));
+    }
+  }, [refreshCart]);
+
   return (
     <>
       <FullHeader showClassicTopBar={true} showTopNav={false} />
+      
+      {/* DEBUG: hiển thị trạng thái đăng nhập và localStorage (remove in prod) */}
+      {/* <div style={{ padding: 8 }}>
+        <strong>{isLoggedIn ? 'User: logged in' : 'User: guest (not logged in)'}</strong>
+        <button type="button" onClick={() => { try { alert(JSON.stringify(JSON.parse(localStorage.getItem('marketpro_cart') || '[]'), null, 2)); } catch (e) { alert('parse error') } }} style={{ marginLeft: 12 }}>Show local cart</button>
+        <pre style={{ maxHeight: 200, overflow: 'auto', background: '#f6f6f6', padding: 8 }}>{debugLocalCart ? JSON.stringify(debugLocalCart, null, 2) : 'no local cart'}</pre>
+      </div> */}
 
       <section className="py-20 cart">
         <div className="container container-lg">
@@ -338,6 +407,12 @@ function CartPageContent() {
               </div>
             </div>
           )}
+          {/* Dev helper: import sample guest cart into localStorage (expects public/giohang-noauth.json) */}
+          <div className="mb-12">
+            <button type="button" className="btn btn-sm btn-outline" onClick={importGuestFromFile} style={{ padding: '8px 12px' }}>
+              Dev: Import guest cart sample
+            </button>
+          </div>
           <div className="row gy-4">
             <div className="col-xl-9 col-lg-8">
               <div className="pb-0 border border-gray-100 cart-table rounded-8 p-30">
