@@ -114,14 +114,6 @@ export default function SearchPage() {
                 });
 
                 setProducts(filtered);
-
-                // Gọi API tăng lượt truy cập từ khóa (optional - không block nếu lỗi)
-                try {
-                    await trackKeywordAccess(query);
-                } catch (err) {
-                    // Bỏ qua lỗi tracking, không ảnh hưởng tới hiển thị sản phẩm
-                    console.debug("Keyword tracking:", err);
-                }
             } catch (err: unknown) {
                 const e = err as { message?: string };
                 setError(e.message || "Lỗi khi tìm kiếm");
