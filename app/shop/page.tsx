@@ -67,6 +67,12 @@ const BRAND_OPTIONS = [
   { value: "chat-viet-group", label: "CHẤT VIỆT GROUP" }
 ];
 
+interface CategoryOption {
+  value: string;
+  label: string;
+  count?: number;
+}
+
 interface Product {
   id: number;
   name: string;
@@ -424,6 +430,7 @@ export default function ShopPage() {
 
             // Lưu filters từ V1 API
             if (v1ShopData.filters) {
+              console.log('📂 Shop - V1 Categories from API:', v1ShopData.filters.categories);
               setV1Categories(v1ShopData.filters.categories || []);
               setV1Brands(v1ShopData.filters.brands || []);
             }
@@ -536,20 +543,23 @@ export default function ShopPage() {
   }, [searchQuery, sourceParam, categoryParam, filters.danhmuc, filters.thuonghieu]); // Fetch lại khi search/source/category/brand thay đổi, giá lọc client-side
 
   // Tạo category options từ API (ưu tiên V1 API)
-  const dynamicCategoryOptions = useMemo(() => {
+  const dynamicCategoryOptions = useMemo<CategoryOption[]>(() => {
     // Ưu tiên V1 API categories
     if (v1Categories.length > 0) {
-      return [
+      const options = [
         { value: "", label: "Tất cả" },
         ...v1Categories.map(cat => ({
           value: cat.slug,
-          label: cat.ten
+          label: cat.ten,
+          count: cat.tong_sanpham
         }))
       ];
+      console.log('🏷️ Shop - Dynamic Category Options (V1):', options);
+      return options;
     }
     // Fallback sang old API categories
     if (apiCategories.length > 0) {
-      return [
+      const options = [
         { value: "", label: "Tất cả" },
         ...apiCategories.map(cat => ({
           value: cat.slug,
@@ -557,7 +567,10 @@ export default function ShopPage() {
           count: cat.tong_sanpham
         }))
       ];
+      console.log('🏷️ Shop - Dynamic Category Options (Old API):', options);
+      return options;
     }
+    console.log('🏷️ Shop - Using fallback CATEGORY_OPTIONS');
     return CATEGORY_OPTIONS;
   }, [v1Categories, apiCategories]);
 
@@ -739,10 +752,19 @@ export default function ShopPage() {
                     <h6 className="text-xl border-bottom border-gray-100 pb-16 mb-16">
                       Danh mục sản phẩm
                     </h6>
+                    <style jsx>{`
+                      .category-checkbox .form-check-input {
+                        border-radius: 0.25rem !important;
+                      }
+                      .category-checkbox .form-check-input:checked {
+                        background-color: #ff6b35;
+                        border-color: #ff6b35;
+                      }
+                    `}</style>
                     <ul className="max-h-540 overflow-y-auto scroll-sm">
                       {dynamicCategoryOptions.map((cat, index) => (
                         <li key={`cat-${index}-${cat.value || "all"}`} className="mb-20">
-                          <div className="form-check common-check common-radio">
+                          <div className="form-check common-check common-radio category-checkbox">
                             <input
                               className="form-check-input"
                               type="radio"
@@ -750,10 +772,16 @@ export default function ShopPage() {
                               id={cat.value || "all"}
                               value={cat.value}
                               checked={tempFilters.danhmuc === cat.value}
-                              onChange={(e) => setTempFilters({ ...tempFilters, danhmuc: e.target.value })}
+                              onChange={(e) => {
+                                const newFilters = { ...tempFilters, danhmuc: e.target.value };
+                                setTempFilters(newFilters);
+                                setFilters(newFilters);
+                                setCurrentPage(1);
+                                window.scrollTo({ top: 0, behavior: "smooth" });
+                              }}
                             />
                             <label className="form-check-label fw-semibold text-black" htmlFor={cat.value || "all"}>
-                              {cat.label}{cat.value && 'count' in cat ? ` (${cat.count})` : ""}
+                              {cat.label}{cat.count !== undefined ? ` (${cat.count})` : ""}
                             </label>
                           </div>
                         </li>
@@ -776,7 +804,13 @@ export default function ShopPage() {
                               id={price.value || "all-price"}
                               value={price.value}
                               checked={tempFilters.locgia === price.value}
-                              onChange={(e) => setTempFilters({ ...tempFilters, locgia: e.target.value })}
+                              onChange={(e) => {
+                                const newFilters = { ...tempFilters, locgia: e.target.value };
+                                setTempFilters(newFilters);
+                                setFilters(newFilters);
+                                setCurrentPage(1);
+                                window.scrollTo({ top: 0, behavior: "smooth" });
+                              }}
                             />
                             <label className="form-check-label fw-semibold text-black" htmlFor={price.value || "all-price"}>
                               {price.label}
@@ -804,7 +838,13 @@ export default function ShopPage() {
                                 id={brandId}
                                 value={brand.value}
                                 checked={tempFilters.thuonghieu === brand.value}
-                                onChange={(e) => setTempFilters({ ...tempFilters, thuonghieu: e.target.value })}
+                                onChange={(e) => {
+                                  const newFilters = { ...tempFilters, thuonghieu: e.target.value };
+                                  setTempFilters(newFilters);
+                                  setFilters(newFilters);
+                                  setCurrentPage(1);
+                                  window.scrollTo({ top: 0, behavior: "smooth" });
+                                }}
                               />
                               <label className="form-check-label fw-semibold text-black" htmlFor={brandId}>
                                 {brand.label}
@@ -816,25 +856,19 @@ export default function ShopPage() {
                     </ul>
                   </div>
 
-                  <div className="shop-sidebar__box rounded-8 flex-column flex-sm-row flex-align gap-12 gap-sm-16 mb-32">
-                    <button
-                      title="Lọc sản phẩm trong bộ lọc của bạn"
-                      type="submit"
-                      className="btn border-main-600 text-main-600 hover-bg-main-600 hover-border-main-600 hover-text-white rounded-8 px-32 py-12 w-100"
-                    >
-                      Lọc sản phẩm
-                    </button>
+                  <div className="shop-sidebar__box rounded-8 mb-32">
                     <button
                       type="button"
-                      className="btn border-gray-400 text-gray-700 hover-bg-gray-100 rounded-8 px-32 py-12 w-100"
+                      className="btn border-main-600 text-main-600 hover-bg-main-600 hover-border-main-600 hover-text-white rounded-8 px-32 py-12 w-100"
                       onClick={() => {
                         setTempFilters({ danhmuc: "", locgia: "", thuonghieu: "", rating: "" });
                         setFilters({ danhmuc: "", locgia: "", thuonghieu: "", rating: "" });
+                        setCurrentPage(1);
                         setSidebarOpen(false);
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                     >
-                      Xóa lọc
+                      Xóa bộ lọc
                     </button>
                   </div>
 

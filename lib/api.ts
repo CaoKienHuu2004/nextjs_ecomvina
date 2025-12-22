@@ -308,7 +308,9 @@ type V1ProductImage = { id: number; url: string };
 type V1ProductBrand = {
   id: number;
   ten: string;
+  slug?: string;
   logo: string;
+  trangthai?: string;
 };
 
 type V1ProductCategory = {
@@ -318,11 +320,29 @@ type V1ProductCategory = {
   logo: string;
 };
 
+// Biến thể sản phẩm từ API V1
+type V1ProductVariant = {
+  id: number;
+  id_loaibienthe: number;
+  tenbienthe?: string; // Tên biến thể từ API mới
+  giagoc: number;
+  soluong: number;
+  luottang: number;
+  luotban: number;
+  trangthai: string;
+  loaibienthe?: {
+    id: number;
+    ten: string;
+  };
+};
+
 type V1Product = {
   id: number;
-  tensanpham: string;
+  id_thuonghieu?: number;
+  tensanpham?: string; // Dùng trong list API
+  ten?: string; // Dùng trong detail API
   slug: string;
-  giamgia: number;
+  giamgia?: number;
   mota: string;
   luotxem: number;
   trangthai: string;
@@ -335,8 +355,11 @@ type V1Product = {
     formatted_giagoc: string;
     formatted_giadagiam: string;
   };
-  tong_luotban: number;
-  bienthe?: any[]; // Mảng biến thể nếu có
+  tong_luotban?: number;
+  bienthe?: V1ProductVariant[];
+  xuatxu?: string;
+  sanxuat?: string;
+  deleted_at?: string | null;
 };
 
 type V1Category = {
@@ -524,7 +547,16 @@ function formatRemainingTime(endAt: string): string {
 // Map V1Product -> HomeHotSaleProduct (API mới đã trả full URL cho ảnh)
 function mapV1ProductToHomeProduct(p: V1Product): HomeHotSaleProduct {
   // API mới trả hinhanh[].url là full URL
-  const firstImg = Array.isArray(p.hinhanh) && p.hinhanh.length > 0 ? p.hinhanh[0]?.url : "";
+  let firstImg = "";
+
+  if (Array.isArray(p.hinhanh) && p.hinhanh.length > 0 && p.hinhanh[0]?.url) {
+    firstImg = p.hinhanh[0].url;
+  } else {
+    // Fallback: nếu không có hinhanh array, thử dùng trường khác
+    firstImg = (p as any).hinh_anh || (p as any).mediaurl || "/assets/images/thumbs/product-two-img1.png";
+    console.warn(`⚠️ Sản phẩm ${p.id} (${p.tensanpham}) không có hinhanh[].url, dùng fallback: ${firstImg}`);
+  }
+
   const current = p.gia?.giadagiam ?? 0;
   const before = p.gia?.giagoc ?? current;
   const discountPercent = p.giamgia ?? (before > 0 ? Math.max(0, Math.round(((before - current) / before) * 100)) : 0);
@@ -532,7 +564,7 @@ function mapV1ProductToHomeProduct(p: V1Product): HomeHotSaleProduct {
   return {
     id: p.id,
     slug: p.slug,
-    ten: p.tensanpham,
+    ten: p.tensanpham || p.ten || '',
     hinh_anh: firstImg,
     thuonghieu: p.thuonghieu?.ten ?? "",
     rating: {
@@ -762,11 +794,15 @@ export interface ProductVariantType {
 // Biến thể sản phẩm
 export interface ProductVariant {
   id_bienthe: number;
-  loai_bien_the: number;
+  id_loaibienthe?: number;
+  loai_bien_the: number | string;
   giagoc: number;
   giamgia: number;
   giahientai: number;
+  soluong?: number;
   luotban: number;
+  luottang?: number;
+  trangthai?: string;
 }
 
 // Ảnh sản phẩm
@@ -933,25 +969,101 @@ export async function fetchProductDetail(slug: string): Promise<ProductDetailRes
 function convertV1ToLegacyProductDetail(v1Response: V1ProductDetailResponse): ProductDetailResponse {
   const v1Data = v1Response.data;
 
+  // Convert variants (biến thể) từ API mới
+  const convertedVariants: ProductVariant[] = (v1Data.bienthe || []).map(variant => ({
+    id_bienthe: variant.id,
+    id_loaibienthe: variant.id_loaibienthe,
+    // Ở tầng ProductVariant, loai_bien_the là ID (để map với mảng loai_bien_the)
+    loai_bien_the: variant.id_loaibienthe,
+    giagoc: variant.giagoc,
+    giahientai: variant.giagoc, // API v1 hiện không trả giá khuyến mãi riêng cho biến thể
+    giamgia: v1Data.giamgia || 0,
+    soluong: variant.soluong,
+    luotban: variant.luotban,
+    luottang: variant.luottang,
+    trangthai: variant.trangthai,
+  }));
+
+  // Tạo danh sách loại biến thể từ mảng biến thể
+  // Ưu tiên dùng tenbienthe (API mới) > loaibienthe.ten > fallback sang ID
+  const variantTypes: ProductVariantType[] = Array.from(
+    new Map(
+      (v1Data.bienthe || []).map(v => [
+        v.id_loaibienthe,
+        {
+          id_loaibienthe: v.id_loaibienthe,
+          ten: v.tenbienthe || v.loaibienthe?.ten || `Biến thể ${v.id_loaibienthe}`,
+          trangthai: v.trangthai,
+        } as ProductVariantType,
+      ])
+    ).values()
+  );
+
+  // Tính tổng số lượng đã bán từ tất cả biến thể
+  const totalSold = v1Data.bienthe?.reduce((sum, v) => sum + (v.luotban || 0), 0) || v1Data.tong_luotban || 0;
+
+  // Xử lý logo thương hiệu - thêm domain nếu cần
+  let brandLogo = v1Data.thuonghieu?.logo || '';
+  if (brandLogo && !brandLogo.startsWith('http')) {
+    brandLogo = `https://sieuthivina.com/assets/client/images/brands/${brandLogo}`;
+  }
+
+  // Xử lý hình ảnh với fallback - API có thể trả về:
+  // 1. hinhanh: [{id, url}] - full URL (dùng cho related products)
+  // 2. hinhanhsanpham: [{id, hinhanh}] - chỉ filename (dùng cho product detail)
+  const IMAGE_BASE_URL = 'https://sieuthivina.com/assets/client/images/thumbs/';
+
+  let productImages: { id: number; url: string }[] = [];
+
+  // Ưu tiên hinhanh nếu có full URL
+  if (Array.isArray(v1Data.hinhanh) && v1Data.hinhanh.length > 0 && v1Data.hinhanh[0]?.url) {
+    productImages = v1Data.hinhanh;
+  }
+  // Fallback sang hinhanhsanpham (cần build full URL)
+  else if (Array.isArray((v1Data as any).hinhanhsanpham) && (v1Data as any).hinhanhsanpham.length > 0) {
+    productImages = (v1Data as any).hinhanhsanpham.map((img: any) => ({
+      id: img.id,
+      url: img.hinhanh?.startsWith('http') ? img.hinhanh : `${IMAGE_BASE_URL}${img.hinhanh}`
+    }));
+  }
+
+  // Debug log để kiểm tra dữ liệu hình ảnh và biến thể
+  console.log(`📸 Product ${v1Data.id} (${v1Data.slug}):`, {
+    hinhanh_source: Array.isArray(v1Data.hinhanh) && v1Data.hinhanh.length > 0 ? 'hinhanh' : 'hinhanhsanpham',
+    hinhanh_count: productImages.length,
+    hinhanh_urls: productImages.map(img => img.url),
+    bienthe_count: v1Data.bienthe?.length || 0,
+    bienthe_info: v1Data.bienthe?.map(v => ({
+      id: v.id,
+      id_loaibienthe: v.id_loaibienthe,
+      tenbienthe: v.tenbienthe || v.loaibienthe?.ten || '(không có)'
+    }))
+  });
+
+  if (productImages.length === 0) {
+    console.warn(`⚠️ Sản phẩm ${v1Data.id} (${v1Data.slug}) không có hinhanh từ API chi tiết`);
+  }
+
   // Convert main product data
   const productDetail: ProductDetail = {
     id: v1Data.id,
     slug: v1Data.slug,
-    ten: v1Data.tensanpham,
-    hinh_anh: v1Data.hinhanh?.[0]?.url || '',
-    images: v1Data.hinhanh?.map(img => img.url) || [],
-    anh_san_pham: v1Data.hinhanh?.map(img => ({
+    // API v1: field có thể là "tensanpham" (trong các list) hoặc "ten" (trong chi tiết)
+    ten: (v1Data as any).tensanpham || (v1Data as any).ten || '',
+    hinh_anh: productImages[0]?.url || '/assets/images/thumbs/product-two-img1.png',
+    images: productImages.map(img => img.url),
+    anh_san_pham: productImages.map(img => ({
       id: img.id,
       id_sanpham: v1Data.id,
       hinhanh: img.url,
       trangthai: 'active',
       deleted_at: null
-    })) || [],
+    })),
     thuonghieu: v1Data.thuonghieu?.ten || '',
     nhacungcap: {
       ten: v1Data.thuonghieu?.ten || '',
-      slug: v1Data.thuonghieu?.ten?.toLowerCase().replace(/\s+/g, '-') || '',
-      logo: v1Data.thuonghieu?.logo || ''
+      slug: v1Data.thuonghieu?.slug || v1Data.thuonghieu?.ten?.toLowerCase().replace(/\s+/g, '-') || '',
+      logo: brandLogo
     },
     mota: v1Data.mota || '',
     danhmuc: v1Data.danhmuc?.map(cat => ({
@@ -966,24 +1078,28 @@ function convertV1ToLegacyProductDetail(v1Response: V1ProductDetailResponse): Pr
     },
     luotxem: v1Data.luotxem || 0,
     sold: {
-      total_sold: v1Data.tong_luotban || 0,
-      total_quantity: 0
+      total_sold: totalSold,
+      total_quantity: v1Data.bienthe?.reduce((sum, v) => sum + (v.soluong || 0), 0) || 0
     },
-    sold_count: String(v1Data.tong_luotban || 0),
+    sold_count: String(totalSold),
     rating: {
       average: 0,
       count: 0
     },
     trangthai: {
       active: v1Data.trangthai || 'Công khai',
-      in_stock: true
-    }
+      in_stock: v1Data.bienthe?.some(v => v.soluong > 0) ?? true
+    },
+    xuatxu: v1Data.xuatxu || '',
+    sanxuat: v1Data.sanxuat || '',
+    loai_bien_the: variantTypes.length > 0 ? variantTypes : undefined,
+    bienthe_khichon_loaibienthe_themvaogio: convertedVariants.length > 0 ? convertedVariants : undefined
   };
 
   // Convert related products
   const similarProducts: SimilarProduct[] = (v1Response.related || []).map(related => ({
     id: related.id,
-    ten: related.tensanpham,
+    ten: related.tensanpham || related.ten || '',
     slug: related.slug,
     hinh_anh: related.hinhanh?.[0]?.url || '',
     have_gift: false,
@@ -1406,6 +1522,7 @@ export interface V1ShopCategory {
   id: number;
   ten: string;
   slug: string;
+  tong_sanpham?: number;
 }
 
 // Cấu trúc filter brand từ API v1

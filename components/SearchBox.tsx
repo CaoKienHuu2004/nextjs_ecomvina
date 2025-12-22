@@ -13,7 +13,6 @@ type Product = {
   gia_goc: number;
   gia_ban: number;
 };
-
 type CategoryProduct = {
   id: number;
   ten?: string;

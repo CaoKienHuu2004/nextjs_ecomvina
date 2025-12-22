@@ -116,7 +116,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
             console.log("📦 Adding to cart with full info:", productInput);
 
-            await addToCart(productInput, quantity);
+            //    await addToCart(productInput, quantity);
 
             setAddedSuccess(true);
             setTimeout(() => setAddedSuccess(false), 2000);

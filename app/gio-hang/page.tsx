@@ -415,7 +415,7 @@ function CartPageContent() {
           </div>
           <div className="row gy-4">
             <div className="col-xl-9 col-lg-8">
-              <div className="pb-0 border border-gray-100 cart-table rounded-8 p-30" aria-busy={loading}>
+              <div className="pb-0 border border-gray-100 cart-table rounded-8 p-30">
                 <form>
                   <div
                     className="overflow-x-auto scroll-sm scroll-sm-horizontal"
@@ -622,6 +622,7 @@ function CartPageContent() {
                                     className="w-32 px-4 py-8 text-center bg-gray-100 border quantity__input flex-grow-1 border-start-0 border-end-0"
                                     value={`x ${gift.soluong}`}
                                     readOnly
+                                    aria-label={`Số lượng quà tặng ${gift.ten_sanpham || 'sản phẩm'}`}
                                   />
                                 </div>
                               </td>
