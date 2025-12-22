@@ -8,7 +8,7 @@ const VOUCHER_STORAGE_KEY = "marketpro_applied_voucher";
 const CART_PAYLOAD_KEY = "marketpro_cart_payload";
 
 // ========================================================================
-// 1. TYPE Definitions (Giữ nguyên)
+// 1. TYPE Definitions
 // ========================================================================
 
 export type VoucherConditionType =
@@ -121,21 +121,23 @@ export const parseVoucherCondition = (dieukien?: string, mota?: string): {
 
 export const isVoucherInDateRange = (ngaybatdau?: string, ngayketthuc?: string): boolean => {
   const now = new Date();
-  now.setHours(0, 0, 0, 0);
+  // Reset giờ về 0 để so sánh chính xác theo ngày (tuỳ chọn, nếu muốn chính xác từng giây thì bỏ dòng này)
+  // now.setHours(0, 0, 0, 0); 
 
   if (ngaybatdau) {
     const startDate = new Date(ngaybatdau);
-    startDate.setHours(0, 0, 0, 0);
-    if (now < startDate) return false;
+    if (now < startDate) return false; // Chưa đến ngày
   }
+  
   if (ngayketthuc) {
     const endDate = new Date(ngayketthuc);
-    endDate.setHours(23, 59, 59, 999);
-    if (now > endDate) return false;
+    // Đặt giờ kết thúc là cuối ngày (23:59:59) để voucher vẫn dùng được trong ngày hết hạn
+    endDate.setHours(23, 59, 59, 999); 
+    if (now > endDate) return false; // Đã quá hạn
   }
+
   return true;
 };
-
 // ========================================================================
 // 3. HOOK LOGIC (MAIN)
 // ========================================================================
@@ -160,7 +162,7 @@ export function useCart() {
   
   const isMountedRef = useRef(true);
   const hasSyncedRef = useRef(false);
-  const emitTimeoutRef = useRef<number | null>(null); // Dùng để debounce update số lượng
+  const emitTimeoutRef = useRef<number | null>(null);
 
   const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
@@ -182,14 +184,10 @@ export function useCart() {
     return headers;
   }, [isLoggedIn]);
 
-  // --- EVENT EMITTER ---
-  // Vẫn giữ hàm này để Header có thể lắng nghe và cập nhật số lượng badge
   const emitCartUpdated = useCallback((detail: { count?: number } = {}) => {
-    // Không cần debounce ở đây, chỉ dispatch sự kiện ra ngoài
     window.dispatchEvent(new CustomEvent("cart:updated", { detail }));
   }, []);
 
-  // Khôi phục Voucher từ LocalStorage khi mới vào
   useEffect(() => {
     isMountedRef.current = true;
     if (typeof window !== "undefined") {
@@ -220,7 +218,9 @@ export function useCart() {
   const saveLocalCart = useCallback((cartItems: CartItem[]) => {
     if (typeof window === "undefined") return;
     try {
+      // Lưu toàn bộ item vào storage chính
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+      // Lưu payload tối giản để gửi lên API
       const payload = { 
         cart_local: cartItems.map(i => ({ id_bienthe: i.id_bienthe, soluong: i.soluong }))
       };
@@ -234,8 +234,12 @@ export function useCart() {
     const sp = bt.sanpham || {};
     const detail = bt.detail || {};
 
+    // [FIX]: Luôn ưu tiên tạo ID dựa trên id_bienthe nếu là Guest để khớp với LocalStorage
+    const fallbackId = `local_${bt.id}`;
+    
     return {
-      id_giohang: serverItem.id_giohang ?? serverItem.id ?? `temp_${bt.id}`,
+      // Nếu có id_giohang từ DB (User) thì lấy, nếu ko (Guest) thì lấy id_giohang server gửi về hoặc fallback
+      id_giohang: serverItem.id_giohang ?? serverItem.id ?? fallbackId, 
       id_bienthe: bt.id || serverItem.id_bienthe,
       soluong: serverItem.soluong,
       thanhtien: serverItem.thanhtien,
@@ -256,19 +260,15 @@ export function useCart() {
   }, []);
 
   // ========================================================================
-  // CORE: FETCH CART (Hàm này chỉ chạy khi được GỌI CỤ THỂ)
+  // CORE: FETCH CART
   // ========================================================================
   const fetchCart = useCallback(async (codeOverride?: string) => {
     if (!isMountedRef.current) return;
     
-    // Chỉ hiện loading nếu là lần đầu hoặc cần thiết
-    // setLoading(true); 
-
     try {
       const hasToken = hasValidToken();
       let currentCode = codeOverride;
 
-      // Logic lấy code: Ưu tiên tham số -> LocalStorage
       if (currentCode === undefined && typeof window !== 'undefined') {
           const savedRaw = localStorage.getItem(VOUCHER_STORAGE_KEY);
           if (savedRaw) {
@@ -279,6 +279,7 @@ export function useCart() {
           }
       }
 
+      // [QUAN TRỌNG]: Luôn load lại local storage mới nhất ngay thời điểm gọi API
       const payload = {
         cart_local: !hasToken ? loadLocalCartPayload().cart_local : [],
         voucher_code: currentCode || ""
@@ -296,12 +297,9 @@ export function useCart() {
       
       if (j.status === 200 && j.data) {
         const svData = j.data;
-        
-        // 1. Map Items
         const rawItems = Array.isArray(svData.items) ? svData.items : [];
         const mappedItems = rawItems.map(mapServerItemToLocal);
         
-        // 2. Map Gifts
         const rawGifts = Array.isArray(svData.gifts) ? svData.gifts : [];
         const mappedGifts = rawGifts.map((g: any) => ({
           id_bienthe: g.id_bienthe,
@@ -316,7 +314,6 @@ export function useCart() {
           is_gift: true
         }));
 
-        // 3. Map Summary
         if (svData.summary) {
           setSummary(svData.summary);
           if (svData.summary.voucher_info) {
@@ -333,7 +330,6 @@ export function useCart() {
           }
         }
 
-        // 4. Map Available Vouchers
         if (Array.isArray(svData.available_vouchers)) {
            const mappedVouchers = svData.available_vouchers.map((v: any) => ({
                id: v.id,
@@ -355,7 +351,6 @@ export function useCart() {
           setGifts(mappedGifts);
         }
         
-        // Cập nhật số lượng cho Header (nhưng không gọi fetch lại ở đây)
         const totalQty = mappedItems.reduce((acc: number, item: CartItem) => acc + item.soluong, 0);
         emitCartUpdated({ count: totalQty });
       }
@@ -373,7 +368,6 @@ export function useCart() {
     }
   }, [API, hasValidToken, getAuthHeaders, loadLocalCartPayload, mapServerItemToLocal, emitCartUpdated]);
 
-  // --- INIT: Chạy 1 lần duy nhất khi vào trang ---
   const syncLocalToServer = useCallback(async () => {
     const { cart_local } = loadLocalCartPayload();
     if (cart_local.length === 0) return;
@@ -385,7 +379,6 @@ export function useCart() {
       });
       localStorage.removeItem(CART_STORAGE_KEY);
       localStorage.removeItem(CART_PAYLOAD_KEY);
-      // Sau khi sync xong thì mới load lại giỏ
       fetchCart();
     } catch (e) { console.warn("Sync failed", e); }
   }, [API, getAuthHeaders, loadLocalCartPayload, fetchCart]);
@@ -400,7 +393,6 @@ export function useCart() {
              await fetchCart();
          }
       } else {
-         // Khách vãng lai: load luôn
          await fetchCart();
       }
     };
@@ -408,12 +400,7 @@ export function useCart() {
   }, [hasValidToken, syncLocalToServer, fetchCart]);
 
   // ========================================================================
-  // QUAN TRỌNG: ĐÃ XÓA useEffect lắng nghe 'cart:updated'
-  // Bây giờ API chỉ gọi khi User tương tác (bấm nút) hoặc mới vào trang.
-  // ========================================================================
-
-  // ========================================================================
-  // 4. ACTIONS (Các hàm này sẽ chủ động gọi API cập nhật)
+  // 4. ACTIONS
   // ========================================================================
 
   const addToCart = useCallback(async (product: AddToCartInput, soluong = 1, id_chuongtrinh?: number | string) => {
@@ -431,7 +418,7 @@ export function useCart() {
           body: JSON.stringify(body),
         });
         if (res.ok) {
-           fetchCart(); // Gọi cập nhật sau khi thêm xong
+           fetchCart();
            alert("Đã thêm vào giỏ hàng");
         } else {
            const err = await res.json();
@@ -447,7 +434,7 @@ export function useCart() {
           tempItems[existIdx].soluong = Number(tempItems[existIdx].soluong) + soluong;
       } else {
           tempItems.push({
-             id_giohang: `local_${id_bienthe}_${Date.now()}`,
+             id_giohang: `local_${id_bienthe}`, // Dùng ID đơn giản để dễ match
              id_bienthe,
              soluong,
              product: { 
@@ -458,6 +445,7 @@ export function useCart() {
           });
       }
 
+      // Check stock với BE
       try {
          const res = await fetch(`${API}/api/v1/gio-hang/them`, {
             method: "POST",
@@ -471,8 +459,8 @@ export function useCart() {
          
          const j = await res.json();
          if (j.status === 200 || j.status === 201) {
-             saveLocalCart(tempItems);
-             fetchCart(); // Gọi cập nhật
+             saveLocalCart(tempItems); // Lưu xong thì fetch lại
+             fetchCart();
              alert("Đã thêm vào giỏ hàng");
          } else {
              alert(j.message || "Sản phẩm không đủ số lượng");
@@ -481,52 +469,71 @@ export function useCart() {
     }
   }, [API, hasValidToken, getAuthHeaders, fetchCart, saveLocalCart]);
 
+  // [SỬA LỖI CHÍNH]: Hàm updatesoluong cho Guest
   const updatesoluong = useCallback(async (id_giohang: number | string, soluong: number) => {
       if (soluong < 1) return;
       
-      // 1. Cập nhật UI ngay lập tức (Optimistic)
+      // 1. Optimistic update (trên UI)
       setItems(prev => prev.map(i => i.id_giohang === id_giohang ? { ...i, soluong } : i));
 
-      // 2. Debounce gọi API (chờ 500ms sau khi người dùng dừng bấm)
+      // 2. Debounce & Update Storage/API
       if (emitTimeoutRef.current) clearTimeout(emitTimeoutRef.current);
       
       emitTimeoutRef.current = window.setTimeout(() => {
           if (hasValidToken()) {
-              // Member: Gọi API tính lại (vì bạn chưa có API PUT riêng, dùng fetchCart để BE tính tổng)
               fetchCart();
           } else {
-              // Guest: Lưu local rồi gọi API tính
-              const localItems = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
-              const idx = localItems.findIndex((i: any) => i.id_giohang === id_giohang);
-              if (idx > -1) {
-                  localItems[idx].soluong = soluong;
-                  saveLocalCart(localItems);
-                  fetchCart();
+              // --- SỬA LỖI GUEST ---
+              // Tìm item trong state hiện tại để lấy ra id_bienthe
+              const currentItem = items.find(i => i.id_giohang === id_giohang);
+              
+              if (currentItem) {
+                  const localItems = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
+                  
+                  // QUAN TRỌNG: Tìm trong localStorage bằng id_bienthe, KHÔNG dùng id_giohang vì id_giohang có thể lệch
+                  const idx = localItems.findIndex((i: any) => String(i.id_bienthe) === String(currentItem.id_bienthe));
+                  
+                  if (idx > -1) {
+                      localItems[idx].soluong = soluong;
+                      saveLocalCart(localItems);
+                      // Gọi fetchCart để BE tính toán lại giá/quà dựa trên localStorage mới
+                      fetchCart();
+                  } else {
+                    console.warn("Không tìm thấy item trong LocalStorage để update", currentItem);
+                  }
               }
           }
-      }, 500); // 500ms delay
-  }, [hasValidToken, saveLocalCart, fetchCart]);
+      }, 500); 
+  }, [hasValidToken, saveLocalCart, fetchCart, items]); // Thêm items vào dependency
 
   const removeItem = useCallback(async (id_giohang: number | string) => {
       // Optimistic update
+      const itemToRemove = items.find(i => i.id_giohang === id_giohang);
       setItems(prev => prev.filter(i => i.id_giohang !== id_giohang));
       
       if (hasValidToken()) {
           try {
-             const itemToRemove = items.find(i => i.id_giohang === id_giohang);
              const idParam = itemToRemove ? itemToRemove.id_bienthe : id_giohang;
-
              await fetch(`${API}/api/v1/gio-hang/xoa/${idParam}`, {
                  method: "DELETE",
                  headers: getAuthHeaders()
              });
-             fetchCart(); // Xóa xong thì gọi API lấy lại dữ liệu mới
+             fetchCart(); 
           } catch (e) { fetchCart(); }
       } else {
+          // GUEST: Xóa cũng phải dựa vào id_bienthe cho chắc chắn
           const localItems = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
-          const newItems = localItems.filter((i: any) => i.id_giohang !== id_giohang);
+          let newItems = [];
+          
+          if (itemToRemove) {
+             newItems = localItems.filter((i: any) => String(i.id_bienthe) !== String(itemToRemove.id_bienthe));
+          } else {
+             // Fallback nếu ko tìm thấy trong state (hiếm)
+             newItems = localItems.filter((i: any) => i.id_giohang !== id_giohang);
+          }
+          
           saveLocalCart(newItems);
-          fetchCart(); // Xóa xong thì gọi API lấy lại dữ liệu mới
+          fetchCart(); 
       }
   }, [hasValidToken, items, getAuthHeaders, API, fetchCart, saveLocalCart]);
 
@@ -546,7 +553,6 @@ export function useCart() {
       if (typeof window !== "undefined") {
           localStorage.setItem(VOUCHER_STORAGE_KEY, JSON.stringify(voucher));
       }
-      // Gọi ngay API để tính toán lại với voucher mới
       fetchCart(voucher.magiamgia ? String(voucher.magiamgia) : voucher.code);
   }, [fetchCart]);
 
@@ -555,7 +561,6 @@ export function useCart() {
       if (typeof window !== "undefined") {
           localStorage.removeItem(VOUCHER_STORAGE_KEY);
       }
-      // Gọi ngay API để tính toán lại (không kèm voucher)
       fetchCart(""); 
   }, [fetchCart]);
   
@@ -589,10 +594,7 @@ export function useCart() {
     updatesoluong,
     removeItem,
     clearCart,
-    
-    // [SỬA LỖI]: Trỏ trực tiếp vào fetchCart thay vì tạo hàm nặc danh () => ...
     refreshCart: fetchCart, 
-    
     applyVoucher,
     removeVoucher,
     applyVoucherByCode,
