@@ -43,35 +43,49 @@ export default function SearchPage() {
             setError(null);
             try {
                 // Gọi API tìm kiếm
+                // 1. GỌI API THỰC TẾ
+                // Lưu ý: Thay đổi domain nếu chạy local hoặc production
+                const res = await fetch(`https://sieuthivina.com/api/v1/tim-kiem?query=${query}`);
+                
+                if (!res.ok) {
+                    throw new Error("Không thể kết nối đến máy chủ");
+                }
+                const apiData = result.products?.data || [];
+                const result = await res.json();
 
-
-                // Map từ SearchProduct sang DisplayProduct
-                const mappedProducts: DisplayProduct[] = data.map((item) => {
-                    const currentPrice = item.gia?.current || 0;
-                    const beforeDiscount = item.gia?.before_discount || currentPrice;
-                    const discountPercent = item.gia?.discount_percent || 0;
-                    const ratingValue = typeof item.rating === 'object' ? item.rating.average : item.rating || 0;
-
-                    // Normalize image URL - Xử lý chuỗi rỗng
-                    let imageUrl = item.hinh_anh && item.hinh_anh.trim() !== ""
-                        ? item.hinh_anh
-                        : "/assets/images/thumbs/product-placeholder.png";
-
-                    if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/assets')) {
-                        imageUrl = `https://sieuthivina.cloud${imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`}`;
+                // 3. MAP DỮ LIỆU TỪ API SANG UI (DisplayProduct)
+                const mappedProducts: DisplayProduct[] = apiData.map((item: any) => {
+                    // Xử lý giá
+                    const currentPrice = item.gia?.giadagiam || 0;
+                    const originalPrice = item.gia?.giagoc || currentPrice;
+                    
+                    // Tính phần trăm giảm giá thủ công vì API trả về giamgia: 0
+                    let discountPercent = 0;
+                    if (originalPrice > currentPrice) {
+                        discountPercent = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
                     }
+
+                    // Xử lý hình ảnh (API trả về mảng object [{id, url}, ...])
+                    let imageUrl = "/assets/images/thumbs/product-placeholder.png";
+                    if (item.hinhanh && Array.isArray(item.hinhanh) && item.hinhanh.length > 0) {
+                        imageUrl = item.hinhanh[0].url; 
+                    }
+
+                    // Xử lý rating (API hiện tại thiếu field rating, tạm gán mặc định hoặc random để test UI)
+                    // API có "luotxem" nhưng chưa có "danhgia", tạm để 5 sao
+                    const ratingValue = 5; 
 
                     return {
                         id: item.id,
-                        name: item.ten,
-                        slug: item.slug || `product-${item.id}`,
+                        name: item.tensanpham, // API trả về 'tensanpham'
+                        slug: item.slug,
                         image: imageUrl,
-                        brand: item.thuonghieu || "Không rõ",
+                        brand: item.thuonghieu?.ten || "Không rõ", // API trả về object thuonghieu { id, ten, ... }
                         price: currentPrice,
-                        originalPrice: beforeDiscount,
+                        originalPrice: originalPrice,
                         discount: discountPercent,
                         rating: ratingValue,
-                        sold: parseInt(item.sold_count || "0") || 0,
+                        sold: item.tong_luotban || 0, // API trả về 'tong_luotban'
                     };
                 });
 
