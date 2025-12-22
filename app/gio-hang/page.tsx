@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useCart, parseVoucherCondition, isVoucherInDateRange, VoucherConditionType, Gia } from '@/hooks/useCart';
+import { useAuth } from '@/hooks/useAuth';
 import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData';
 import Image from 'next/image';
 import FullHeader from '@/components/FullHeader';
@@ -262,6 +263,14 @@ function CartPageContent() {
     id: 0,
     name: '',
   });
+  const { isLoggedIn } = useAuth();
+  const [debugLocalCart, setDebugLocalCart] = useState<any>(null);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('marketpro_cart') || '[]';
+      setDebugLocalCart(JSON.parse(raw));
+    } catch { setDebugLocalCart(null); }
+  }, []);
 
   // fallback home coupons (an toàn)
   const couponsFromHome: HomeCoupon[] = ((homeData?.data as { new_coupon?: HomeCoupon[] } | undefined)?.new_coupon) ?? [];
@@ -269,15 +278,15 @@ function CartPageContent() {
   // Nếu hook useCart trả về vouchers thì ưu tiên dùng nó (map về shape HomeCoupon)
   const coupons: HomeCoupon[] = (availableVouchers && availableVouchers.length > 0)
     ? (availableVouchers as any[]).map((v) => ({
-        id: (v?.id ?? 0) as number,
-        magiamgia: v?.magiamgia ?? v?.code,
-        dieukien: v?.dieukien,
-        mota: v?.mota,
-        giatri: Number(v?.giatri ?? v?.giatri ?? 0),
-        ngaybatdau: v?.ngaybatdau,
-        ngayketthuc: v?.ngayketthuc,
-        trangthai: v?.trangthai ?? 'Hoạt động',
-      }))
+      id: (v?.id ?? 0) as number,
+      magiamgia: v?.magiamgia ?? v?.code,
+      dieukien: v?.dieukien,
+      mota: v?.mota,
+      giatri: Number(v?.giatri ?? v?.giatri ?? 0),
+      ngaybatdau: v?.ngaybatdau,
+      ngayketthuc: v?.ngayketthuc,
+      trangthai: v?.trangthai ?? 'Hoạt động',
+    }))
     : couponsFromHome;
 
 
@@ -318,9 +327,69 @@ function CartPageContent() {
     }, 3000);
   };
 
+  // Dev helper: import sample guest cart JSON from public/giohang-noauth.json
+  const importGuestFromFile = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const res = await fetch('/giohang-noauth.json');
+      if (!res.ok) throw new Error('Không tìm thấy file /giohang-noauth.json in public folder');
+      const json = await res.json();
+      const data = (json && json.data) ? json.data : json;
+      const rawItems = Array.isArray(data?.items) ? data.items : [];
+
+      const mapped = rawItems.map((it: any, idx: number) => {
+        const bienthe = it.bienthe || {};
+        const id_bienthe = bienthe.id ?? it.id_bienthe ?? `file_${idx}`;
+        const soluong = Number(it.soluong ?? 1);
+        const productName = (bienthe?.sanpham?.ten) || (bienthe?.detail?.tensanpham) || it.ten_sp || it.ten || 'Sản phẩm';
+        const media = (bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh) || bienthe?.hinhanh || it.hinhanh || '/assets/images/thumbs/product-placeholder.png';
+        const currentPrice = Number(bienthe?.giadagiam ?? bienthe?.giagoc ?? it.giaban ?? it.thanhtien ?? 0);
+        const originPrice = Number(bienthe?.giagoc ?? 0);
+
+        return {
+          id_giohang: `file_${idx}_${Date.now()}`,
+          id_bienthe,
+          soluong,
+          product: {
+            id: id_bienthe,
+            ten: productName,
+            mediaurl: media,
+            gia: { current: currentPrice, before_discount: originPrice, discount_percent: 0 },
+            loaibienthe: bienthe?.loaibienthe?.ten || bienthe?.ten || '',
+            thuonghieu: bienthe?.sanpham?.thuonghieu?.ten || undefined,
+            slug: bienthe?.sanpham?.slug || undefined,
+          },
+        } as any;
+      });
+
+      // Save to localStorage keys used by the hook
+      try {
+        localStorage.setItem('marketpro_cart', JSON.stringify(mapped));
+        const payload = { cart_local: mapped.map((m: any) => ({ id_bienthe: Number(m.id_bienthe) || m.id_bienthe, soluong: Number(m.soluong) })), voucher_code: '' };
+        localStorage.setItem('marketpro_cart_payload', JSON.stringify(payload));
+      } catch (err) {
+        console.error('Lỗi khi lưu sample vào localStorage', err);
+      }
+
+      // Refresh cart to pick up imported data
+      refreshCart();
+      alert('Đã import sample guest cart vào localStorage.');
+    } catch (e: any) {
+      console.error(e);
+      alert('Import thất bại: ' + (e?.message || e));
+    }
+  }, [refreshCart]);
+
   return (
     <>
       <FullHeader showClassicTopBar={true} showTopNav={false} />
+      
+      {/* DEBUG: hiển thị trạng thái đăng nhập và localStorage (remove in prod) */}
+      {/* <div style={{ padding: 8 }}>
+        <strong>{isLoggedIn ? 'User: logged in' : 'User: guest (not logged in)'}</strong>
+        <button type="button" onClick={() => { try { alert(JSON.stringify(JSON.parse(localStorage.getItem('marketpro_cart') || '[]'), null, 2)); } catch (e) { alert('parse error') } }} style={{ marginLeft: 12 }}>Show local cart</button>
+        <pre style={{ maxHeight: 200, overflow: 'auto', background: '#f6f6f6', padding: 8 }}>{debugLocalCart ? JSON.stringify(debugLocalCart, null, 2) : 'no local cart'}</pre>
+      </div> */}
 
       <section className="py-20 cart">
         <div className="container container-lg">
@@ -338,6 +407,12 @@ function CartPageContent() {
               </div>
             </div>
           )}
+          {/* Dev helper: import sample guest cart into localStorage (expects public/giohang-noauth.json) */}
+          <div className="mb-12">
+            <button type="button" className="btn btn-sm btn-outline" onClick={importGuestFromFile} style={{ padding: '8px 12px' }}>
+              Dev: Import guest cart sample
+            </button>
+          </div>
           <div className="row gy-4">
             <div className="col-xl-9 col-lg-8">
               <div className="pb-0 border border-gray-100 cart-table rounded-8 p-30" aria-busy={loading}>
@@ -445,7 +520,7 @@ function CartPageContent() {
                                 <td className="px-5 py-20">
                                   <QuantityControl
                                     quantity={item.soluong}
-                                    onUpdate={(newQty) => updatesoluong(item.id_giohang, newQty)} 
+                                    onUpdate={(newQty) => updatesoluong(item.id_giohang, newQty)}
                                     disabled={loading}
                                   />
                                 </td>
@@ -569,178 +644,178 @@ function CartPageContent() {
                     <i className="text-xl ph-bold ph-ticket text-main-600"></i>Áp dụng Voucher
                   </h6>
 
-            {/* Applied voucher (shows when a voucher has been applied, allows cancel) */}
-            {appliedVoucher && (
-              <div className="gap-8 px-12 py-10 mt-10 border-gray-200 border-dashed flex-align flex-between rounded-4">
-                <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
-                  <i className="text-2xl ph-bold ph-ticket text-main-two-600"></i>
-                  <div className="text-sm d-flex flex-column">
-                    <span className="text-sm text-gray-900 w-100">
-                      {appliedVoucher.giatri ? `Giảm ${formatPrice(Number(appliedVoucher.giatri))}` : ''}
-                    </span>
-                    <span className="text-xs text-gray-500 w-100">
-                      {String(appliedVoucher.code ?? appliedVoucher.magiamgia ?? '')}
-                    </span>
-                  </div>
-                </span>
-                <span className="gap-8 text-xs text-gray-900 flex-align fw-medium">
-                  <button
-                    type="button"
-                    onClick={() =>  removeVoucher()}
-                    className="p-6 text-xs btn border-danger-600 text-danger-600 hover-bg-danger-600 hover-text-white hover-border-danger-600 rounded-4"
-                  >
-                    Hủy
-                  </button>
-                </span>
-              </div>
-            )}
+                  {/* Applied voucher (shows when a voucher has been applied, allows cancel) */}
+                  {appliedVoucher && (
+                    <div className="gap-8 px-12 py-10 mt-10 border-gray-200 border-dashed flex-align flex-between rounded-4">
+                      <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
+                        <i className="text-2xl ph-bold ph-ticket text-main-two-600"></i>
+                        <div className="text-sm d-flex flex-column">
+                          <span className="text-sm text-gray-900 w-100">
+                            {appliedVoucher.giatri ? `Giảm ${formatPrice(Number(appliedVoucher.giatri))}` : ''}
+                          </span>
+                          <span className="text-xs text-gray-500 w-100">
+                            {String(appliedVoucher.code ?? appliedVoucher.magiamgia ?? '')}
+                          </span>
+                        </div>
+                      </span>
+                      <span className="gap-8 text-xs text-gray-900 flex-align fw-medium">
+                        <button
+                          type="button"
+                          onClick={() => removeVoucher()}
+                          className="p-6 text-xs btn border-danger-600 text-danger-600 hover-bg-danger-600 hover-text-white hover-border-danger-600 rounded-4"
+                        >
+                          Hủy
+                        </button>
+                      </span>
+                    </div>
+                  )}
 
-            {/* Vouchers list (existing logic preserved) */}
-            {coupons
-              .filter((voucher: HomeCoupon) => {
-                if (!voucher) return false;
-                if (voucher.trangthai !== 'Hoạt động') return false;
-                if (appliedVoucher && voucher.id === appliedVoucher.id) return false;
-                if (!isVoucherInDateRange(voucher.ngaybatdau, voucher.ngayketthuc)) return false;
+                  {/* Vouchers list (existing logic preserved) */}
+                  {coupons
+                    .filter((voucher: HomeCoupon) => {
+                      if (!voucher) return false;
+                      if (voucher.trangthai !== 'Hoạt động') return false;
+                      if (appliedVoucher && voucher.id === appliedVoucher.id) return false;
+                      if (!isVoucherInDateRange(voucher.ngaybatdau, voucher.ngayketthuc)) return false;
 
-                const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
+                      const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
 
-                switch (type) {
-                  case 'tatca':
-                    return true;
-                  case 'don_toi_thieu':
-                  case 'freeship':
-                    return subtotal >= minOrderValue;
-                  case 'khachhang_moi':
-                  case 'khachhang_than_thiet':
-                    return items.length > 0;
-                  default:
-                    return true;
-                }
-              })
-              .map((voucher: HomeCoupon) => {
-                const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
-                const isEligible =
-                  type === 'tatca' ||
-                  type === 'khachhang_moi' ||
-                  type === 'khachhang_than_thiet' ||
-                  subtotal >= minOrderValue;
+                      switch (type) {
+                        case 'tatca':
+                          return true;
+                        case 'don_toi_thieu':
+                        case 'freeship':
+                          return subtotal >= minOrderValue;
+                        case 'khachhang_moi':
+                        case 'khachhang_than_thiet':
+                          return items.length > 0;
+                        default:
+                          return true;
+                      }
+                    })
+                    .map((voucher: HomeCoupon) => {
+                      const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
+                      const isEligible =
+                        type === 'tatca' ||
+                        type === 'khachhang_moi' ||
+                        type === 'khachhang_than_thiet' ||
+                        subtotal >= minOrderValue;
 
-                return (
-                  <div key={voucher.id} className={`gap-8 px-12 py-10 mt-10 border-dashed flex-align flex-between rounded-4 ${isEligible ? 'border-gray-200' : 'border-warning-300 bg-warning-50'}`}>
-                    <span className="gap-8 text-sm text-gray-900 flex-align fw-medium" style={{ flex: '1', minWidth: 0 }}>
-                      <i className="text-2xl ph-bold ph-ticket text-main-600" style={{ flexShrink: 0 }}></i>
-                      <div className="text-sm d-flex flex-column" style={{ flex: '1', minWidth: 0 }}>
-                        <span className="text-sm text-gray-900 w-100">{voucher.giatri ? `Giảm ${formatPrice(Number(voucher.giatri))}` : ''}</span>
-                        <span className="text-xs text-gray-500 w-100">{String(voucher.magiamgia ?? '')}</span>
+                      return (
+                        <div key={voucher.id} className={`gap-8 px-12 py-10 mt-10 border-dashed flex-align flex-between rounded-4 ${isEligible ? 'border-gray-200' : 'border-warning-300 bg-warning-50'}`}>
+                          <span className="gap-8 text-sm text-gray-900 flex-align fw-medium" style={{ flex: '1', minWidth: 0 }}>
+                            <i className="text-2xl ph-bold ph-ticket text-main-600" style={{ flexShrink: 0 }}></i>
+                            <div className="text-sm d-flex flex-column" style={{ flex: '1', minWidth: 0 }}>
+                              <span className="text-sm text-gray-900 w-100">{voucher.giatri ? `Giảm ${formatPrice(Number(voucher.giatri))}` : ''}</span>
+                              <span className="text-xs text-gray-500 w-100">{String(voucher.magiamgia ?? '')}</span>
+                            </div>
+                          </span>
+
+                          <button
+                            onClick={() => {
+                              if (!isEligible) {
+                                alert(`Đơn hàng chưa đạt giá trị tối thiểu ${minOrderValue.toLocaleString('vi-VN')}đ`);
+                                return;
+                              }
+                              applyVoucher({
+                                id: voucher.id,
+                                code: String(voucher.magiamgia),
+                                giatri: Number(voucher.giatri ?? 0),
+                                mota: voucher.mota,
+                                min_order_value: minOrderValue,
+                                dieukien: voucher.dieukien,
+                                condition_type: type,
+                                ngaybatdau: voucher.ngaybatdau,
+                                ngayketthuc: voucher.ngayketthuc
+                              });
+                            }}
+                            disabled={!isEligible}
+                            className={`text-xs btn rounded-4 ${isEligible ? 'text-white bg-main-600 hover-bg-main-100 hover-text-main-600' : 'text-gray-500 bg-gray-200 cursor-not-allowed'}`}
+                          >
+                            {isEligible ? 'Chọn' : 'Chưa đủ ĐK'}
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                  {/* Fallback "no vouchers" block (matches your sample) */}
+                  {coupons.filter((v) => {
+                    if (!v) return false;
+                    if (v.trangthai !== 'Hoạt động') return false;
+                    if (appliedVoucher && v.id === appliedVoucher.id) return false;
+                    if (!isVoucherInDateRange(v.ngaybatdau, v.ngayketthuc)) return false;
+                    const { type, minOrderValue } = parseVoucherCondition(v.dieukien, v.mota);
+                    switch (type) {
+                      case 'tatca':
+                        return true;
+                      case 'don_toi_thieu':
+                      case 'freeship':
+                        return subtotal >= minOrderValue;
+                      case 'khachhang_moi':
+                      case 'khachhang_than_thiet':
+                        return items.length > 0;
+                      default:
+                        return true;
+                    }
+                  }).length === 0 && !appliedVoucher && (
+                      <div className="gap-8 px-12 py-10 mt-10 flex-align flex-center rounded-4">
+                        <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
+                          <div className="text-sm d-flex flex-column">
+                            <span className="text-sm text-gray-900 w-100">Chưa có voucher nào phù hợp !</span>
+                          </div>
+                        </span>
                       </div>
+                    )}
+                </div>
+                <div className="px-20 py-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
+                  <div className="mb-20">
+                    <h6 className="gap-4 mb-6 text-lg flex-align"><i className="text-xl ph-bold ph-shopping-cart text-main-600"></i> Thông tin giỏ hàng</h6>
+                    <span className="gap-1 text-sm text-gray-600 flex-align fw-medium">
+                      {totalItems} sản phẩm
                     </span>
-
-                    <button
-                      onClick={() => {
-                        if (!isEligible) {
-                          alert(`Đơn hàng chưa đạt giá trị tối thiểu ${minOrderValue.toLocaleString('vi-VN')}đ`);
-                          return;
-                        }
-                        applyVoucher({
-                          id: voucher.id,
-                          code: String(voucher.magiamgia),
-                          giatri: Number(voucher.giatri ?? 0),
-                          mota: voucher.mota,
-                          min_order_value: minOrderValue,
-                          dieukien: voucher.dieukien,
-                          condition_type: type,
-                          ngaybatdau: voucher.ngaybatdau,
-                          ngayketthuc: voucher.ngayketthuc
-                        });
-                      }}
-                      disabled={!isEligible}
-                      className={`text-xs btn rounded-4 ${isEligible ? 'text-white bg-main-600 hover-bg-main-100 hover-text-main-600' : 'text-gray-500 bg-gray-200 cursor-not-allowed'}`}
-                    >
-                      {isEligible ? 'Chọn' : 'Chưa đủ ĐK'}
-                    </button>
                   </div>
-                );
-              })}
-
-            {/* Fallback "no vouchers" block (matches your sample) */}
-            {coupons.filter((v) => {
-              if (!v) return false;
-              if (v.trangthai !== 'Hoạt động') return false;
-              if (appliedVoucher && v.id === appliedVoucher.id) return false;
-              if (!isVoucherInDateRange(v.ngaybatdau, v.ngayketthuc)) return false;
-              const { type, minOrderValue } = parseVoucherCondition(v.dieukien, v.mota);
-              switch (type) {
-                case 'tatca':
-                  return true;
-                case 'don_toi_thieu':
-                case 'freeship':
-                  return subtotal >= minOrderValue;
-                case 'khachhang_moi':
-                case 'khachhang_than_thiet':
-                  return items.length > 0;
-                default:
-                  return true;
-              }
-            }).length === 0 && !appliedVoucher && (
-              <div className="gap-8 px-12 py-10 mt-10 flex-align flex-center rounded-4">
-                <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
-                  <div className="text-sm d-flex flex-column">
-                    <span className="text-sm text-gray-900 w-100">Chưa có voucher nào phù hợp !</span>
+                  <div className="gap-8 mb-20 flex-between">
+                    <span className="text-gray-900 font-heading-two">Tạm tính:</span>
+                    <span className="text-gray-900 fw-semibold">{formatPrice(subtotal)}</span>
                   </div>
+
+                  {discountAmount > 0 && (
+                    <div className="gap-8 flex-between">
+                      <span className="text-gray-900 font-heading-two">Giảm giá Voucher:</span>
+                      <span className="text-success-600 fw-semibold">-{formatPrice(Number(discountAmount ?? 0))}</span>
+                    </div>
+                  )}
+
+                  <div className="pt-24 my-20 border-gray-100 border-top">
+                    <div className="gap-8 flex-between">
+                      <span className="text-lg text-gray-900 fw-semibold">Tổng giá trị:</span>
+                      <span className="text-lg text-main-600 fw-semibold">
+                        {formatPrice(total)}
+                      </span>
+                    </div>
+                    <div className="gap-8 mt-6 text-end">
+                      <span className="text-sm text-success-600 fw-normal">Tiết kiệm:</span>
+                      <span className="text-sm text-success-600 fw-normal ms-2">{formatPrice(productDiscount + (discountAmount ?? 0))}</span>
+                    </div>
+                  </div>
+                  <Link
+                    href="/thanh-toan"
+                    className={`btn btn-main py-14 w-100 rounded-8 ${items.length === 0 ? 'disabled opacity-50' : ''}`}
+                    style={{
+                      pointerEvents: items.length === 0 ? 'none' : 'auto',
+                    }}
+                  >
+                    Tiến hành thanh toán
+                  </Link>
+                </div>
+                <span className="mt-20 w-100 d-block">
+                  <Link href="/shop" className="text-sm text-main-600 fw-medium flex-align d-flex flex-center">
+                    <i className="ph-bold ph-arrow-fat-lines-left text-main-600 text-md pe-10"></i> <span>Tiếp tục mua hàng</span>
+                  </Link>
                 </span>
               </div>
-            )}
-            </div>
-              <div className="px-20 py-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
-                <div className="mb-20">
-                  <h6 className="gap-4 mb-6 text-lg flex-align"><i className="text-xl ph-bold ph-shopping-cart text-main-600"></i> Thông tin giỏ hàng</h6>
-                  <span className="gap-1 text-sm text-gray-600 flex-align fw-medium">
-                    {totalItems} sản phẩm
-                  </span>
-                </div>
-                <div className="gap-8 mb-20 flex-between">
-                  <span className="text-gray-900 font-heading-two">Tạm tính:</span>
-                  <span className="text-gray-900 fw-semibold">{formatPrice(subtotal)}</span>
-                </div>
-
-                {discountAmount > 0 && (
-                  <div className="gap-8 flex-between">
-                    <span className="text-gray-900 font-heading-two">Giảm giá Voucher:</span>
-                    <span className="text-success-600 fw-semibold">-{formatPrice(Number(discountAmount ?? 0))}</span>
-                  </div>
-                )}
-
-                <div className="pt-24 my-20 border-gray-100 border-top">
-                  <div className="gap-8 flex-between">
-                    <span className="text-lg text-gray-900 fw-semibold">Tổng giá trị:</span>
-                    <span className="text-lg text-main-600 fw-semibold">
-                      {formatPrice(total)}
-                    </span>
-                  </div>
-                  <div className="gap-8 mt-6 text-end">
-                    <span className="text-sm text-success-600 fw-normal">Tiết kiệm:</span>
-                    <span className="text-sm text-success-600 fw-normal ms-2">{formatPrice(productDiscount + (discountAmount ?? 0))}</span>
-                  </div>
-                </div>
-                <Link
-                  href="/thanh-toan"
-                  className={`btn btn-main py-14 w-100 rounded-8 ${items.length === 0 ? 'disabled opacity-50' : ''}`}
-                  style={{
-                    pointerEvents: items.length === 0 ? 'none' : 'auto',
-                  }}
-                >
-                  Tiến hành thanh toán
-                </Link>
-              </div>
-              <span className="mt-20 w-100 d-block">
-                <Link href="/shop" className="text-sm text-main-600 fw-medium flex-align d-flex flex-center">
-                  <i className="ph-bold ph-arrow-fat-lines-left text-main-600 text-md pe-10"></i> <span>Tiếp tục mua hàng</span>
-                </Link>
-              </span>
             </div>
           </div>
-        </div>
         </div>
       </section>
 

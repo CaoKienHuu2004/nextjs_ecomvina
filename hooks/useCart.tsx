@@ -289,8 +289,8 @@ interface ServerCartItemRaw {
 export type AddToCartInput = {
   id_bienthe?: number | string;
   id?: number | string;
-  ten?: string;
-  hinhanh?: string;
+  ten: string;
+  hinhanh: string;
   mediaurl?: string;
   gia?: number | Gia;
   loaibienthe?: string;
@@ -396,36 +396,36 @@ export function useCart() {
   }, [isLoggedIn]);
   // --- HELPER MAP DATA ---
   const mapServerDataToCartItem = useCallback((serverItem: unknown): CartItem => {
-  const s = (serverItem ?? {}) as Record<string, any>;
+    const s = (serverItem ?? {}) as Record<string, any>;
 
-  // flat/guest response mapping (your sample)
-  if (s && (s.ten_sp || s.hinhanh || s.giaban)) {
-    const id_bienthe = s.id_bienthe ?? s.bienthe_id ?? `local_${Date.now()}`;
-    const qty = Number(s.soluong ?? 1);
-    const price = Number(s.giaban ?? s.gia ?? 0);
-    const media = s.hinhanh ?? s.mediaurl ?? "/assets/images/thumbs/product-placeholder.png";
-    const name = s.ten_sp ?? s.ten ?? "Sản phẩm";
-    const variant = s.ten_bt ?? s.loaibienthe ?? "";
+    // flat/guest response mapping (your sample)
+    if (s && (s.ten_sp || s.hinhanh || s.giaban)) {
+      const id_bienthe = s.id_bienthe ?? s.bienthe_id ?? `local_${Date.now()}`;
+      const qty = Number(s.soluong ?? 1);
+      const price = Number(s.giaban ?? s.gia ?? 0);
+      const media = s.hinhanh ?? s.mediaurl ?? "/assets/images/thumbs/product-placeholder.png";
+      const name = s.ten_sp ?? s.ten ?? "Sản phẩm";
+      const variant = s.ten_bt ?? s.loaibienthe ?? "";
 
-    return {
-      id_giohang: s.id_giohang ?? s.id ?? `local_${id_bienthe}_${Date.now()}`,
-      id_bienthe,
-      soluong: qty,
-      product: {
-        id: id_bienthe,
-        ten: name,
-        mediaurl: media,
-        gia: { current: price, before_discount: Number(s.giagoc ?? 0), discount_percent: 0 },
-        loaibienthe: variant,
-        thuonghieu: s.thuonghieu ?? undefined,
-        slug: s.slug ?? undefined,
-      },
-    };
-  }
+      return {
+        id_giohang: s.id_giohang ?? s.id ?? `local_${id_bienthe}_${Date.now()}`,
+        id_bienthe,
+        soluong: qty,
+        product: {
+          id: id_bienthe,
+          ten: name,
+          mediaurl: media,
+          gia: { current: price, before_discount: Number(s.giagoc ?? 0), discount_percent: 0 },
+          loaibienthe: variant,
+          thuonghieu: s.thuonghieu ?? undefined,
+          slug: s.slug ?? undefined,
+        },
+      };
+    }
 
-  // existing nested mapping fallback (keep original mapping here)
-  const id_giohang = (serverItem as any)?.id_giohang ?? (serverItem as any)?.id ?? `temp_${Date.now()}`;
-  const soluong = Number((serverItem as any)?.soluong ?? 1);
+    // existing nested mapping fallback (keep original mapping here)
+    const id_giohang = (serverItem as any)?.id_giohang ?? (serverItem as any)?.id ?? `temp_${Date.now()}`;
+    const soluong = Number((serverItem as any)?.soluong ?? 1);
     const bienthe = s.bienthe;
     const detail = bienthe?.detail;
     const sanpham = bienthe?.sanpham;
@@ -500,24 +500,24 @@ export function useCart() {
     }
 
     return {
-    id_giohang,
-    id_bienthe: (serverItem as any)?.id_bienthe ?? (serverItem as any)?.bienthe?.id ?? undefined,
-    soluong,
-    product: {
-      id: (serverItem as any)?.id_bienthe ?? (serverItem as any)?.bienthe?.id,
-      ten: (serverItem as any)?.bienthe?.sanpham?.ten ?? (serverItem as any)?.bienthe?.detail?.ten ?? "Sản phẩm",
-      mediaurl: (serverItem as any)?.bienthe?.sanpham?.hinhanh ?? "/assets/images/thumbs/product-placeholder.png",
-      gia: {
-        current: Number((serverItem as any)?.bienthe?.gia ?? 0),
-        before_discount: Number((serverItem as any)?.bienthe?.gia_old ?? 0),
-        discount_percent: 0,
+      id_giohang,
+      id_bienthe: (serverItem as any)?.id_bienthe ?? (serverItem as any)?.bienthe?.id ?? undefined,
+      soluong,
+      product: {
+        id: (serverItem as any)?.id_bienthe ?? (serverItem as any)?.bienthe?.id,
+        ten: (serverItem as any)?.bienthe?.sanpham?.ten ?? (serverItem as any)?.bienthe?.detail?.ten ?? "Sản phẩm",
+        mediaurl: (serverItem as any)?.bienthe?.sanpham?.hinhanh ?? "/assets/images/thumbs/product-placeholder.png",
+        gia: {
+          current: Number((serverItem as any)?.bienthe?.gia ?? 0),
+          before_discount: Number((serverItem as any)?.bienthe?.gia_old ?? 0),
+          discount_percent: 0,
+        },
+        loaibienthe: (serverItem as any)?.bienthe?.ten ?? undefined,
+        thuonghieu: (serverItem as any)?.bienthe?.sanpham?.thuonghieu ?? undefined,
+        slug: (serverItem as any)?.bienthe?.sanpham?.slug ?? undefined,
       },
-      loaibienthe: (serverItem as any)?.bienthe?.ten ?? undefined,
-      thuonghieu: (serverItem as any)?.bienthe?.sanpham?.thuonghieu ?? undefined,
-      slug: (serverItem as any)?.bienthe?.sanpham?.slug ?? undefined,
-    },
-  };
-}, []);
+    };
+  }, []);
 
   const extractCartPayload = useCallback((payload: unknown): unknown[] => {
     if (Array.isArray(payload)) return payload;
@@ -653,18 +653,70 @@ export function useCart() {
       const saved = localStorage.getItem(CART_STORAGE_KEY);
       if (!saved) return [];
       const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) ? (parsed as CartItem[]) : [];
-    } catch { return []; }
+      if (!Array.isArray(parsed)) return [];
+
+      return parsed.map((p: any, idx: number) => {
+        // already normalized shape
+        if (p && p.id_bienthe && p.product) return p as CartItem;
+
+        // support minimal shape { id_bienthe, soluong } or server full item
+        const id_bienthe = p?.id_bienthe ?? p?.id ?? p?.bienthe?.id ?? `local_${idx}`;
+        const soluong = Number(p?.soluong ?? 1);
+        const id_giohang = p?.id_giohang ?? `local_${id_bienthe}_${Date.now()}_${idx}`;
+
+        const product: ProductDisplayInfo = {
+          id: id_bienthe,
+          ten: p?.ten ?? p?.bienthe?.sanpham?.ten ?? 'Sản phẩm',
+          mediaurl: p?.product?.mediaurl ?? p?.hinhanh ?? p?.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh ?? '/assets/images/thumbs/product-placeholder.png',
+          gia: {
+            current: Number(p?.gia?.current ?? p?.bienthe?.giadagiam ?? p?.bienthe?.giagoc ?? 0),
+            before_discount: Number(p?.gia?.before_discount ?? p?.bienthe?.giagoc ?? 0),
+            discount_percent: 0,
+          },
+          loaibienthe: p?.bienthe?.loaibienthe?.ten ?? '',
+          thuonghieu: p?.bienthe?.sanpham?.thuonghieu?.ten ?? '',
+          slug: p?.bienthe?.sanpham?.slug ?? '',
+        };
+
+        return { id_giohang, id_bienthe, soluong, product } as CartItem;
+      });
+    } catch (err) {
+      console.warn("Không thể parse marketpro_cart từ localStorage:", err);
+      return [];
+    }
   }, []);
+
+  // Normalize cart items before saving to localStorage to ensure id_bienthe exists
+  const normalizeCartForSave = (cart: CartItem[]) => {
+    return (cart || []).map((it, idx) => {
+      const inferredId = it.id_bienthe ?? it.product?.id ?? it.id_giohang ?? `local_${idx}`;
+      const product: ProductDisplayInfo = {
+        id: it.product?.id ?? inferredId,
+        ten: it.product?.ten ?? 'Sản phẩm',
+        mediaurl: it.product?.mediaurl ?? it.product?.hinhanh ?? '/assets/images/thumbs/product-placeholder.png',
+        gia: it.product?.gia ?? { current: 0, before_discount: 0, discount_percent: 0 },
+        loaibienthe: it.product?.loaibienthe ?? '',
+        thuonghieu: it.product?.thuonghieu ?? '',
+        slug: it.product?.slug ?? '',
+      };
+      return { ...it, id_bienthe: inferredId, product };
+    });
+  };
 
   const saveLocalCart = useCallback((cart: CartItem[]) => {
     if (typeof window === "undefined") return;
-    try { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); 
+    try {
+      const normalized = normalizeCartForSave(cart);
+      console.debug("🔁 Saving local cart (normalized):", normalized);
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(normalized));
+
       try {
-        const payload = buildCartLocalPayload(cart);
+        const payload = { cart_local: normalized.map((m) => ({ id_bienthe: Number(m.id_bienthe) || m.id_bienthe, soluong: Number(m.soluong) })), voucher_code: DEFAULT_VOUCHER_CODE };
         localStorage.setItem(CART_PAYLOAD_KEY, JSON.stringify(payload));
-      } catch {}
-    } catch { }
+      } catch { }
+    } catch (e) {
+      console.warn("Lỗi khi lưu marketpro_cart:", e);
+    }
   }, []);
 
   const buildCartLocalPayload = useCallback((cart: CartItem[]) => {
@@ -736,9 +788,33 @@ export function useCart() {
         }
       } else {
         const localCart = loadLocalCart();
-        if (isMountedRef.current) {
-          setItems(localCart);
-          setGifts([]);
+        if (localCart.length > 0) {
+          // Try to materialize guest local cart on server (get full product info/prices).
+          // Fallback to localCart if network/API fails or server returns empty.
+          try {
+            const { items: serverItems, gifts: serverGifts } = await loadServerCart();
+            if (serverItems && serverItems.length > 0) {
+              if (isMountedRef.current) {
+                setItems(serverItems);
+                setGifts(serverGifts);
+              }
+            } else {
+              if (isMountedRef.current) {
+                setItems(localCart);
+                setGifts([]);
+              }
+            }
+          } catch (err) {
+            if (isMountedRef.current) {
+              setItems(localCart);
+              setGifts([]);
+            }
+          }
+        } else {
+          if (isMountedRef.current) {
+            setItems([]);
+            setGifts([]);
+          }
         }
       }
     } finally {
@@ -848,86 +924,59 @@ export function useCart() {
           console.error("❌ Cart API Error:", res.status, await res.text().catch(() => ''));
         }
       } else {
-        // === (Logic cũ khi chưa login: session/localStorage) ===
-        // session API try/catch omitted for brevity — keep your existing logic
+        // Guest flow: store minimal payload { id_bienthe, soluong } in localStorage
+        if (typeof window === 'undefined') return;
         try {
-          const res = await fetch(`${API}/api/v1/gio-hang/them`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify({ id_bienthe: Number(id_bienthe), soluong }),
-          });
-          if (res.ok || res.status === 201) {
-            const resp = await res.json().catch(() => null);
-            // resp should contain the full item; merge into localStorage
-            const localCart = loadLocalCart();
-            const returned = Array.isArray(resp?.data) ? resp.data[0] : (resp?.data ?? resp);
-            const added = mapServerDataToCartItem(returned);
-            // keep existing logic for dedupe
-            const existingIndex = localCart.findIndex(i => i.id_bienthe == added.id_bienthe);
-            if (existingIndex >= 0) {
-              localCart[existingIndex].soluong = (Number(localCart[existingIndex].soluong) || 0) + Number(added.soluong || 0);
-            } else {
-              localCart.push(added);
+          // migrate existing guest_cart_v1 into marketpro_cart if present
+          try {
+            const legacy = localStorage.getItem('guest_cart_v1');
+            if (legacy) {
+              const parsedLegacy = JSON.parse(legacy || '[]');
+              if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
+                const now = Date.now();
+                const migrated = parsedLegacy.map((it: any, idx: number) => ({
+                  id_bienthe: it.variantId ?? it.id_bienthesp ?? it.id_bienthe,
+                  soluong: Number(it.qty ?? it.quantity ?? 1)
+                }));
+                localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(migrated));
+                localStorage.removeItem('guest_cart_v1');
+              }
             }
-            saveLocalCart(localCart);
-            if (isMountedRef.current) setItems(localCart);
-            if (typeof window !== "undefined") {
-              const count = localCart.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-              emitCartUpdated({ count });
-            }
-            return;
+          } catch (e) { /* ignore legacy migration errors */ }
+
+          const raw = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]');
+          const currentCart = Array.isArray(raw) ? raw : [];
+          const existingIndex = currentCart.findIndex((item: any) => String(item.id_bienthe) === String(id_bienthe));
+
+          if (existingIndex > -1) {
+            currentCart[existingIndex].soluong = Number(currentCart[existingIndex].soluong || 0) + Number(soluong);
+          } else {
+            currentCart.push({ id_bienthe: Number(id_bienthe) || id_bienthe, soluong: Number(soluong) });
           }
+
+          // persist minimal cart + payload
+          localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(currentCart));
+          try {
+            const payload = { cart_local: currentCart.map((i: any) => ({ id_bienthe: Number(i.id_bienthe) || i.id_bienthe, soluong: Number(i.soluong) || 0 })), voucher_code: (appliedVoucher && (appliedVoucher.magiamgia || appliedVoucher.code)) ? String(appliedVoucher.magiamgia ?? appliedVoucher.code) : DEFAULT_VOUCHER_CODE };
+            localStorage.setItem(CART_PAYLOAD_KEY, JSON.stringify(payload));
+          } catch (e) { /* ignore */ }
+
+          // materialize on server to get full product info/prices for UI
+          await fetchCart();
+
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('cart:updated'));
+          }
+          return;
         } catch (e) {
-          console.warn("Guest addToCart API error:", e);
-        }
-
-        // Fallback: local-only behavior if guest API fails
-        const localCart = loadLocalCart();
-        const existingIndex = localCart.findIndex(i => i.id_bienthe == id_bienthe);
-
-        const giaObj = typeof product.gia === 'number'
-          ? { current: product.gia, before_discount: 0, discount_percent: 0 }
-          : {
-            current: Number(product.gia?.current ?? 0),
-            before_discount: Number(product.gia?.before_discount ?? 0),
-            discount_percent: Number(product.gia?.discount_percent ?? 0)
-          };
-
-        const displayItem: CartItem = {
-          id_giohang: `local_${Date.now()}`,
-          id_bienthe: id_bienthe,
-          soluong: soluong,
-          id_chuongtrinh: programId,
-          product: {
-            id: id_bienthe,
-            ten: product.ten ?? "Sản phẩm",
-            mediaurl: product.hinhanh || product.mediaurl || "/assets/images/thumbs/placeholder.png",
-            gia: giaObj,
-            loaibienthe: product.loaibienthe ?? "",
-            thuonghieu: product.thuonghieu ?? "",
-            slug: product.slug ?? ""
-          }
-        };
-
-        if (existingIndex >= 0) {
-          localCart[existingIndex].soluong += soluong;
-        } else {
-          localCart.push(displayItem);
-        }
-
-        saveLocalCart(localCart);
-        if (isMountedRef.current) setItems(localCart);
-
-        if (typeof window !== "undefined") {
-          const count = localCart.reduce((s, it) => s + (Number(it.soluong) || 0), 0);
-          emitCartUpdated({ count });
+          console.warn('Guest addToCart error:', e);
         }
       }
     } finally {
       // [THÊM] chỉ tắt loading nếu component vẫn mount
       if (isMountedRef.current) setLoading(false);
     }
-  }, [API, buildCartStateFromRaw, isLoggedIn, hasValidToken, getAuthHeaders, extractCartPayload, loadServerCart, loadLocalCart, saveLocalCart]);
+  }, [API, buildCartStateFromRaw, isLoggedIn, hasValidToken, getAuthHeaders, extractCartPayload, loadServerCart, loadLocalCart, saveLocalCart, fetchCart]);
 
   const updatesoluong = useCallback(async (id_giohang: number | string, soluong: number) => {
     if (soluong < 1) return;
