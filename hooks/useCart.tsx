@@ -709,15 +709,15 @@ export function useCart() {
       const normalized = normalizeCartForSave(cart);
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(normalized));
       try {
-        const payload = { 
-          cart_local: normalized.map((m) => ({ 
-            id_bienthe: Number(m.id_bienthe) || m.id_bienthe, 
-            soluong: Number(m.soluong) 
-          })), 
-          voucher_code: DEFAULT_VOUCHER_CODE 
+        const payload = {
+          cart_local: normalized.map((m) => ({
+            id_bienthe: Number(m.id_bienthe) || m.id_bienthe,
+            soluong: Number(m.soluong)
+          })),
+          voucher_code: DEFAULT_VOUCHER_CODE
         };
         localStorage.setItem(CART_PAYLOAD_KEY, JSON.stringify(payload));
-      } catch {}
+      } catch { }
     } catch (e) {
       console.warn("Lỗi khi lưu marketpro_cart:", e);
     }
