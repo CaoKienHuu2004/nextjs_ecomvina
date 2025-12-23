@@ -31,7 +31,7 @@ type FavoriteRecord = {
 };
 
 export default function WishlistPage() {
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "http://localhost:4000";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com/api/v1";
 
   // Hook wishlist (keeps a local Set of IDs for quick UI)
   const { ids, isWished, toggle } = useWishlist();
@@ -50,7 +50,7 @@ export default function WishlistPage() {
   const fetchFavorites = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
+      const res = await fetch(`${API}/`, {
         headers: getAuthHeaders(),
         // credentials: 'include',
       });
