@@ -193,6 +193,7 @@ export default function ThanhToanPage() {
     const category = sp.loaibienthe || item.ten_loaibienthe || "";
 
     const keyVal = (item.id_giohang ?? item.id ?? item.id_sanpham) ?? `${name}_${idx}`;
+    const imageSize = isGift ? 54 : 72;
 
     return (
       <tr key={String(keyVal)}>
@@ -203,12 +204,12 @@ export default function ThanhToanPage() {
             </span>
           )}
           <div className="gap-12 d-flex align-items-center">
-            <div className="border border-gray-100 rounded-8 flex-center" style={{ width: 64, height: 64, flexShrink: 0 }}>
+            <div className="border border-gray-100 rounded-8 flex-center" style={{ width: imageSize, height: imageSize, flexShrink: 0 }}>
               <Image 
                 src={String(img)} 
                 alt={String(name)} 
-                width={64} 
-                height={64} 
+                width={imageSize} 
+                height={imageSize} 
                 className="w-100 h-100 rounded-8 object-fit-contain" 
               />
             </div>
@@ -225,7 +226,12 @@ export default function ThanhToanPage() {
                 )}
               </div>
               <div className="product-card__price">
-                <span className="text-sm text-main-600 fw-bold">{(isGift ? 0 : totalRow).toLocaleString("vi-VN")} ₫</span>
+                {/* Ẩn giá nếu là quà tặng và giá = 0 */}
+                {!(isGift && totalRow === 0) && (
+                  <span className={isGift ? "summary-price-small fw-medium" : "summary-price-large text-main-600 fw-bold"}>
+                    {(isGift ? 0 : totalRow).toLocaleString("vi-VN")} ₫
+                  </span>
+                )}
               </div>
             </div>
           </div>
