@@ -160,7 +160,7 @@ export default function LoginPage() {
                                                     checked={form.remember} 
                                                     onChange={handleChange} 
                                                 />
-                                                <label className="gap-2 text-gray-900 form-check-label flex-align" htmlFor="remember">
+                                                <label className="text-sm text-main-600 fw-semibold hover-text-decoration-underline" htmlFor="remember">
                                                     Ghi nhớ đăng nhập
                                                 </label>
                                             </div>

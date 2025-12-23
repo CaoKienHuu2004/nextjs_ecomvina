@@ -9,6 +9,7 @@ import { getUserFromServer } from "@/lib/get-user-server";
 import "./swiper.css";
 // import { GoogleOAuthProvider } from '@react-oauth/google';
 import ClientProviders from "@/components/ClientProviders";
+import Chatbox from "@/components/Chatbox";
 
 export const metadata = { title: "Siêu Thị Vina | Cửa hàng thương mại điện tử Siêu Thị Vina |" };
 
@@ -36,6 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <WishlistProvider>
             <AppShell>
               {children}
+              <Chatbox />
             </AppShell>
           </WishlistProvider>
         </AuthProvider>
