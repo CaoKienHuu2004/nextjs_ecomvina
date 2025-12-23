@@ -1,600 +1,500 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import FullHeader from "@/components/FullHeader";
-import BenefitsStrip from "@/components/BenefitsStrip";
-import { useAuth } from "@/hooks/useAuth";
-import { useCart, Gia } from "@/hooks/useCart";
-import LoadingRedirect from "@/components/LoadingRedirect";
-import Cookies from "js-cookie";
+import Link from 'next/link';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useCart, parseVoucherCondition, isVoucherInDateRange } from '@/hooks/useCart'; // Bỏ các type thừa không dùng
+import { useHomeData, HomeDataProvider } from '@/hooks/useHomeData'; // Vẫn giữ để lấy voucher fallback nếu cần
+import { useAuth } from '@/hooks/useAuth';
+import Image from 'next/image';
+import FullHeader from '@/components/FullHeader';
+import QuantityControl from '@/components/TangGiamSL';
 
-type Address = {
-  id?: number | string;
-  ten_nguoinhan?: string;
-  sodienthoai?: string;
-  diachi?: string;
-  tinhthanh?: string;
-  trangthai?: string;
-  [key: string]: unknown;
-};
-type UserWithAddress = {
-  hoten?: string;
-  diachi?: Address[];
-  [key: string]: unknown;
+// --- HELPER FORMAT ---
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    minimumFractionDigits: 0,
+  }).format(price);
+
 };
 
-// --- Helper Price ---
-type PriceInput = number | Gia | undefined | null;
-const getDefaultAddress = (user: UserWithAddress | null) => {
-  if (!user?.diachi || user.diachi.length === 0) return null;
-  return user.diachi.find((d) => d.trangthai === "Mặc định") || user.diachi[0];
-};
-const getPrice = (gia: PriceInput): number => {
-  if (typeof gia === "number") return gia;
-  return Number(gia?.current ?? 0);
-};
-
-export default function ThanhToanPage() {
-  const router = useRouter();
-  const { user, isLoggedIn } = useAuth();
-  const { items, subtotal, total, discountAmount, clearCart, loading, appliedVoucher, removeVoucher } = useCart();
+// --- MODAL XÓA (Giữ nguyên giao diện đẹp của bạn) ---
+function DeleteConfirmModal({
+  isOpen,
+  productName,
+  onConfirm,
+  onCancel,
+}: {
+  isOpen: boolean;
+  productName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!isOpen) return null;
 
 
-  type CartItem = (typeof items)[number];
-  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-  const [showAddressModal, setShowAddressModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // 1: COD, 3: QR
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [redirecting, setRedirecting] = useState(false);
+  return (
+    <div
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+        animation: 'fadeIn 0.2s ease',
+      }}
+      onClick={onCancel}
+    >
+      <div
+        style={{
+          backgroundColor: 'white', borderRadius: '16px', padding: '32px',
+          maxWidth: '420px', width: '90%', boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+          animation: 'slideUp 0.3s ease',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: 'rgb(229, 57, 53)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', boxShadow: '0 8px 24px rgba(229, 57, 53, 0.4)' }}>
+            <i className="ph ph-trash" style={{ fontSize: '32px', color: 'white' }}></i>
+          </div>
+        </div>
+        <h5 style={{ textAlign: 'center', marginBottom: '12px', color: '#333', fontSize: '20px', fontWeight: '600' }}>Xác nhận xóa sản phẩm</h5>
+        <p style={{ textAlign: 'center', color: '#666', marginBottom: '8px', fontSize: '15px', lineHeight: '1.5' }}>Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?</p>
+        <p style={{ textAlign: 'center', color: 'rgb(229, 57, 53)', fontWeight: '600', marginBottom: '28px', fontSize: '15px', padding: '8px 16px', backgroundColor: 'rgba(229, 57, 53, 0.1)', borderRadius: '8px', wordBreak: 'break-word' }}>&quot;{productName}&quot;</p>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: '14px 24px', borderRadius: '10px', border: '2px solid #E0E0E0', backgroundColor: 'white', color: '#666', fontSize: '15px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s ease' }}>Hủy bỏ</button>
+          <button onClick={onConfirm} style={{ flex: 1, padding: '14px 24px', borderRadius: '10px', border: 'none', background: 'rgb(229, 57, 53)', color: 'white', fontSize: '15px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: '0 4px 12px rgba(229, 57, 53, 0.4)' }}>Xác nhận xóa</button>
+        </div>
+      </div>
+      <style jsx>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      `}</style>
+    </div>
+  );
+}
 
+function CartPageContent() {
+  const { 
+    items, 
+    loading, 
+    updatesoluong, 
+    removeItem, 
+    subtotal, 
+    totalItems, 
+    refreshCart, 
+    appliedVoucher, 
+    applyVoucher, 
+    removeVoucher, 
+    discountAmount, 
+    total, 
+    savedAmount, // Sử dụng biến này thay cho việc tự tính
+    gifts, 
+    totalGifts, 
+    availableVouchers 
+  } = useCart();
+  
+  const { data: homeData } = useHomeData();
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: number | string; name: string }>({
+    isOpen: false, id: 0, name: '',
+  });
 
-  // 1. Load địa chỉ mặc định khi user load xong
+  // --- LOGIC VOUCHER ---
+  // Kết hợp voucher từ API giỏ hàng (ưu tiên) và trang chủ
+  // API Giỏ hàng đã filter sẵn theo điều kiện tiền, nhưng ta vẫn giữ logic filter FE để hiển thị trạng thái "Chưa đủ ĐK"
+  const cartCoupons = (availableVouchers && availableVouchers.length > 0) ? availableVouchers : [];
+  const homeCoupons = ((homeData?.data as any)?.new_coupon) || [];
+  
+  // Nếu API giỏ hàng chưa trả về voucher (ví dụ chưa load xong), dùng tạm của home
+  const displayCoupons = cartCoupons.length > 0 ? cartCoupons : homeCoupons;
+
+  // Refetch khi mount để đảm bảo số liệu mới nhất
+
   useEffect(() => {
-    if (user) {
-      const def = getDefaultAddress(user);
-      setSelectedAddress(def);
-    }
-  }, [user]);
+    refreshCart();
+  }, [refreshCart]);
 
-  // Redirect nếu chưa login hoặc giỏ hàng trống
-  useEffect(() => {
-    if (!isLoggedIn && typeof window !== 'undefined') {
-      // router.push("/dang-nhap?redirect=/thanh-toan");
-    }
-    if (items.length === 0 && typeof window !== 'undefined') {
-      // router.push("/gio-hang");
-    }
-  }, [isLoggedIn, items, router]);
 
-  // Tách sản phẩm chính và quà tặng (để render giống UI mẫu)
-  // const mainItems = items.filter(it => getPrice(it.product?.gia) > 0);
-  // const giftItems = items.filter(it => getPrice(it.product?.gia) === 0);
-  // --- PHÂN LOẠI & GỘP SẢN PHẨM / QUÀ TẶNG ---
-  const isGiftItem = (it: any) => {
-    // nhiều nguồn có thể định danh quà: product.gia === 0, thanhtien === 0, hoặc có trường bienthe_quatang
-    try {
-      if (it?.bienthe_quatang) {
-        const bt = it.bienthe_quatang;
-        if (Number(bt.thanhtien ?? bt.tamtinh ?? NaN) === 0) return true;
-      }
-      if (Number(it.thanhtien ?? it.tamtinh ?? NaN) === 0 && (it.thanhtien !== undefined || it.tamtinh !== undefined)) return true;
-      if (getPrice(it.product?.gia) === 0) return true;
-      return false;
-    } catch {
-      return false;
-    }
+  // --- DELETE HANDLERS ---
+  const openDeleteModal = (id: number | string, productName: string) => {
+    setDeleteModal({ isOpen: true, id, name: productName });
   };
 
-  const rawMain = items.filter((it) => !isGiftItem(it));
-  const rawGifts = items.filter((it) => isGiftItem(it));
 
-  const groupItems = (arr: any[]) => {
-    const map = new Map<string, any>();
-    for (const it of arr) {
-      const key =
-        String(it.product?.id ?? it.id ?? it.bienthe?.id ?? it.product?.ten ?? it.name ?? JSON.stringify(it.product?.slug ?? ""));
-      if (map.has(key)) {
-        const ex = map.get(key);
-        ex.quantity = Number(ex.quantity ?? ex.soluong ?? 0) + Number(it.quantity ?? it.soluong ?? 1);
-        // keep price/other fields from first occurrence
-      } else {
-        map.set(key, { ...it, quantity: Number(it.quantity ?? it.soluong ?? 1) });
-      }
-    }
-    return Array.from(map.values());
+  const closeDeleteModal = () => {
+    setDeleteModal({ isOpen: false, id: 0, name: '' });
+
   };
 
-  const mainItems = groupItems(rawMain);
-  const giftItems = groupItems(rawGifts);
+  const confirmDelete = () => {
+    removeItem(deleteModal.id);
+    setDeleteMessage(`Đã xóa "${deleteModal.name}" khỏi giỏ hàng.`);
+    closeDeleteModal();
+    setTimeout(() => setDeleteMessage(null), 3000);
 
-  // Xử lý đặt hàng
-  const handlePlaceOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedAddress) {
-      alert("Vui lòng chọn địa chỉ nhận hàng.");
-      return;
-    }
+  };
 
-    setIsSubmitting(true);
+  // --- DEV: Import Helper (Updated for New Hook Structure) ---
+  const importGuestFromFile = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+
     try {
-      const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
-      const token = Cookies.get("access_token");
+      const res = await fetch('/giohang-noauth.json');
+      if (!res.ok) throw new Error('File not found');
+      const json = await res.json();
+      const rawItems = Array.isArray(json?.data?.items) ? json.data.items : (Array.isArray(json) ? json : []);
 
-      const payload = {
-        id_diachinguoidung: selectedAddress.id,
-        ma_phuongthuc: paymentMethod,
-        ma_magiamgia: null,
-        // nguoinhan: selectedAddress?.ten_nguoinhan ?? user?.hoten ?? "",
-        // diachinhan: selectedAddress?.diachi ?? "",
-        // sodienthoai: selectedAddress?.sodienthoai ?? "",
-        // khuvucgiao: selectedAddress?.tinhthanh ?? "",
-      };
-
-      const res = await fetch(`${API}/api/thanh-toan/dat-hang`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : "",
-          "Accept": "application/json",
-        },
-        body: JSON.stringify(payload),
+      const mapped = rawItems.map((it: any, idx: number) => {
+        // Map data từ file json mẫu sang cấu trúc LocalStorage
+        const id_bienthe = it.bienthe?.id ?? it.id_bienthe ?? it.id;
+        return {
+          id_giohang: `local_${id_bienthe}`, // Format ID khớp với hook mới
+          id_bienthe: Number(id_bienthe),
+          soluong: Number(it.soluong ?? 1),
+          product: { 
+             ten: it.bienthe?.sanpham?.ten || it.ten_sp || "SP Mẫu",
+             mediaurl: it.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh || "",
+             gia: { current: it.bienthe?.giadagiam || 0 }
+          }
+        };
       });
 
-      const json = await res.json().catch(() => ({}));
-      console.log("createOrder response:", res.status, json);
 
-      if (!res.ok || json.status === false) {
-        const msg = json.message;
-        if (msg && typeof msg === "object") {
-          const flat = Object.values(msg).flat().filter(Boolean).join("\n");
-          alert(flat || "Đặt hàng thất bại. Vui lòng kiểm tra dữ liệu.");
-        } else {
-          alert(msg?.toString?.() || "Đặt hàng thất bại. Vui lòng thử lại.");
-        }
-        setIsSubmitting(false);
-        return;
-      }
+      // 1. Lưu full object để hiển thị ngay (Optimistic)
+      localStorage.setItem('marketpro_cart', JSON.stringify(mapped));
+      
+      // 2. [QUAN TRỌNG] Lưu payload rút gọn để Hook gửi lên API tính toán
+      const payload = { 
+        cart_local: mapped.map((m: any) => ({ id_bienthe: m.id_bienthe, soluong: m.soluong })) 
 
-      const orderData = json.data ?? json;
-      const orderId = orderData?.id;
-      console.log("Order created, id=", orderId);
+      };
+      localStorage.setItem('marketpro_cart_payload', JSON.stringify(payload));
 
-      if (!orderId) {
-        alert("Không lấy được ID đơn hàng từ server.");
-        setIsSubmitting(false);
-        return;
-      }
+      refreshCart(); // Gọi hook load lại
+      alert('Đã import sample cart. Reload trang nếu số liệu chưa khớp.');
+    } catch (e: any) {
+      console.error(e);
+      alert('Lỗi import: ' + e.message);
 
-      // xử lý theo phương thức
-      if (paymentMethod === "cod") {
-        clearCart();
-        router.push(`/hoan-tat-thanh-toan?order_id=${orderId}`);
-        return;
-      }
-
-      if (paymentMethod === "dbt") {
-        // gọi API tạo payment link
-        // const resPay = await fetch(`${API}/api/v1/don-hang/${orderId}/payment-url`, {
-        const resPay = await fetch(`${API}/api/thanh-toan/vnp-return/${orderId}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": token ? `Bearer ${token}` : "",
-            "Accept": "application/json",
-          },
-          // nếu server cần body như { provider: "vnpay" } hãy thêm vào đây
-          // body: JSON.stringify({ provider: "vnpay" }),
-        });
-
-        const payJson = await resPay.json().catch(() => ({}));
-        console.log("payment-url response:", resPay.status, payJson);
-
-        if (!resPay.ok) {
-          alert(payJson.message || "Không thể tạo liên kết thanh toán (server trả lỗi).");
-          return;
-        }
-
-        if (payJson.status && payJson.payment_url) {
-          clearCart();
-          setRedirecting(true);
-          // chuyển hướng trực tiếp (có thể dùng window.location.href)
-          window.location.href = payJson.payment_url;
-          return;
-        } else {
-          alert(payJson.message || "Không tạo được liên kết VNPay");
-          return;
-        }
-        // if (paymentMethod === "cp") {
-        //     const resPay = await fetch(`${API}/api/v1/don-hang/${orderId}/payment-url`, {
-        //         method: "POST",
-        //         headers: {
-        //             "Content-Type": "application/json",
-        //             "Authorization": `Bearer ${token}`
-        //         },
-        //         body: JSON.stringify({ provider: "cp" }) // hoặc server chấp nhận khác
-        //     });
-
-        //     const payJson = await resPay.json();
-        //     if (payJson.status && payJson.payment_url) {
-        //         clearCart();
-        //         setRedirecting(true);
-        //         setTimeout(() => { window.location.href = payJson.payment_url; }, 500);
-        //         return;
-        //     } else {
-        //         alert(payJson.message || "Không tạo được liên kết VietQR");
-        //     }
-        // }
-      }
-
-      alert("Phương thức thanh toán không được hỗ trợ.");
-    } catch (error) {
-      console.error(error);
-      alert("Lỗi kết nối.");
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  }, [refreshCart]);
 
-  if (redirecting) {
-    return <LoadingRedirect message="Đang chuyển sang VNPay..." />;
-  }
-
-  // Render 1 dòng sản phẩm trong bảng tóm tắt
-
-  const renderSummaryRow = (item: CartItem, isGift = false, idx = 0): React.ReactElement => {
-    const rec = item as unknown as Record<string, unknown>;
-    const spCandidate = (rec.product as Record<string, unknown> | undefined) ?? rec;
-    const sp = (spCandidate ?? {}) as {
-      gia?: number | Gia;
-      mediaurl?: string;
-      hinhanhsanpham?: string;
-      ten?: string;
-      name?: string;
-      category?: string;
-      [k: string]: unknown;
-    };
-
-    const price = isGift ? 0 : getPrice(sp.gia ?? (sp as unknown as Record<string, unknown>).giagiam_min ?? (sp as unknown as Record<string, unknown>).gia_min ?? 0);
-    const quantity = Number(rec.quantity ?? rec.soluong ?? 1);
-    const totalRow = price * quantity;
-    const img = sp.mediaurl ?? sp.hinhanhsanpham ?? "/assets/images/thumbs/placeholder.png";
-    const name = sp.ten ?? sp.name ?? (sp as unknown as Record<string, unknown>).ten_sanpham ?? "Sản phẩm";
-
-    const keyVal =
-      (rec.id_giohang ?? rec.id ?? rec.id_sanpham) ?? `${name}_${idx}`;
-
-    return (
-
-      <tr key={String(keyVal)}>
-        <td className="px-5 py-10 rounded-4">
-          {isGift && (
-            <span className="mb-10 text-sm flex-align fw-medium">
-              <i className="text-lg ph-bold ph-gift text-main-600 pe-4"></i>Quà tặng nhận được
-            </span>
-          )}
-          <div className="gap-12 d-flex align-items-center">
-            <div className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: 80, maxHeight: 80, width: "100%", height: "100%" }}>
-              <Image src={String(img)} alt={String(name)} width={80} height={80} className="w-100 rounded-8 object-fit-contain" />
-            </div>
-            <div className="table-product__content text-start">
-              <h6 className="mb-0 text-sm title fw-semibold">
-                <span className="link text-line-2" title={String(name)}>{String(name)}</span>
-              </h6>
-              <div className="gap-16 mb-6 flex-align">
-                <span className="px-6 py-4 text-xs bg-gray-100 text-heading fw-medium rounded-4">x {quantity}</span>
-                <span className="gap-8 px-6 py-4 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">
-                  {sp.category ?? "Sản phẩm"}
-                </span>
-              </div>
-              <div className="mb-6 product-card__price">
-                <div className="gap-12 flex-align">
-                  <span className="text-sm text-main-600 fw-bold">{(isGift ? 0 : totalRow).toLocaleString("vi-VN")} ₫</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </td>
-      </tr>
-    );
-  };
 
   return (
     <>
       <FullHeader showClassicTopBar={true} showTopNav={false} />
+      
+      <section className="py-20 cart">
 
-      <section className="py-20 cart bg-white-50">
         <div className="container container-lg">
-          <form onSubmit={handlePlaceOrder} className="row gy-4">
+          {/* Thông báo xóa */}
+          {deleteMessage && (
+            <div className="p-10 mb-20 border bg-success-200 border-success-600 text-success-900 fw-medium rounded-8" style={{ animation: 'fadeIn 0.3s ease' }}>
+              <div className="gap-8 d-flex align-items-center">
+                <i className="text-xl ph ph-check-circle text-success-600"></i> {deleteMessage}
+              </div>
+            </div>
+          )}
 
-            {/* LEFT: Thông tin giao hàng + Sản phẩm */}
-            <div className="col-xl-7 col-lg-8">
 
-              {/* 1. ĐỊA CHỈ NHẬN HÀNG */}
-              <div className="px-20 py-20 pb-20 bg-white border border-gray-100 shadow-sm cart-sidebar rounded-8">
-                <div className="gap-8 mb-20 flex-align flex-between">
-                  <h6 className="gap-4 m-0 text-lg flex-align">
-                    <i className="text-xl ph-bold ph-map-pin-area text-main-600"></i>Người nhận hàng
-                  </h6>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddressModal(true)}
-                    className="gap-1 p-0 text-xs bg-transparent border-0 text-primary-700 flex-align fw-normal"
+          {/* Dev Button */}
+          {/* <div className="mb-12">
+            <button type="button" className="btn btn-sm btn-outline" onClick={importGuestFromFile} style={{ padding: '8px 12px' }}>
+              Dev: Import Sample Data
+            </button>
+          </div> */}
+
+          <div className="row gy-4">
+            <div className="col-xl-9 col-lg-8">
+              <div className="pb-0 border border-gray-100 cart-table rounded-8 p-30">
+                <form onSubmit={(e) => e.preventDefault()}>
+                  <div
+                    className="overflow-x-auto scroll-sm scroll-sm-horizontal"
+                    style={{
+                      maxHeight: items.length > 5 ? '750px' : 'none',
+                      overflowY: items.length > 5 ? 'auto' : 'visible',
+                      opacity: loading ? 0.5 : 1, // Hiệu ứng mờ khi đang sync
+                      pointerEvents: loading ? 'none' : 'auto',
+                      transition: 'opacity 0.2s',
+                    }}
+
                   >
-                    <i className="ph-bold ph-pencil-simple"></i> Thay đổi
-                  </button>
-                </div>
+                    <table className="table style-three">
+                      <thead>
+                        <tr className="py-10 my-10 border-gray-500 border-bottom">
+                          <th className="gap-24 p-0 pb-10 mb-0 text-lg h6 fw-bold flex-align" colSpan={2}>
+                            <div>
+                              <i className="text-lg ph-bold ph-shopping-cart text-main-600 pe-6"></i>
+                              Giỏ hàng ( {totalItems} sản phẩm )
+                            </div>
+                          </th>
+                          <th className="p-0 pb-10 mb-0 text-lg h6 fw-bold">Số lượng</th>
+                          <th className="p-0 pb-10 mb-0 text-lg h6 fw-bold">Thành tiền</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.length === 0 ? (
+                          <tr><td colSpan={4} className="py-20 text-center">Giỏ hàng trống.</td></tr>
+                        ) : (
+                          items.map((item, idx) => {
+                            // Hook đã map dữ liệu chuẩn, ta chỉ việc dùng
+                            const product = item.product || {};
+                            const currentPrice = Number(product.gia?.current || 0);
+                            const originalPrice = Number(product.gia?.before_discount || 0);
+                            const itemTotal = item.thanhtien ?? (currentPrice * item.soluong); // Ưu tiên thành tiền từ BE
 
-                {selectedAddress ? (
-                  <>
-                    <div className="flex-wrap flex-align">
-                      <span className="text-gray-600 border-gray-600 text-md fw-semibold border-end me-8 pe-10">
-                        {selectedAddress.ten_nguoinhan || user?.hoten}
-                      </span>
-                      <span className="text-gray-600 text-md fw-medium">
-                        {selectedAddress.sodienthoai}
-                      </span>
-                    </div>
-                    <div className="flex-wrap gap-4 mt-10 flex-align">
-                      <span className="text-sm text-gray-600 fw-normal">
-                        {selectedAddress.trangthai === "Mặc định" && (
-                          <span className="px-6 text-xs text-white fw-semibold rounded-4 bg-success-400 me-2">Mặc định</span>
+                            const reactKey = `${String(item.id_giohang ?? `local_${item.id_bienthe}`)}_${idx}`;
+
+                            return (
+                              <tr key={reactKey}>
+                                <td className="px-5 py-20">
+                                  <div className="gap-12 d-flex align-items-center">
+                                    <button
+                                      type="button"
+                                      className="gap-8 flex-align hover-text-danger-600 pe-10"
+                                      onClick={() => openDeleteModal(item.id_giohang, product.ten || "Sản phẩm")}
+                                    >
+                                      <i className="text-2xl ph ph-trash d-flex"></i> Xóa
+                                    </button>
+                                    <Link href={`/san-pham/${product.slug}`} className="border border-gray-100 rounded-8 flex-center" style={{ width: '100px', height: '100px', flexShrink: 0 }}>
+                                      <Image
+                                        src={product.mediaurl || '/assets/images/thumbs/product-placeholder.png'}
+                                        alt={product.ten || 'Product'}
+                                        width={100} height={100}
+                                        className="w-100 rounded-8"
+                                        style={{ objectFit: 'contain' }}
+                                      />
+                                    </Link>
+                                    <div className="table-product__content text-start">
+                                      {product.thuonghieu && (
+                                        <div className="gap-4 mb-5 flex-align">
+                                          <span className="text-main-two-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
+                                          <span className="text-xs text-gray-500">{product.thuonghieu}</span>
+                                        </div>
+                                      )}
+                                      <h6 className="mb-0 text-lg title fw-semibold">
+                                        <Link href={`/san-pham/${product.slug}`} className="link text-line-2" title={product.ten}>
+                                          {product.ten}
+                                        </Link>
+                                      </h6>
+                                      {product.loaibienthe && (
+                                        <div className="px-8 py-4 mt-2 text-sm text-gray-500 bg-gray-50 d-inline-block rounded-4">
+                                          Phân loại: {product.loaibienthe}
+                                        </div>
+                                      )}
+                                      <div className="mt-6 product-card__price">
+                                        {originalPrice > currentPrice && (
+                                          <span className="text-sm text-gray-400 fw-semibold text-decoration-line-through me-8">
+                                            {formatPrice(originalPrice)}
+                                          </span>
+                                        )}
+                                        <span className="text-heading text-md fw-bold">{formatPrice(currentPrice)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-5 py-20">
+                                  {/* Component Tăng Giảm đã có sẵn */}
+                                  <QuantityControl
+                                    quantity={item.soluong}
+                                    onUpdate={(newQty) => updatesoluong(item.id_giohang, newQty)}
+                                    disabled={loading}
+                                  />
+                                </td>
+                                <td className="px-5 py-20">
+                                  <span className="mb-0 text-lg h6 fw-semibold text-main-600">{formatPrice(itemTotal)}</span>
+                                  {loading && <div className="text-xs text-gray-400">Đang tính...</div>}
+                                </td>
+                              </tr>
+                            );
+                          })
+
                         )}
-                        {selectedAddress.diachi}, {selectedAddress.tinhthanh}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="py-4 text-center">
-                    <p className="mb-2 text-sm text-gray-500">Bạn chưa có địa chỉ nhận hàng.</p>
-                    <Link href="/dia-chi" className="text-sm text-main-600 fw-medium hover-underline">
-                      + Thêm địa chỉ mới
-                    </Link>
-                  </div>
-                )}
+                      </tbody>
+                    </table>
 
-                {!selectedAddress && (
-                  <div className="px-8 py-4 mt-20 border border-warning-400 bg-warning-100 rounded-4 text-warning-900">
-                    <span className="gap-8 text-sm fw-medium flex-align">
-                      <i className="text-2xl ph-bold ph-warning-circle"></i> Vui lòng chọn địa chỉ để tiếp tục.
-                    </span>
                   </div>
-                )}
+                </form>
               </div>
 
-              {/* 2. TÓM TẮT ĐƠN HÀNG */}
-              <div className="pb-0 mt-20 bg-white border border-gray-100 shadow-sm cart-table rounded-8 p-30">
-                <div>
-                  {loading ? (
-                    <LoadingRedirect message="Đang tải tóm tắt sản phẩm..." />
-                  ) : (
-                    <div className="overflow-x-auto scroll-sm scroll-sm-horizontal">
-                      <table className="table mb-20 style-three">
-                        <thead>
-                          <tr className="py-10 my-10">
-                            <th className="gap-24 p-0 pb-10 mb-0 text-lg h6 fw-bold flex-align" colSpan={2}>
-                              <div>
-                                <i className="text-lg ph-bold ph-shopping-cart text-main-600 pe-6"></i>
-                                Tóm tắt đơn hàng ( {items.length} sản phẩm )
+              {/* QUÀ TẶNG (Logic từ BE, FE chỉ render) */}
+              {gifts && gifts.length > 0 && (
+                <>
+                  <div className="p-10 mt-20 font-semibold text-center text-yellow-800 border-2 border-yellow-500 border-dashed rounded-lg bg-yellow-50">
+                    🎉 Chúc mừng! Bạn nhận được {totalGifts} quà tặng miễn phí.
+
+                  </div>
+                  <div className="pb-0 mt-20 border border-gray-100 cart-table rounded-8 p-30">
+                    <table className="table style-three">
+                      <thead>
+                        <tr>
+                          <th className="text-lg h6 fw-bold"><i className="ph-bold ph-gift text-main-600"></i> Danh sách quà tặng</th>
+                          <th>Số lượng</th>
+                          <th>Giá trị</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gifts.map((gift, idx) => (
+                          <tr key={`gift-${idx}`}>
+                            <td className="px-5 py-10">
+                              <div className="gap-12 d-flex align-items-center">
+                                <div style={{ width: '60px', height: '60px' }} className="p-1 border rounded-8">
+                                  <img src={gift.hinhanh} alt="Gift" className="w-100 h-100 object-fit-contain" />
+                                </div>
+                                <div>
+                                  <div className="text-sm fw-bold text-line-1" title={gift.ten_sanpham}>{gift.ten_sanpham}</div>
+                                  <div className="text-xs text-gray-500">{gift.ten_loaibienthe}</div>
+                                  <div className="text-xs text-main-two-600 fw-bold">QUÀ TẶNG 0đ</div>
+                                </div>
+
                               </div>
-                            </th>
+                            </td>
+                            <td className="px-5 py-10 text-center fw-bold">x{gift.soluong}</td>
+                            <td className="px-5 py-10 text-main-600 fw-bold">Miễn phí</td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {mainItems.map((item, i) => renderSummaryRow(item, false, i))}
-                        </tbody>
-                      </table>
+                        ))}
+                      </tbody>
+                    </table>
 
-                      {/* Quà tặng riêng biệt */}
-                      {giftItems.length > 0 && (
-                        <div className="p-20 pb-0 mt-10 bg-white border border-gray-100 cart-table rounded-8">
-                          <div className="gap-8 mb-12 flex-align">
-                            <i className="text-lg ph-bold ph-gift text-main-600 pe-6"></i>
-                            <h6 className="m-0 text-md fw-semibold">Quà tặng nhận được</h6>
-                          </div>
-                          <div className="overflow-x-auto">
-                            <table className="table style-three">
-                              <tbody>
-                                {giftItems.map((item, i) => renderSummaryRow(item, true, i))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 3. PHƯƠNG THỨC THANH TOÁN */}
-              <div className="px-20 py-20 pb-20 mt-20 bg-white border border-gray-100 shadow-sm cart-sidebar rounded-8">
-                <h6 className="mb-20 flex-between flex-align">
-                  <span className="gap-8 text-lg flex-align">
-                    <i className="text-xl ph-bold ph-wallet text-main-600"></i>Phương thức thanh toán
-                  </span>
-                </h6>
-
-                <label
-                  className={`w-100 mt-10 border ${paymentMethod === "cod" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
-                  onClick={() => setPaymentMethod("cod")}
-                >
-                  <div className="mb-0 form-check common-check common-radio">
-                    <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "cod"} readOnly />
-                    <label className="text-sm form-check-label fw-medium text-neutral-600 w-100">
-                      Thanh toán khi nhận hàng (COD)
-                    </label>
                   </div>
-                </label>
-
-                <label
-                  className={`w-100 mt-10 border ${paymentMethod === "dbt" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
-                  onClick={() => setPaymentMethod("dbt")}
-                >
-                  <div className="mb-0 form-check common-check common-radio">
-                    <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "dbt"} readOnly />
-                    <label className="text-sm form-check-label fw-medium text-neutral-600 w-100">
-                      Thanh toán qua QR Code (VNPAY)
-                    </label>
-                  </div>
-                </label>
-                {/* <label 
-                        className={`w-100 mt-10 border ${paymentMethod === "cp" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
-                        onClick={() => setPaymentMethod("cp")}
-                    >
-                        <div className="mb-0 form-check common-check common-radio">
-                            <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "cp"} readOnly />
-                            <label className="text-sm form-check-label fw-medium text-neutral-600 w-100">
-                                Thanh toán qua VietQR (QR Code)
-                            </label>
-                        </div>
-                    </label>
-                    </label> */}
-              </div>
+                </>
+              )}
             </div>
 
-            {/* RIGHT: Sidebar Tổng tiền */}
-            <div className="col-xl-5 col-lg-4">
-              {/* Voucher (Read-only hoặc Link về giỏ hàng) */}
-              <div className="px-20 py-20 pb-20 mb-20 bg-white border border-gray-100 shadow-sm cart-sidebar rounded-8">
-                <h6 className="mb-20 flex-between flex-align">
-                  <span className="gap-8 text-lg flex-align">
-                    <i className="text-xl ph-bold ph-ticket text-main-600"></i>Áp dụng Voucher
-                  </span>
-                  <Link href="/gio-hang" className="gap-1 text-xs text-primary-700 flex-align fw-normal">
-                    <i className="ph-bold ph-pencil-simple"></i> Thay đổi
-                  </Link>
-                </h6>
-                <div className="gap-8 px-12 py-10 mt-10 flex-align flex-center rounded-4 bg-50">
-                  {appliedVoucher ? (
-                    <div className="gap-8 px-12 py-10 mt-10 border-gray-200 border-dashed flex-align flex-between rounded-4" style={{ width: '100%' }}>
-                      <span className="gap-8 text-sm text-gray-900 flex-align fw-medium" style={{ flex: 1 }}>
-                        <i className="text-2xl ph-bold ph-ticket text-main-two-600"></i>
-                        <div className="text-sm d-flex flex-column">
-                          <span className="text-sm text-gray-900 w-100">
-                            {appliedVoucher.giatri ? `Giảm ${Number(appliedVoucher.giatri).toLocaleString('vi-VN')}đ` : ''}
-                          </span>
-                          <span className="text-xs text-gray-500 w-100">
-                            {String(appliedVoucher.code ?? appliedVoucher.magiamgia ?? '')}
-                          </span>
-                        </div>
-                      </span>
-                      <span className="gap-8 text-xs text-gray-900 flex-align fw-medium">
-                        <button
-                          type="button"
-                          onClick={() => removeVoucher()}
-                          className="p-6 text-xs btn border-danger-600 text-danger-600 hover-bg-danger-600 hover-text-white hover-border-danger-600 rounded-4"
-                        >
-                          Hủy
-                        </button>
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-gray-900">
-                      {discountAmount > 0 ? `Đã giảm ${discountAmount.toLocaleString()}đ` : "Không có áp dụng Voucher !"}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Tổng tiền & Nút Đặt hàng */}
-              <div className="px-20 py-20 bg-white border border-gray-100 shadow-sm cart-sidebar rounded-8">
-                <div className="mb-20">
-                  <h6 className="gap-4 mb-6 text-lg flex-align">
-                    <i className="text-xl ph-bold ph-notepad text-main-600"></i>Đơn hàng
+            <div className="col-xl-3 col-lg-4">
+              <div className="mt-16">
+                {/* VOUCHER SIDEBAR */}
+                <div className="px-24 pb-20 border border-gray-100 cart-sidebar rounded-8 py-30">
+                  <h6 className="gap-8 mb-20 text-lg flex-align">
+                    <i className="text-xl ph-bold ph-ticket text-main-600"></i>Mã giảm giá
                   </h6>
-                  <span className="gap-1 text-sm text-gray-600 flex-align fw-medium">
-                    {mainItems.length} sản phẩm {giftItems.length > 0 && `+ ${giftItems.length} quà tặng`}
-                  </span>
-                </div>
 
-                <div className="gap-8 mb-20 flex-between">
-                  <span className="text-gray-900 font-heading-two">Tổng tiền hàng:</span>
-                  <span className="text-gray-900 fw-semibold">{subtotal.toLocaleString("vi-VN")} ₫</span>
-                </div>
 
-                {/* Phí ship (Mock tạm = 0 hoặc tính toán sau) */}
-                <div className="gap-8 mb-20 flex-between">
-                  <span className="text-gray-900 font-heading-two d-flex flex-column">
-                    <span>Phí vận chuyển:</span>
-                    {/* <span className="text-xs">- Nội tỉnh (TP.HCM)</span> */}
-                  </span>
-                  <span className="text-gray-900 fw-semibold">0 ₫</span>
-                </div>
+                  {/* 1. Voucher Đã áp dụng */}
+                  {appliedVoucher && (
+                    <div className="gap-8 px-12 py-10 mt-10 border border-main-600 bg-main-50 flex-align flex-between rounded-4">
+                      <div className="overflow-hidden text-sm d-flex flex-column">
+                        <span className="text-main-600 fw-bold">Đang dùng: {appliedVoucher.code}</span>
+                        <span className="text-xs text-gray-600 text-line-1">Giảm {formatPrice(Number(appliedVoucher.giatri))}</span>
+                      </div>
+                      <button onClick={removeVoucher} className="text-xs text-danger-600 fw-bold hover-text-danger-700">
+                        Bỏ chọn
+                      </button>
 
-                <div className="pt-24 my-20 border-gray-100 border-top">
-                  <div className="gap-8 flex-between">
-                    <span className="text-lg text-gray-900 fw-semibold">Tổng thanh toán:</span>
-                    <span className="text-lg text-main-600 fw-semibold">{total.toLocaleString("vi-VN")} ₫</span>
+                    </div>
+
+                  )}
+
+                  {/* 2. Danh sách Voucher khả dụng */}
+                  <div className="gap-10 mt-10 d-flex flex-column" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                    {displayCoupons.map((voucher: any) => {
+                       // Filter cơ bản ở FE để hiển thị UI (ẩn voucher hết hạn)
+                       if (!isVoucherInDateRange(voucher.ngaybatdau, voucher.ngayketthuc)) return null;
+                       if (appliedVoucher && voucher.id === appliedVoucher.id) return null; // Ẩn cái đang chọn
+
+                       const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
+                       const isEligible = subtotal >= minOrderValue; // Logic check đơn giản
+
+                       return (
+                         <div key={voucher.id} className={`p-10 border border-dashed rounded-4 ${isEligible ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300 opacity-75'}`}>
+                           <div className="d-flex justify-content-between align-items-center">
+                             <div className="d-flex flex-column" style={{flex: 1, overflow: 'hidden'}}>
+                               <span className="text-sm text-gray-900 fw-bold">{voucher.magiamgia || voucher.code}</span>
+                               <span className="text-xs text-gray-500">Giảm {formatPrice(Number(voucher.giatri))}</span>
+                               {!isEligible && <span className="text-xs text-warning-600">Đơn từ {formatPrice(minOrderValue)}</span>}
+                             </div>
+                             <button
+                               onClick={() => applyVoucher(voucher)}
+                               disabled={!isEligible}
+                               className={`btn btn-sm px-10 py-4 text-xs rounded-4 ${isEligible ? 'btn-main' : 'btn-gray text-gray-500'}`}
+                             >
+                               {isEligible ? 'Dùng' : 'Chưa đủ'}
+                             </button>
+                           </div>
+                         </div>
+                       );
+                    })}
+                    
+                    {displayCoupons.length === 0 && !appliedVoucher && (
+                      <div className="py-10 text-sm text-center text-gray-500">Chưa có mã giảm giá phù hợp.</div>
+                    )}
                   </div>
+
+                </div>
+
+                {/* TỔNG TIỀN */}
+                <div className="px-20 py-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
+                  <div className="mb-20">
+                    <h6 className="gap-4 mb-6 text-lg flex-align"><i className="text-xl ph-bold ph-shopping-cart text-main-600"></i> Thông tin thanh toán</h6>
+                  </div>
+                  
+                  <div className="gap-8 mb-20 flex-between">
+                    <span className="text-gray-900 font-heading-two">Tạm tính:</span>
+                    <span className="text-gray-900 fw-semibold">{formatPrice(subtotal)}</span>
+                  </div>
+
+
+
                   {discountAmount > 0 && (
-                    <div className="gap-8 text-end">
-                      <span className="text-sm text-success-600 fw-normal">Tiết kiệm: </span>
-                      <span className="text-sm text-success-600 fw-normal">{discountAmount.toLocaleString("vi-VN")} ₫</span>
+                    <div className="gap-8 mb-20 flex-between">
+                      <span className="text-gray-900 font-heading-two">Voucher giảm:</span>
+                      <span className="text-success-600 fw-semibold">-{formatPrice(discountAmount)}</span>
+
                     </div>
                   )}
-                </div>
 
-                <button
-                  type="submit"
-                  className="btn btn-main py-14 w-100 rounded-8"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Đang xử lý..." : "Đặt hàng"}
-                </button>
-              </div>
 
-              <span className="mt-20 text-center w-100 d-block">
-                <Link href="/gio-hang" className="text-sm text-main-600 fw-medium flex-align d-flex flex-center transition-1 link">
-                  <i className="ph-bold ph-arrow-fat-lines-left text-main-600 text-md pe-10"></i> <span>Quay lại giỏ hàng</span>
-                </Link>
-              </span>
-            </div>
+                  <div className="pt-24 my-20 border-gray-100 border-top">
+                    <div className="gap-8 flex-between">
+                      <span className="text-lg text-gray-900 fw-semibold">Tổng cộng:</span>
+                      <span className="text-xl text-main-600 fw-bold">{formatPrice(total)}</span>
 
-          </form>
-        </div>
-      </section>
-
-      {/* MODAL CHỌN ĐỊA CHỈ */}
-      {showAddressModal && (
-        <div className="modal" style={{ display: 'block', background: 'rgba(0,0,0,0.5)' }}>
-          <div className="container modal-content container-lg" style={{ maxWidth: 600 }}>
-            <div className="mb-20 flex-align flex-between">
-              <span className="pb-10 text-lg text-gray-900 fw-semibold">Chọn địa chỉ giao hàng</span>
-              <button onClick={() => setShowAddressModal(false)} className="pb-10 text-2xl text-gray-900 bg-transparent border-0" style={{ cursor: 'pointer' }}>&times;</button>
-            </div>
-            <div className="overflow-y-auto row gy-4 max-h-400">
-              {user?.diachi?.map((addr: Address) => (
-                <div key={addr.id} className="col-12" onClick={() => { setSelectedAddress(addr); setShowAddressModal(false); }}>
-                  <div className={`border rounded-8 p-16 cursor-pointer hover-bg-gray-50 ${selectedAddress?.id === addr.id ? 'border-main-600 bg-main-50' : 'border-gray-200'}`}>
-                    <div className="gap-12 mb-2 flex-align">
-                      <span className="text-gray-900 border-gray-600 fw-semibold text-md border-end pe-10">
-                        {addr.ten_nguoinhan || user.hoten}
-                      </span>
-                      <span className="text-gray-900 fw-semibold text-md">
-                        {addr.sodienthoai}
-                      </span>
-                      {addr.trangthai === "Mặc định" && <span className="px-6 text-xs text-white rounded bg-success-500">Mặc định</span>}
                     </div>
-                    <p className="m-0 text-sm text-gray-600">{addr.diachi}, {addr.tinhthanh}</p>
+                    {savedAmount > 0 && (
+                      <div className="gap-8 mt-6 text-end">
+                        <span className="text-sm text-success-600 fst-italic">
+                          (Bạn đã tiết kiệm được {formatPrice(savedAmount)})
+                        </span>
+                      </div>
+                    )}
+
                   </div>
+
+                  <Link
+                    href="/thanh-toan"
+                    className={`btn btn-main py-14 w-100 rounded-8 ${items.length === 0 || loading ? 'disabled opacity-50' : ''}`}
+                    style={{ pointerEvents: (items.length === 0 || loading) ? 'none' : 'auto' }}
+                  >
+                    {loading ? 'Đang tính toán...' : 'Tiến hành thanh toán'}
+                  </Link>
                 </div>
-              ))}
-              <div className="mt-3 text-center col-12">
-                <Link href="/dia-chi" className="px-24 btn btn-outline-main rounded-pill">+ Thêm địa chỉ mới</Link>
+                
+                <span className="mt-20 text-center w-100 d-block">
+                  <Link href="/shop" className="text-sm text-main-600 fw-medium">
+                    <i className="ph-bold ph-arrow-left pe-4"></i> Tiếp tục mua sắm
+                  </Link>
+                </span>
+
               </div>
             </div>
           </div>
         </div>
-      )}
+      </section>
 
-      <BenefitsStrip />
-
-      {/* Styles Modal (Giữ nguyên hoặc đưa vào CSS global) */}
-      <style jsx>{`
-        .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; }
-        .modal-content { background-color: #fefefe; margin: 50px auto; padding: 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-      `}</style>
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        productName={deleteModal.name}
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+      />
     </>
+  );
+}
+
+export default function CartPage() {
+  return (
+    <HomeDataProvider>
+      <CartPageContent />
+    </HomeDataProvider>
+
   );
 }
