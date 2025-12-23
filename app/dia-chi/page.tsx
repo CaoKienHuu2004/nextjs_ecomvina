@@ -101,9 +101,12 @@ export default function Page(): JSX.Element {
   const [provinces, setProvinces] = useState<Tinh[]>([]);
   useEffect(() => {
     let mounted = true;
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://sieuthivina.com";
+    const PROVINCES_PATH = process.env.NEXT_PUBLIC_PROVINCES_PATH || "/api/v1/provinces";
+
     (async () => {
       try {
-        const res = await fetch("https://sieuthivina.com/api/v1/provinces", { headers: { Accept: "application/json" } });
+        const res = await fetch(`${API_BASE}${PROVINCES_PATH}`, { headers: { Accept: "application/json" } });
         if (!mounted) return;
         if (res.ok) {
           const json = await res.json();

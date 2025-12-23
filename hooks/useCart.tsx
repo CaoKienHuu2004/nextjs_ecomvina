@@ -147,6 +147,11 @@ export function useCart() {
 
   const [items, setItems] = useState<CartItem[]>([]);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
+  const itemsRef = useRef<CartItem[]>(items);
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   const [summary, setSummary] = useState<CartSummary>({
     tamtinh: 0,
@@ -507,38 +512,63 @@ export function useCart() {
   const updatesoluong = useCallback(async (id_giohang: number | string, soluong: number) => {
     if (soluong < 1) return;
 
-    // 1. Optimistic update (trên UI)
+    // Optimistic update UI
     setItems(prev => prev.map(i => i.id_giohang === id_giohang ? { ...i, soluong } : i));
 
-    // 2. Debounce & Update Storage/API
+    // Debounce
     if (emitTimeoutRef.current) clearTimeout(emitTimeoutRef.current);
 
-    emitTimeoutRef.current = window.setTimeout(() => {
+    emitTimeoutRef.current = window.setTimeout(async () => {
+      // Lấy item hiện tại từ ref để tránh stale closure
+      const currentItem = itemsRef.current.find(i => i.id_giohang === id_giohang);
+
       if (hasValidToken()) {
-        fetchCart();
+        // USER: gọi API cập nhật số lượng
+        try {
+          if (!currentItem) {
+            console.warn("Item not found for update (user)", id_giohang);
+            await fetchCart();
+            return;
+          }
+
+          const id_bienthe = currentItem.id_bienthe ?? currentItem.id_giohang ?? (currentItem as any).id;
+          const res = await fetch(`${API}/api/v1/gio-hang/cap-nhat`, {
+            method: "PUT",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ id_bienthe, soluong }),
+            credentials: "include"
+          });
+
+          // Luôn re-sync từ server để đảm bảo giá/khuyến mãi/gift chính xác
+          await fetchCart();
+          if (!res.ok) console.error("Lỗi update số lượng (user):", res.status);
+        } catch (e) {
+          console.error("Update quantity error (user)", e);
+          await fetchCart();
+        }
       } else {
-        // --- SỬA LỖI GUEST ---
-        // Tìm item trong state hiện tại để lấy ra id_bienthe
-        const currentItem = items.find(i => i.id_giohang === id_giohang);
-
-        if (currentItem) {
+        // GUEST: cập nhật localStorage rồi re-sync UI bằng fetchCart()
+        try {
+          if (!currentItem) {
+            console.warn("Item not found for update (guest)", id_giohang);
+            return;
+          }
           const localItems = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
-
-          // QUAN TRỌNG: Tìm trong localStorage bằng id_bienthe, KHÔNG dùng id_giohang vì id_giohang có thể lệch
-          const idx = localItems.findIndex((i: any) => String(i.id_bienthe) === String(currentItem.id_bienthe));
-
+          // Tìm bằng id_bienthe trước, fallback id_giohang
+          const idx = localItems.findIndex((i: any) => String(i.id_bienthe) === String(currentItem.id_bienthe) || String(i.id_giohang) === String(id_giohang));
           if (idx > -1) {
             localItems[idx].soluong = soluong;
             saveLocalCart(localItems);
-            // Gọi fetchCart để BE tính toán lại giá/quà dựa trên localStorage mới
-            fetchCart();
+            await fetchCart();
           } else {
-            console.warn("Không tìm thấy item trong LocalStorage để update", currentItem);
+            console.warn("Không tìm thấy item trong LocalStorage để update (guest)", currentItem);
           }
+        } catch (e) {
+          console.error("Update quantity error (guest)", e);
         }
       }
     }, 500);
-  }, [hasValidToken, saveLocalCart, fetchCart, items]); // Thêm items vào dependency
+  }, [hasValidToken, saveLocalCart, fetchCart]);
 
   const removeItem = useCallback(async (id_giohang: number | string) => {
     // Optimistic update

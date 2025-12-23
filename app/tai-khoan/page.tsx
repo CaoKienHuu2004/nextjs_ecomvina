@@ -42,10 +42,11 @@ type CartRow = {
 
 type Address = {
   id?: number;
+  id_nguoidung: number;
   hoten: string;
   sodienthoai: string;
   diachi: string;
-  tinhthanh?: string;
+  tinhthanh: string;
   trangthai?: string;
 };
 
@@ -61,7 +62,8 @@ type AuthUser = {
   avatar?: string | null;
   // vaitro?: string | null;
   // trangthai?: string | null;
-  diachi?: Address[] | null;
+  danh_sach_diachi?: Address[] | null;
+  [key: string]: unknown;
 };
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
@@ -79,39 +81,51 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null;
 
 function normalizeUser(raw: unknown): AuthUser {
-      if (!isPlainObject(raw)) return {};
-      const r = raw as Record<string, any>;
-      const diachiRaw = Array.isArray(r.diachi) ? r.diachi : r.danh_sach_diachi ?? null;
-      const diachi = Array.isArray(diachiRaw)
-        ? diachiRaw
-            .map((it: any) => {
-              if (!it || (it.id == null && it.id === undefined)) return null;
-              const idNum = Number(it.id);
-              if (!Number.isFinite(idNum)) return null;
-              return {
-                id: idNum,
-                hoten: typeof it.hoten === "string" ? it.hoten : String(it.hoten ?? ""),
-                sodienthoai: typeof it.sodienthoai === "string" ? it.sodienthoai : String(it.sodienthoai ?? ""),
-                diachi: typeof it.diachi === "string" ? it.diachi : String(it.diachi ?? ""),
-                tinhthanh: typeof it.tinhthanh === "string" ? it.tinhthanh : undefined,
-                trangthai: typeof it.trangthai === "string" ? it.trangthai : undefined,
-              } as Address;
-            })
-            .filter(Boolean) as Address[]
-        : null;
-      const mapped: AuthUser = {
-        id: r.id ?? r.ID ?? r.user_id ?? undefined,
-        username: typeof r.username === "string" ? r.username : r.email ?? undefined,
-        hoten: typeof r.hoten === "string" ? r.hoten : r.name ?? undefined,
-        sodienthoai: typeof r.sodienthoai === "string" ? r.sodienthoai : r.phone ?? undefined,
-        email: typeof r.email === "string" ? r.email : undefined,
-        gioitinh: typeof r.gioitinh === "string" ? r.gioitinh : undefined,
-        ngaysinh: typeof r.ngaysinh === "string" ? r.ngaysinh : undefined,
-        avatar: typeof r.avatar === "string" ? r.avatar : undefined,
-        diachi: diachi ?? null,
-      };
-      return mapped;
-    }
+  if (!isPlainObject(raw)) return {};
+  const r0 = raw as Record<string, any>;
+  // unwrap common wrappers: { user: ... } or { data: ... }
+  const core = (r0.user ?? r0.data ?? r0) as Record<string, any>;
+
+  const diachiRaw = Array.isArray(core.danh_sach_diachi)
+    ? core.danh_sach_diachi
+    : Array.isArray(core.diachi)
+    ? core.diachi
+    : null;
+
+  const diachi = Array.isArray(diachiRaw)
+    ? diachiRaw
+        .map((it: any) => {
+          if (!it) return null;
+          const idVal = it.id ?? it.ID ?? it.id_nguoidung ?? null;
+          if (idVal == null) return null;
+          const idNum = Number(idVal);
+          if (!Number.isFinite(idNum)) return null;
+          return {
+            id: idNum,
+            id_nguoidung: it.id_nguoidung ?? undefined,
+            hoten: typeof it.hoten === "string" ? it.hoten : String(it.hoten ?? it.name ?? ""),
+            sodienthoai: typeof it.sodienthoai === "string" ? it.sodienthoai : String(it.sodienthoai ?? ""),
+            diachi: typeof it.diachi === "string" ? it.diachi : String(it.diachi ?? ""),
+            tinhthanh: typeof it.tinhthanh === "string" ? it.tinhthanh : undefined,
+            trangthai: typeof it.trangthai === "string" ? it.trangthai : undefined,
+          } as Address;
+        })
+        .filter(Boolean) as Address[]
+    : null;
+
+  const mapped: AuthUser = {
+    id: core.id ?? core.ID ?? core.user_id ?? undefined,
+    username: typeof core.username === "string" ? core.username : core.email ?? undefined,
+    hoten: typeof core.hoten === "string" ? core.hoten : core.name ?? undefined,
+    sodienthoai: typeof core.sodienthoai === "string" ? core.sodienthoai : core.phone ?? undefined,
+    email: typeof core.email === "string" ? core.email : undefined,
+    gioitinh: typeof core.gioitinh === "string" ? core.gioitinh : undefined,
+    ngaysinh: typeof core.ngaysinh === "string" ? core.ngaysinh : undefined,
+    avatar: typeof core.avatar === "string" ? core.avatar : undefined,
+    danh_sach_diachi: diachi ?? null,
+  };
+  return mapped;
+}
 
 export default function Page() {
   const router = useRouter();
@@ -352,7 +366,7 @@ export default function Page() {
         try { localStorage.setItem("username", String(updated.username)); } catch { }
       }
       // if backend returns diachi array, remind user to add address if empty
-      const diachiArr = Array.isArray(normalizedUpdated?.diachi) ? (normalizedUpdated!.diachi as Address[]) : undefined;
+      const diachiArr = Array.isArray(normalizedUpdated?.danh_sach_diachi) ? (normalizedUpdated!.danh_sach_diachi as Address[]) : undefined;
       if (!diachiArr || diachiArr.length === 0) {
         setNotice({
           type: "success",

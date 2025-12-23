@@ -177,7 +177,7 @@ export default function ThanhToanPage() {
       if (paymentMethod === "dbt") {
         // gọi API tạo payment link
         // const resPay = await fetch(`${API}/api/v1/don-hang/${orderId}/payment-url`, {
-        const resPay = await fetch(`${API}/api/thanh-toan/vnp-return/${orderId}`, {
+        const resPay = await fetch(`${API}/api/thanh-toan/vnpay-return/${orderId}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -564,7 +564,7 @@ export default function ThanhToanPage() {
               <button onClick={() => setShowAddressModal(false)} className="pb-10 text-2xl text-gray-900 bg-transparent border-0" style={{ cursor: 'pointer' }}>&times;</button>
             </div>
             <div className="overflow-y-auto row gy-4 max-h-400">
-              {user?.diachi?.map((addr: Address) => (
+              {user?.danh_sach_diachi?.map((addr: Address) => (
                 <div key={addr.id} className="col-12" onClick={() => { setSelectedAddress(addr); setShowAddressModal(false); }}>
                   <div className={`border rounded-8 p-16 cursor-pointer hover-bg-gray-50 ${selectedAddress?.id === addr.id ? 'border-main-600 bg-main-50' : 'border-gray-200'}`}>
                     <div className="gap-12 mb-2 flex-align">

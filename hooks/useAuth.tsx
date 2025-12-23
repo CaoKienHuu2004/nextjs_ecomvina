@@ -25,8 +25,9 @@ export type AuthUser = {
   gioitinh?: string;
   ngaysinh?: string;
   avatar?: string;
-  diachi?: {
-    id?: number;
+  danh_sach_diachi?: {
+    id: number;
+    id_nguoidung: number;
     hoten?: string;
     sodienthoai?: string;
     diachi?: string;
@@ -127,7 +128,7 @@ export function AuthProvider({
         gioitinh: candidate.gioitinh ?? undefined,
         ngaysinh: candidate.ngaysinh ?? undefined,
         avatar: candidate.avatar ?? candidate.photo ?? undefined,
-        diachi: candidate.diachi ?? candidate.address ?? undefined,
+        danh_sach_diachi: candidate.diachi ?? candidate.address ?? undefined,
       };
       setUserState(mappedUser);
       if (!token) setToken(accessToken);
@@ -175,7 +176,7 @@ export function AuthProvider({
         gioitinh: candidate.gioitinh ?? undefined,
         ngaysinh: candidate.ngaysinh ?? undefined,
         avatar: candidate.avatar ?? candidate.photo ?? undefined,
-        diachi: candidate.diachi ?? candidate.address ?? undefined,
+        danh_sach_diachi: candidate.diachi ?? candidate.address ?? undefined,
       };
       setUserState(mapped);
       try { Cookies.set("user_info", JSON.stringify(mapped), { expires: 7, path: "/" }); } catch {}
@@ -258,7 +259,7 @@ export function AuthProvider({
         gioitinh: userPayload.gioitinh ?? undefined,
         ngaysinh: userPayload.ngaysinh ?? undefined,
         avatar: userPayload.avatar ?? userPayload.photo ?? undefined,
-        diachi: userPayload.danh_sach_diachi ?? userPayload.diachi ?? undefined,
+        danh_sach_diachi: userPayload.danh_sach_diachi ?? userPayload.diachi ?? undefined,
       };
       setUserState(mapped);
     } else if (accessToken) {
@@ -319,7 +320,7 @@ export function AuthProvider({
         gioitinh: returned.gioitinh ?? user?.gioitinh,
         ngaysinh: returned.ngaysinh ?? user?.ngaysinh,
         avatar: returned.avatar ?? user?.avatar,
-        diachi: returned.diachi ?? user?.diachi,
+        danh_sach_diachi: returned.danh_sach_diachi ?? user?.danh_sach_diachi,
       };
       Cookies.set("user_info", JSON.stringify(mappedUser), { expires: 7, path: "/" });
       setUserState(mappedUser);
