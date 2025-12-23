@@ -10,10 +10,16 @@ export const API_ROUTES = {
   // Routes gọi kèm endpoint khác
   TU_KHOAS: "/api/tukhoas",
 
-
-
   // can-xac-thuc-tai-khoan-truoc Người dùng - Frontend scope - routes đăng nhập token
   TOI_DON_HANGS: "/api/v1/don-hang",
+  TOI_DON_HANG_DETAIL: (id: string | number) => `/api/v1/don-hang/${id}`,
+  TOI_DON_HANG_HUY: (id: string | number) => `/api/v1/don-hang/${id}/huy`,
+  TOI_DON_HANG_MUA_LAI: (id: string | number) => `/api/v1/don-hang/${id}/mua-lai-don-hang`,
+  TOI_DON_HANG_THANH_TOAN_LAI: (id: string | number) => `/api/v1/don-hang/${id}/thanh-toan-lai-don-hang`,
+  TOI_DON_HANG_PAYMENT_URL: (id: string | number) => `/api/v1/don-hang/${id}/payment-url`,
+  TOI_DON_HANG_PHUONG_THUC: (id: string | number) => `/api/v1/don-hang/${id}/phuong-thuc`,
+  TOI_DON_HANG_TRANG_THAI: (id: string | number) => `/api/v1/don-hang/${id}/trang-thai`,
+  
   TOI_GIO_HANG: "/api/v1/gio-hang",
   TOI_GIO_HANG_ITEM: (id: string | number) => `/api/v1/gio-hang/${id}`,
   TOI_THONG_BAOS: "/api/tai-khoan/thongbaos",
@@ -32,9 +38,7 @@ export const API_ROUTES = {
   AUTH_ME_UPDATE: "/api/v1/thong-tin-ca-nhan/cap-nhat", //POST
 
   // Khác (banner, chương trình, mã giảm giá, từ khoá, ...) // ko quan trọng lắm có trong trang-chu
-
   BANNERS: "/api/bannerquangcaos",
   SU_KIENS: "/api/chuongtrinhsukiens",
   MA_GIAM_GIAS: "/api/magiamgias",
-
 };

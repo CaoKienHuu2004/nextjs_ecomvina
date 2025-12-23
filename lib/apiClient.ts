@@ -65,3 +65,41 @@ export const getBanners = () => apiGet<any>(API_ROUTES.BANNERS);
 export const getSuKienList = () => apiGet<any>(API_ROUTES.SU_KIENS);
 export const getMaGiamGiaList = () => apiGet<any>(API_ROUTES.MA_GIAM_GIAS);
 export const getTuKhoaList = () => apiGet<any>(API_ROUTES.TU_KHOAS);
+
+// ==================== ĐƠN HÀNG APIs ====================
+
+export const getDonHangList = () => 
+  apiGet<any>(API_ROUTES.TOI_DON_HANGS, { withAuth: true });
+
+export const getDonHangDetail = (id: string | number) => 
+  apiGet<any>(API_ROUTES.TOI_DON_HANG_DETAIL(id), { withAuth: true });
+
+export const huyDonHang = (id: string | number) => 
+  apiPatch<any>(API_ROUTES.TOI_DON_HANG_HUY(id), {}, { withAuth: true });
+
+export const muaLaiDonHang = (id: string | number) => 
+  apiPatch<any>(API_ROUTES.TOI_DON_HANG_MUA_LAI(id), {}, { withAuth: true });
+
+export const thanhToanLaiDonHang = (id: string | number) => 
+  apiPatch<any>(API_ROUTES.TOI_DON_HANG_THANH_TOAN_LAI(id), {}, { withAuth: true });
+
+export const getPaymentUrl = (id: string | number, provider?: string) => 
+  apiPost<any>(
+    API_ROUTES.TOI_DON_HANG_PAYMENT_URL(id), 
+    { provider }, 
+    { withAuth: true }
+  );
+
+export const capNhatPhuongThucThanhToan = (id: string | number, ma_phuongthuc: string) => 
+  apiPatch<any>(
+    API_ROUTES.TOI_DON_HANG_PHUONG_THUC(id), 
+    { ma_phuongthuc }, 
+    { withAuth: true }
+  );
+
+export const capNhatTrangThaiDonHang = (id: string | number, payload: Record<string, any>) => 
+  apiPatch<any>(
+    API_ROUTES.TOI_DON_HANG_TRANG_THAI(id), 
+    payload, 
+    { withAuth: true }
+  );

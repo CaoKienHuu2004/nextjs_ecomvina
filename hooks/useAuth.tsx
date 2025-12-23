@@ -83,7 +83,7 @@ export function AuthProvider({
   const changePassword = useCallback(async (current_password: string, new_password: string, new_password_confirmation: string) => {
     const t = Cookies.get(TOKEN_KEY) || token;
     if (!t) throw new Error("Chưa đăng nhập");
-    
+
     const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan/cap-nhat-mat-khau`, {
       method: "PATCH",
       headers: {
@@ -98,6 +98,14 @@ export function AuthProvider({
     if (!res.ok) throw new Error(j?.message ?? "Không thể đổi mật khẩu");
     return;
   }, [API, token]);
+
+  // Fix eslint: Tự đồng lấy token từ cookie khi mount
+  useEffect(() => {
+    const currentToken = Cookies.get(TOKEN_KEY);
+    if (currentToken) {
+      setToken(currentToken);
+    }
+  }, []);
 
   // --- Fetch Me Helper ---
   const fetchMe = useCallback(async (accessToken: string) => {
@@ -134,7 +142,7 @@ export function AuthProvider({
           ? (candidate.danh_sach_diachi ?? candidate.diachi ?? candidate.address).map(normalizeAddr)
           : null,
       };
-      
+
       setUserState(mappedUser);
       if (!token) setToken(accessToken);
       return mappedUser;
@@ -144,7 +152,17 @@ export function AuthProvider({
     }
   }, [API, token]);
 
-  // --- Refresh Profile ---
+  // Tự động fetch user info khi có token nhưng chưa có user
+  useEffect(() => {
+    const t = Cookies.get(TOKEN_KEY) || token;
+    console.log("useAuth: checking token for auto-fetch", { hasToken: !!t, hasUser: !!user, tokenValue: t ? t.substring(0, 20) + "..." : null });
+    if (t && !user) {
+      console.log("useAuth: calling fetchMe with token");
+      fetchMe(t);
+    }
+  }, [token, user, fetchMe]);
+
+  // Public: refreshProfile - lấy dữ liệu user mới nhất từ server (dùng cookie/token)
   const refreshProfile = useCallback(async (): Promise<AuthUser | null> => {
     const now = Date.now();
     if (now - lastRefreshRef.current < REFRESH_PROFILE_MIN_INTERVAL_MS) {
@@ -155,13 +173,13 @@ export function AuthProvider({
       const t = Cookies.get(TOKEN_KEY) || token;
       const headers: Record<string, string> = { Accept: "application/json" };
       if (t) headers.Authorization = `Bearer ${t}`;
-      
+
       const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {
         method: "GET",
         headers,
         credentials: "include",
       });
-      
+
       if (!res.ok) {
         if (res.status === 401) {
           Cookies.remove(TOKEN_KEY);
@@ -170,7 +188,7 @@ export function AuthProvider({
         }
         return null;
       }
-      
+
       const data = await res.json().catch(() => null);
       const candidate = (data && (data.user ?? data.data ?? data)) || null;
       if (!candidate) return null;
@@ -191,7 +209,7 @@ export function AuthProvider({
       };
 
       setUserState(mapped);
-      try { Cookies.set("user_info", JSON.stringify(mapped), { expires: 7, path: "/" }); } catch {}
+      try { Cookies.set("user_info", JSON.stringify(mapped), { expires: 7, path: "/" }); } catch { }
       return mapped;
     } catch (e) {
       console.error("refreshProfile error:", e);
@@ -202,7 +220,7 @@ export function AuthProvider({
   // --- Login ---
   const login = useCallback(async ({ phonemail, password }: { phonemail: string; password: string }) => {
     if (!phonemail || !password) throw new Error("Vui lòng nhập thông tin đăng nhập.");
-    
+
     // Validate sơ bộ (giữ nguyên logic cũ của bạn)
     if (!PHONE_REGEX.test(phonemail) && !EMAIL_REGEX.test(phonemail)) {
       throw new Error("Vui lòng nhập Email hoặc Số điện thoại hợp lệ.");
@@ -267,7 +285,7 @@ export function AuthProvider({
     try {
       const t = Cookies.get(TOKEN_KEY) || token;
       if (!t) throw new Error("Chưa đăng nhập");
-      
+
       const isForm = payload instanceof FormData;
       const method = "POST";
       const url = `${API}/api/v1/thong-tin-ca-nhan/cap-nhat`;
@@ -290,9 +308,9 @@ export function AuthProvider({
       const res = await fetch(url, options);
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.message ?? "Cập nhật thất bại");
-      
+
       const returned = j.user ?? j.data ?? j ?? payload;
-      
+
       // Áp dụng chuẩn hóa khi cập nhật
       const mappedUser: AuthUser = {
         id: returned.id ?? user?.id ?? "",

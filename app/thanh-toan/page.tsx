@@ -40,9 +40,9 @@ export default function ThanhToanPage() {
   // State địa chỉ: Dùng Type lấy từ AuthUser["danh_sach_diachi"] cho chuẩn xác
   const [selectedAddress, setSelectedAddress] = useState<NonNullable<AuthUser["danh_sach_diachi"]>[0] | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
-  
+
   // "1": COD, "3": VNPay (Theo quy ước DB)
-  const [paymentMethod, setPaymentMethod] = useState("1"); 
+  const [paymentMethod, setPaymentMethod] = useState("1");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
@@ -57,7 +57,7 @@ export default function ThanhToanPage() {
   }, [user]);
 
   // --- LOGIC XỬ LÝ SẢN PHẨM ---
-  
+
   const isGiftItem = (it: any) => {
     try {
       if (it?.bienthe_quatang) {
@@ -120,10 +120,10 @@ export default function ThanhToanPage() {
         nguoinhan: selectedAddress.ten_nguoinhan, // Đã chuẩn hóa ở useAuth
         sodienthoai: selectedAddress.sodienthoai, // Đã chuẩn hóa ở useAuth
         diachi_chitiet: `${selectedAddress.diachi}, ${selectedAddress.tinhthanh}`,
-        
+
         id_phuongthuc: paymentMethod,
         voucher_code: appliedVoucher?.code || null,
-        ghi_chu: "" 
+        ghi_chu: ""
       };
 
       // GỌI 1 API DUY NHẤT
@@ -141,8 +141,8 @@ export default function ThanhToanPage() {
 
       if (!res.ok || json.status === false) {
         const msg = json.message;
-        const alertMsg = (typeof msg === 'object') 
-          ? Object.values(msg).flat().join("\n") 
+        const alertMsg = (typeof msg === 'object')
+          ? Object.values(msg).flat().join("\n")
           : (msg || "Đặt hàng thất bại. Vui lòng thử lại.");
         alert(alertMsg);
         setIsSubmitting(false);
@@ -153,18 +153,19 @@ export default function ThanhToanPage() {
       clearCart();
 
       // Lấy link thanh toán (kiểm tra cả ở ngoài và trong biến data)
-      const paymentUrl = json.payment_url || json.data?.payment_url; 
+      const paymentUrl = json.payment_url || json.data?.payment_url;
 
       // CASE 1: VNPay -> Redirect
       if (paymentUrl) {
         setRedirecting(true);
         // "Chạy" đường dẫn bằng cách gán cho window.location.href
-        window.location.href = paymentUrl; 
+        window.location.href = paymentUrl;
         return;
       }
 
-      // CASE 2: COD -> Trang Hoàn tất
-      const orderId = json.data?.id || json.order_id || json.id; 
+      // Trường hợp 2: Thanh toán COD (Thành công luôn, không có link)
+      const orderId = json.data?.id || json.data?.donhang?.id || json.id || json.order_id || json.data?.madon;
+      console.log("Order ID extracted:", orderId, "from json:", json);
       router.push(`/hoan-tat-thanh-toan?order_id=${orderId}`);
 
     } catch (error) {
@@ -174,7 +175,9 @@ export default function ThanhToanPage() {
     }
   };
 
-  // --- RENDER ---
+  if (redirecting) {
+    return <LoadingRedirect message="Đang chuyển sang VNPay..." />;
+  }
 
   // Helper render dòng sản phẩm
   const renderSummaryRow = (item: any, isGift = false, idx = 0) => {
@@ -198,12 +201,12 @@ export default function ThanhToanPage() {
           )}
           <div className="gap-12 d-flex align-items-center">
             <div className="border border-gray-100 rounded-8 flex-center" style={{ width: 64, height: 64, flexShrink: 0 }}>
-              <Image 
-                src={String(img)} 
-                alt={String(name)} 
-                width={64} 
-                height={64} 
-                className="w-100 h-100 rounded-8 object-fit-contain" 
+              <Image
+                src={String(img)}
+                alt={String(name)}
+                width={64}
+                height={64}
+                className="w-100 h-100 rounded-8 object-fit-contain"
               />
             </div>
             <div className="table-product__content text-start">
@@ -299,7 +302,7 @@ export default function ThanhToanPage() {
               {/* 2. DANH SÁCH SẢN PHẨM */}
               <div className="px-20 py-20 mb-20 bg-white border border-gray-100 shadow-sm rounded-8">
                 <h6 className="gap-2 mb-3 text-lg fw-bold flex-align">
-                  <i className="text-xl ph-bold ph-shopping-bag text-main-600"></i> 
+                  <i className="text-xl ph-bold ph-shopping-bag text-main-600"></i>
                   Danh sách sản phẩm ({items.length})
                 </h6>
                 <div className="overflow-y-auto max-h-400 custom-scrollbar">
@@ -333,7 +336,7 @@ export default function ThanhToanPage() {
                         <div className="text-sm text-gray-900 fw-bold">Thanh toán khi nhận hàng (COD)</div>
                         <div className="mt-1 text-xs text-gray-500">Thanh toán bằng tiền mặt khi shipper giao hàng đến.</div>
                       </div>
-                      <i className="text-3xl text-gray-400 ph-fill ph-money"/>
+                      <i className="text-3xl text-gray-400 ph-fill ph-money" />
                     </div>
                   </label>
 
@@ -350,7 +353,7 @@ export default function ThanhToanPage() {
                         <div className="text-sm text-gray-900 fw-bold">Thanh toán qua VNPAY</div>
                         <div className="mt-1 text-xs text-gray-500">Quét mã QR hoặc thẻ ATM/Visa nội địa.</div>
                       </div>
-                      <i className="text-3xl text-blue-600 ph-fill ph-qr-code"/>
+                      <i className="text-3xl text-blue-600 ph-fill ph-qr-code" />
                     </div>
                   </label>
                 </div>
@@ -359,7 +362,7 @@ export default function ThanhToanPage() {
 
             {/* CỘT PHẢI */}
             <div className="col-xl-5 col-lg-4">
-              
+
               {/* Voucher Widget */}
               <div className="px-20 py-20 mb-20 bg-white border border-gray-100 shadow-sm rounded-8">
                 <div className="mb-3 flex-between">
@@ -368,7 +371,7 @@ export default function ThanhToanPage() {
                   </h6>
                   <Link href="/gio-hang" className="text-xs text-primary-600 hover-underline">Chọn mã khác</Link>
                 </div>
-                
+
                 <div className="p-12 border border-gray-100 border-dashed bg-gray-50 rounded-8">
                   {appliedVoucher ? (
                     <div className="flex-between align-items-center">
@@ -381,8 +384,8 @@ export default function ThanhToanPage() {
                           </div>
                         </div>
                       </div>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={removeVoucher}
                         className="text-xs text-danger-500 hover-text-danger-700 fw-medium"
                       >
@@ -398,7 +401,7 @@ export default function ThanhToanPage() {
               </div>
 
               {/* Order Summary Widget */}
-              <div className="px-20 py-20 bg-white border border-gray-100 shadow-sm rounded-8 sticky-top" style={{top: 100}}>
+              <div className="px-20 py-20 bg-white border border-gray-100 shadow-sm rounded-8 sticky-top" style={{ top: 100 }}>
                 <h6 className="gap-2 mb-3 text-lg fw-bold flex-align">
                   <i className="ph-bold ph-receipt text-main-600"></i> Chi tiết thanh toán
                 </h6>
@@ -407,7 +410,7 @@ export default function ThanhToanPage() {
                   <span className="text-gray-600">Tổng tiền hàng</span>
                   <span className="fw-medium">{subtotal.toLocaleString()} ₫</span>
                 </div>
-                
+
                 {discountAmount > 0 && (
                   <div className="mb-2 text-sm d-flex justify-content-between text-success-600">
                     <span>Giảm giá Voucher</span>
@@ -442,7 +445,7 @@ export default function ThanhToanPage() {
                     `Đặt hàng (${total.toLocaleString()} ₫)`
                   )}
                 </button>
-                
+
                 <div className="mt-3 text-center">
                   <Link href="/gio-hang" className="gap-1 text-sm text-gray-500 hover-text-main-600 flex-center">
                     <i className="ph-bold ph-arrow-left"></i> Quay lại giỏ hàng
@@ -458,7 +461,7 @@ export default function ThanhToanPage() {
       {/* MODAL CHỌN ĐỊA CHỈ */}
       {showAddressModal && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
-          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable" style={{maxWidth: 600}}>
+          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable" style={{ maxWidth: 600 }}>
             <div className="border-0 shadow-lg modal-content rounded-12">
               <div className="pb-0 modal-header border-bottom-0">
                 <h5 className="modal-title fw-bold">Chọn địa chỉ giao hàng</h5>
@@ -467,8 +470,8 @@ export default function ThanhToanPage() {
               <div className="modal-body">
                 <div className="gap-3 d-flex flex-column">
                   {user?.danh_sach_diachi?.map((addr) => (
-                    <div 
-                      key={addr.id} 
+                    <div
+                      key={addr.id}
                       className={`p-16 border rounded-8 cursor-pointer transition-2 ${selectedAddress?.id === addr.id ? 'border-main-600 bg-main-50 shadow-sm' : 'border-gray-200 hover-border-main-200'}`}
                       onClick={() => { setSelectedAddress(addr); setShowAddressModal(false); }}
                     >
@@ -482,9 +485,9 @@ export default function ThanhToanPage() {
                 </div>
               </div>
               <div className="pt-0 modal-footer border-top-0 justify-content-center">
-                 <Link href="/dia-chi" className="px-4 py-2 text-sm btn btn-outline-main rounded-pill fw-bold">
-                   <i className="ph-bold ph-plus me-1"></i> Thêm địa chỉ mới
-                 </Link>
+                <Link href="/dia-chi" className="px-4 py-2 text-sm btn btn-outline-main rounded-pill fw-bold">
+                  <i className="ph-bold ph-plus me-1"></i> Thêm địa chỉ mới
+                </Link>
               </div>
             </div>
           </div>

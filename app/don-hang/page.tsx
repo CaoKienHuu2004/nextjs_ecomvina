@@ -97,7 +97,7 @@ export default function OrdersPage() {
   const [groups, setGroups] = useState<OrderGroup[]>([]);
 
   // State Filter & Pagination
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>("pending");
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
@@ -120,39 +120,36 @@ export default function OrdersPage() {
         setLoading(true);
         const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
         const token = Cookies.get("access_token");
+        console.log("don-hang: fetching orders with token:", token ? token.substring(0, 20) + "..." : null);
 
         const res = await fetch(`${API}/api/v1/don-hang`, {
+          method: "GET",
           headers: {
             "Authorization": token ? `Bearer ${token}` : "",
             "Accept": "application/json",
           },
-          cache: "no-store"
+          cache: "no-store",
+          credentials: "include",
         });
+        console.log("don-hang: API response status:", res.status);
 
         if (res.ok) {
-          const json = await res.json().catch(() => ({}));
-          // Normalize payload: accept either array-of-groups (server sample) or an array-of-orders
-          const payload = Array.isArray(json) ? json : (json.data ?? []);
+          const json: any = await res.json().catch(() => ({}));
+          console.log("don-hang: API response data:", json);
 
-          // If payload looks like groups (items have `donhang`), treat as OrderGroup[]
-          const groupsResp: OrderGroup[] =
-            Array.isArray(payload) &&
-              payload.length > 0 &&
-              typeof ((payload[0] as Record<string, unknown>).donhang) !== "undefined"
-              ? (payload as OrderGroup[])
-              : [];
-          // Save groups (useful if you want to display server-provided counts later)
-          setGroups(groupsResp);
+          // API trả về: { status: 200, message: "...", data: { current_page: 1, data: [...orders], ... } }
+          // Orders nằm ở json.data.data
+          const ordersArray = json?.data?.data ?? [];
+          console.log("don-hang: orders array:", ordersArray, "length:", ordersArray.length);
 
-          // Build flat order list:
-          const allOrders: Order[] = groupsResp.length
-            ? groupsResp.flatMap(g => g.donhang ?? [])
-            : (Array.isArray(payload) ? (payload as Order[]) : []);
+          // Đây là array trực tiếp của orders, không có groups
+          const allOrders: Order[] = Array.isArray(ordersArray) ? ordersArray : [];
 
-          // Sort without mutating original
+          // Sort by id descending
           const sortedList = [...allOrders].sort((a, b) => b.id - a.id);
 
           setOrders(sortedList);
+          console.log("don-hang: set orders complete, count:", sortedList.length);
         } else {
           console.error("Lỗi API:", res.status);
         }
@@ -163,41 +160,64 @@ export default function OrdersPage() {
       }
     };
 
+    console.log("don-hang: isLoggedIn =", isLoggedIn);
     if (isLoggedIn) {
       fetchOrders();
     } else {
-      setLoading(false);
+      // Nếu chưa đăng nhập, kiểm tra xem có token không để fetch trực tiếp
+      const token = Cookies.get("access_token");
+      if (token) {
+        console.log("don-hang: có token nhưng isLoggedIn=false, vẫn fetch orders");
+        fetchOrders();
+      } else {
+        setLoading(false);
+      }
     }
   }, [isLoggedIn]);
 
-  //tự mở detail khi có openOrderId trong sessionStorage khi đặt hàng thành công
+  //tự mở detail khi có openOrderMadon trong sessionStorage khi đặt hàng thành công
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const pending = sessionStorage.getItem("openOrderId");
-    if (!pending) return;
-    // clear immediately to avoid re-opening on refresh
-    sessionStorage.removeItem("openOrderId");
-    const id = Number(pending);
-    if (Number.isNaN(id)) return;
-    // Nếu trang vẫn đang tải dữ liệu đơn hàng, đợi đến khi loadingDetail false (openDetail sẽ fetch chi tiết)
-    // openDetail sẽ setDetailOpen(true) và setDetailOrder(...) khi xong
-    openDetail(id);
-  }, [/* note: empty deps OK since openDetail is stable in this module; if linter complains, wrap with useCallback or disable rule */]);
+    // Ưu tiên lấy madon, fallback sang id nếu cần
+    const pendingMadon = sessionStorage.getItem("openOrderMadon");
+    const pendingId = sessionStorage.getItem("openOrderId");
 
-  const openDetail = async (id: number) => {
+    if (pendingMadon) {
+      sessionStorage.removeItem("openOrderMadon");
+      openDetail(pendingMadon);
+      return;
+    }
+
+    if (pendingId) {
+      sessionStorage.removeItem("openOrderId");
+      // Tìm order trong danh sách để lấy madon
+      const id = Number(pendingId);
+      if (!Number.isNaN(id) && orders.length > 0) {
+        const order = orders.find(o => o.id === id);
+        if (order?.madon) {
+          openDetail(order.madon);
+        }
+      }
+    }
+  }, [orders]);
+
+  const openDetail = async (madon: string) => {
     setDetailOpen(true);
     setLoadingDetail(true);
     try {
       const token = Cookies.get("access_token");
-      const res = await fetch(`${API}/api/v1/don-hang/${id}`, {
+      // API sử dụng madon (mã đơn hàng) thay vì id
+      const res = await fetch(`${API}/api/v1/don-hang/${madon}`, {
         headers: {
           "Authorization": token ? `Bearer ${token}` : "",
           "Accept": "application/json",
         },
         cache: "no-store",
       });
+
       if (res.ok) {
         const json = await res.json();
+        console.log("Chi tiết đơn hàng:", json);
         // API returns { data: { ... } }
         setDetailOrder((json && (json.data || json)) as DetailedOrder);
       } else {
@@ -218,28 +238,44 @@ export default function OrdersPage() {
   };
 
   // --- HỦY ĐƠN: gọi API + optimistic update ---
-  const handleCancelOrder = async (orderId: number) => {
+  const handleCancelOrder = async (orderId: number, madon?: string) => {
     if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) return;
     try {
       const token = Cookies.get("access_token");
-      const res = await fetch(`${API}/api/v1/don-hang/${orderId}/huy`, {
-        method: "PATCH",
+      console.log("handleCancelOrder: orderId=", orderId, "madon=", madon, "token=", token ? "exists" : "missing");
+
+      // API endpoint: /api/v1/don-hang/huy-don-hang
+      const res = await fetch(`${API}/api/v1/don-hang/huy-don-hang`, {
+        method: "POST",
         headers: {
           "Authorization": token ? `Bearer ${token}` : "",
           "Accept": "application/json",
           "Content-Type": "application/json",
         },
+        credentials: "include",
+        body: JSON.stringify({
+          id: orderId,
+          madon: madon
+        }),
       });
-      if (res.ok) {
+      console.log("handleCancelOrder: response status=", res.status);
+
+      const data = await res.json().catch(() => ({}));
+      console.log("handleCancelOrder: response=", data);
+
+      if (res.ok || data.status === 200) {
         // optimistic UI update: mark order as cancelled
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, trangthai: "Đã hủy" } : o));
-        alert("Đã hủy đơn hàng thành công!");
+        // Nếu đang xem chi tiết đơn này, cập nhật luôn
+        if (detailOrder && detailOrder.id === orderId) {
+          setDetailOrder({ ...detailOrder, trangthai: "Đã hủy" });
+        }
+        alert(data.message || "Đã hủy đơn hàng thành công!");
       } else {
-        const err = await res.json().catch(() => ({}));
-        alert(err.message || "Không thể hủy đơn. Vui lòng thử lại.");
+        alert(data.message || "Không thể hủy đơn. Vui lòng thử lại.");
       }
     } catch (e) {
-      console.error(e);
+      console.error("handleCancelOrder error:", e);
       alert("Lỗi kết nối đến hệ thống.");
     }
   };
@@ -481,7 +517,11 @@ export default function OrdersPage() {
         }
 
         // Với COD hoặc khác: refresh detail view
-        await openDetail(paymentModalOrderId);
+        // Tìm madon từ orderId
+        const orderToRefresh = orders.find(o => o.id === paymentModalOrderId);
+        if (orderToRefresh?.madon) {
+          await openDetail(orderToRefresh.madon);
+        }
         alert(json.message || "Đã cập nhật phương thức. Bạn có thể kiểm tra trạng thái đơn.");
       }
     } catch (err) {
@@ -514,10 +554,10 @@ export default function OrdersPage() {
   const getFilterKey = (status?: string): FilterStatus => {
     const s = (status || "").toLowerCase();
     if (s.includes("chờ thanh toán")) return "pending";
-    if (s.includes("chờ xử lý") || s.includes("đã xác nhận") || s.includes("đang chuẩn bị") || s.includes("preparing")) return "processing";
-    if (s.includes("đang giao") || s.includes("shipping")) return "shipping";
-    if (s.includes("đã giao") || s.includes("delivered")) return "delivered";
-    if (s.includes("thành công") || s.includes("completed") || s.includes("success")) return "completed";
+    if (s.includes("chờ xác nhận") || s.includes("đang xử lý")) return "processing";
+    if (s.includes("đang đóng gói")) return "shipping";
+    if (s.includes("đang giao hàng") || s.includes("đang giao")) return "delivered";
+    if (s.includes("đã giao")) return "completed";
     if (s.includes("đã hủy") || s.includes("cancel")) return "cancelled";
     return "all";
   };
@@ -709,14 +749,20 @@ export default function OrdersPage() {
                       const variant = it.bienthe ?? undefined;
                       const sp = (variant as OrderItem["bienthe"])?.sanpham ?? {};
                       const title = sp.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
-                      const imgRaw =
-                        (sp.hinhanhsanpham?.[0]?.hinhanh as string | undefined) ??
-                        (sp.hinhanh as string | undefined) ??
-                        (it.hinhanh as string | undefined) ??
-                        "/assets/images/thumbs/placeholder.png";
-                      const imgSrc = String(imgRaw).startsWith("http")
-                        ? String(imgRaw)
-                        : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${String(imgRaw)}`;
+
+                      // Lấy tên file ảnh từ API
+                      const imgFileName = sp.hinhanhsanpham?.[0]?.hinhanh ?? sp.hinhanh ?? it.hinhanh;
+
+                      // Xây dựng đường dẫn ảnh
+                      let imgSrc = "/assets/images/thumbs/placeholder.png";
+                      if (imgFileName) {
+                        if (String(imgFileName).startsWith("http")) {
+                          imgSrc = String(imgFileName);
+                        } else {
+                          // Đường dẫn theo cấu trúc API: /assets/client/images/thumbs/{filename}
+                          imgSrc = `${API}/assets/client/images/thumbs/${imgFileName}`;
+                        }
+                      }
                       const variantLabel =
                         (variant as OrderItem["bienthe"])?.loaibienthe?.ten ??
                         (variant as OrderItem["bienthe"])?.tenloaibienthe ??
@@ -835,7 +881,7 @@ export default function OrdersPage() {
                   )}
 
                   {isCancellable(detailOrder.trangthai) && (
-                    <button onClick={() => handleCancelOrder(detailOrder.id)} className="gap-8 px-8 py-4 border fw-medium text-main-600 text-md border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
+                    <button onClick={() => handleCancelOrder(detailOrder.id, detailOrder.madon)} className="gap-8 px-8 py-4 border fw-medium text-main-600 text-md border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
                       <i className="ph-bold ph-trash"></i> Hủy đơn
                     </button>
                   )}
@@ -923,46 +969,85 @@ export default function OrdersPage() {
 
                               const renderCompact = (it: OrderItem) => {
                                 const title = it.bienthe?.sanpham?.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
-                                const imgRaw = it.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh ?? it.bienthe?.sanpham?.hinhanh ?? it.hinhanh ?? "/assets/images/thumbs/placeholder.png";
-                                const img = String(imgRaw).startsWith("http") ? imgRaw : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${imgRaw}`;
+                                const slug = (it.bienthe?.sanpham as any)?.slug;
+
+                                // Lấy tên file ảnh từ API - ưu tiên hinhanhsanpham[0].hinhanh
+                                const imgFileName = it.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh
+                                  ?? it.bienthe?.sanpham?.hinhanh
+                                  ?? it.hinhanh;
+
+                                // Xây dựng đường dẫn ảnh
+                                let img = "/assets/images/thumbs/placeholder.png";
+                                if (imgFileName) {
+                                  if (String(imgFileName).startsWith("http")) {
+                                    img = String(imgFileName);
+                                  } else {
+                                    // Đường dẫn theo cấu trúc API: /assets/client/images/thumbs/{filename}
+                                    img = `${API}/assets/client/images/thumbs/${imgFileName}`;
+                                  }
+                                } else if (slug) {
+                                  // Fallback dùng slug nếu không có hình ảnh trực tiếp
+                                  img = `${API}/assets/client/images/thumbs/${slug}-1.webp`;
+                                }
                                 const qty = it.soluong ?? it.quantity ?? 0;
                                 const price = Number(it.dongia ?? it.price ?? 0);
-                                const orig = Number(it.bienthe?.giagoc ?? (it as any).giagoc ?? 0);
-                                const hasDiscount = orig > 0 && orig > price;
-                                const discountPct = hasDiscount ? Math.round((orig - price) / orig * 100) : 0;
+                                const variantName = it.bienthe?.loaibienthe?.ten ?? it.tenloaibienthe ?? "";
 
                                 return (
-                                  <div key={it.id} className="py-2 d-flex align-items-center justify-content-between border-bottom">
-                                    <div className="gap-12 d-flex align-items-center" style={{ maxWidth: 420 }}>
-                                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img src={img} alt={title} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8 }} />
-                                      <div style={{ minWidth: 0 }}>
-                                        <div className="text-sm fw-medium text-truncate" style={{ maxWidth: 320 }}>{title}</div>
-                                        <div className="gap-12 d-flex align-items-center">
-                                          <div className="text-xs text-gray-500">Số lượng: <span className="fw-medium">{qty}</span></div>
-                                          <div className="gap-8 d-flex align-items-baseline">
-                                            {hasDiscount && (
-                                              <span className="text-xs text-gray-400 fw-semibold text-decoration-line-through">
-                                                {formatPrice(orig)}
-                                              </span>
-                                            )}
-                                            <span className="text-sm fw-semibold text-main-600">{formatPrice(price)}</span>
-                                            {hasDiscount && (
-                                              <span className="text-xs text-main-two-600 ms-2">-{discountPct}%</span>
-                                            )}
+                                  <div key={it.id} className="py-6 px-5">
+                                    <div className="d-flex align-items-center gap-12">
+                                      <a href="#" className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: 80, maxHeight: 80, width: "100%", height: "100%" }}>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={img} alt={title} className="w-100 rounded-8" style={{ objectFit: "cover" }} />
+                                      </a>
+                                      <div className="table-product__content text-start">
+                                        <h6 className="title text-sm fw-semibold mb-0">
+                                          <a href="#" className="link text-line-2" title={title} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: 350, display: "inline-block" }}>
+                                            {title}
+                                          </a>
+                                        </h6>
+                                        {variantName && (
+                                          <div className="flex-align gap-16 mb-6">
+                                            <a href="#" className="btn bg-gray-50 text-heading text-xs py-4 px-6 rounded-8 flex-center gap-8 fw-medium">
+                                              {variantName}
+                                            </a>
+                                          </div>
+                                        )}
+                                        <div className="product-card__price mb-6">
+                                          <div className="flex-align gap-24">
+                                            <span className="text-heading text-sm fw-medium">Số lượng: {qty}</span>
+                                            <span className="text-main-600 text-md fw-bold">{formatPrice(price)}</span>
                                           </div>
                                         </div>
                                       </div>
                                     </div>
-                                    <div style={{ width: 8 }} />
                                   </div>
                                 );
                               };
 
                               const renderGift = (g: OrderItem, idx: number) => {
-                                const title = g.tensanpham ?? g.name ?? "Quà tặng";
-                                const imgRaw = g.hinhanh ?? g.bienthe?.sanpham?.hinhanh ?? "/assets/images/thumbs/product-placeholder.png";
-                                const img = String(imgRaw).startsWith("http") ? imgRaw : `${API}${String(imgRaw).startsWith("/") ? "" : "/"}${imgRaw}`;
+                                const title = g.tensanpham ?? g.name ?? g.bienthe?.sanpham?.ten ?? "Quà tặng";
+                                const slug = (g.bienthe?.sanpham as any)?.slug;
+
+                                // Lấy tên file ảnh từ API - ưu tiên hinhanhsanpham[0].hinhanh
+                                const imgFileName = g.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh
+                                  ?? g.bienthe?.sanpham?.hinhanh
+                                  ?? g.hinhanh;
+
+                                // Xây dựng đường dẫn ảnh
+                                let img = "/assets/images/thumbs/placeholder.png";
+                                if (imgFileName) {
+                                  if (String(imgFileName).startsWith("http")) {
+                                    img = String(imgFileName);
+                                  } else {
+                                    // Đường dẫn theo cấu trúc API: /assets/client/images/thumbs/{filename}
+                                    img = `${API}/assets/client/images/thumbs/${imgFileName}`;
+                                  }
+                                } else if (slug) {
+                                  // Fallback dùng slug nếu không có hình ảnh trực tiếp
+                                  img = `${API}/assets/client/images/thumbs/${slug}-1.webp`;
+                                }
+
                                 const qty = g.soluong ?? g.quantity ?? 1;
                                 const orig = Number(g.bienthe?.giagoc ?? (g as any).giagoc ?? 0);
                                 return (
@@ -1017,16 +1102,7 @@ export default function OrdersPage() {
                         <div className="d-flex flex-align flex-between">
                           <div className="gap-12 flex-align">
                             <div className="gap-12 flex-align">
-                              {/* Nếu đơn đang ở trạng thái chờ thanh toán -> hiển thị Quay lại thanh toán */}
-                              {getFilterKey(order.trangthai) === "pending" && (
-                                <button
-                                  type="button"
-                                  onClick={() => retryPayment(order.id, "dbt")}
-                                  className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
-                                >
-                                  <i className="ph-bold ph-credit-card" /> Quay lại thanh toán
-                                </button>
-                              )}
+                              {/* Nút Quay lại thanh toán đã được ẩn theo yêu cầu */}
 
                               {isReviewableStatus(order.trangthai) ? (
                                 <Link href={`/danh-gia?order_id=${order.id}`} className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
@@ -1034,7 +1110,7 @@ export default function OrdersPage() {
                                 </Link>
                               ) : (
                                 <button
-                                  onClick={() => handleCancelOrder(order.id)}
+                                  onClick={() => handleCancelOrder(order.id, order.madon)}
                                   disabled={!isCancellable(order.trangthai)}
                                   className={`gap-8 px-8 py-4 text-sm border fw-medium rounded-4 transition-1 flex-align ${isCancellable(order.trangthai)
                                     ? "text-danger-600 border-danger-600 hover-bg-danger-600 hover-text-white cursor-pointer"
@@ -1070,7 +1146,7 @@ export default function OrdersPage() {
 
                               <button
                                 type="button"
-                                onClick={() => openDetail(order.id)}
+                                onClick={() => openDetail(order.madon)}
                                 className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
                               >
                                 <i className="ph-bold ph-eye" /> Xem chi tiết
@@ -1152,11 +1228,10 @@ export default function OrdersPage() {
 }
 
 const STATUS_OPTIONS: { key: FilterStatus; label: string; icon?: string }[] = [
-  // { key: "all", label: "Tất cả", icon: "ph-list" },
-  { key: "pending", label: "Chờ thanh toán", icon: "ph-clock" },
-  { key: "processing", label: "Đang xử lý", icon: "ph-package" },
-  { key: "shipping", label: "Đang vận chuyển", icon: "ph-truck" },
-  { key: "delivered", label: "Đã giao", icon: "ph-check-circle" },
-  { key: "completed", label: "Đã hoàn thành", icon: "ph-check-fat" },
-  { key: "cancelled", label: "Đã hủy", icon: "ph-x-circle" },
+  { key: "pending", label: "Chờ thanh toán", icon: "ph-wallet" },
+  { key: "processing", label: "Chờ xác nhận", icon: "ph-clock-countdown" },
+  { key: "shipping", label: "Đang đóng gói", icon: "ph-package" },
+  { key: "delivered", label: "Đang giao hàng", icon: "ph-truck" },
+  { key: "completed", label: "Đã giao", icon: "ph-check-fat" },
+  { key: "cancelled", label: "Đã hủy", icon: "ph-prohibit" },
 ];
