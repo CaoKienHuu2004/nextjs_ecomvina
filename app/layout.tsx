@@ -7,12 +7,16 @@ import { WishlistProvider } from "@/hooks/useWishlist";
 import { AuthProvider } from "@/hooks/useAuth";
 import { getUserFromServer } from "@/lib/get-user-server";
 import "./swiper.css";
+// import { GoogleOAuthProvider } from '@react-oauth/google';
+import ClientProviders from "@/components/ClientProviders";
+import Chatbox from "@/components/Chatbox";
 
 export const metadata = { title: "Siêu Thị Vina | Cửa hàng thương mại điện tử Siêu Thị Vina |" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   //lấy thông tin user trên server trước khi render layout
   const user = await getUserFromServer();
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "1074516250046-uo2cstomc492hf5nhj0u3n6aptrisnof.apps.googleusercontent.com";
   return (
     <html lang="vi" className="color-two font-exo header-sticky-style">
       <head>
@@ -28,13 +32,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
       <body>
         {/* 2. Truyền user vào AuthProvider qua prop initialUser */}
+        <ClientProviders clientId={clientId} initialUser={user}>
         <AuthProvider initialUser={user}>
           <WishlistProvider>
             <AppShell>
               {children}
+              <Chatbox />
             </AppShell>
           </WishlistProvider>
         </AuthProvider>
+        </ClientProviders>
 
         <Analytics />
 

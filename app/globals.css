@@ -1164,3 +1164,27 @@ button.btn-more-orange:hover,
 .similar-products-slider .product-card>a {
   width: 100%;
 }
+
+/* Biến theme (nếu muốn dễ thay đổi sau) */
+:root{
+  --benefit-color: #0ea5a4; /* thay bằng màu thực tế của BenefitsStrip nếu biết */
+  --benefit-strong: #ff6a00; /* nếu cần màu khác cho tổng hoặc nhấn mạnh */
+}
+
+/* Lớp tiện ích dùng cho giảm giá / tiết kiệm */
+.text-benefit {
+  color: var(--benefit-color);
+  font-weight: 600;
+}
+
+.text-benefit-strong {
+  color: var(--benefit-strong);
+  font-weight: 700;
+}
+
+/* Nếu cần nền hoặc nút cùng tone */
+.bg-benefit {
+  background-color: var(--benefit-color);
+  color: #fff;
+}
+
