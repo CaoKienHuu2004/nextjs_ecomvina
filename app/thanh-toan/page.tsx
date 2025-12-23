@@ -21,15 +21,15 @@ type Address = {
 };
 type UserWithAddress = {
   hoten?: string;
-  diachi?: Address[];
+  danh_sach_diachi?: Address[];
   [key: string]: unknown;
 };
 
 // --- Helper Price ---
 type PriceInput = number | Gia | undefined | null;
 const getDefaultAddress = (user: UserWithAddress | null) => {
-  if (!user?.diachi || user.diachi.length === 0) return null;
-  return user.diachi.find((d) => d.trangthai === "Mặc định") || user.diachi[0];
+  if (!user?.danh_sach_diachi || user.danh_sach_diachi.length === 0) return null;
+  return user.danh_sach_diachi.find((d) => d.trangthai === "Mặc định") || user.danh_sach_diachi[0];
 };
 const getPrice = (gia: PriceInput): number => {
   if (typeof gia === "number") return gia;
@@ -45,7 +45,7 @@ export default function ThanhToanPage() {
   type CartItem = (typeof items)[number];
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // 1: COD, 3: QR
+  const [paymentMethod, setPaymentMethod] = useState("1"); // 1: COD, 3: QR
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
@@ -123,16 +123,16 @@ export default function ThanhToanPage() {
       const token = Cookies.get("access_token");
 
       const payload = {
-        id_diachinguoidung: selectedAddress.id,
-        ma_phuongthuc: paymentMethod,
-        ma_magiamgia: null,
+        // id_diachinguoidung: selectedAddress.id,
+        id_phuongthuc: paymentMethod, // "1" là COD, "3" là VNPay
+        voucher_code: appliedVoucher?.code || null,
         // nguoinhan: selectedAddress?.ten_nguoinhan ?? user?.hoten ?? "",
         // diachinhan: selectedAddress?.diachi ?? "",
         // sodienthoai: selectedAddress?.sodienthoai ?? "",
         // khuvucgiao: selectedAddress?.tinhthanh ?? "",
       };
 
-      const res = await fetch(`${API}/api/thanh-toan/dat-hang`, {
+      const res = await fetch(`${API}/api/v1/thanh-toan/dat-hang`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -146,66 +146,47 @@ export default function ThanhToanPage() {
       console.log("createOrder response:", res.status, json);
 
       if (!res.ok || json.status === false) {
-        const msg = json.message;
-        if (msg && typeof msg === "object") {
-          const flat = Object.values(msg).flat().filter(Boolean).join("\n");
-          alert(flat || "Đặt hàng thất bại. Vui lòng kiểm tra dữ liệu.");
-        } else {
-          alert(msg?.toString?.() || "Đặt hàng thất bại. Vui lòng thử lại.");
-        }
+        const msg = json.message || "Đặt hàng thất bại.";
+        alert(typeof msg === 'object' ? JSON.stringify(msg) : msg);
         setIsSubmitting(false);
         return;
       }
+      clearCart();
 
-      const orderData = json.data ?? json;
-      const orderId = orderData?.id;
-      console.log("Order created, id=", orderId);
-
-      if (!orderId) {
-        alert("Không lấy được ID đơn hàng từ server.");
-        setIsSubmitting(false);
+      // Trường hợp 1: Nếu Backend trả về Link thanh toán (VNPay)
+      if (json.payment_url) {
+        setRedirecting(true);
+        // Chuyển hướng người dùng sang VNPay ngay lập tức
+        window.location.href = json.payment_url;
         return;
       }
 
-      // xử lý theo phương thức
-      if (paymentMethod === "cod") {
+      // Trường hợp 2: Thanh toán COD (Thành công luôn, không có link)
+      const orderId = json.data?.id || json.order_id; // Lấy ID để hiển thị trang cảm ơn
+      router.push(`/hoan-tat-thanh-toan?order_id=${orderId}`);
+
+    } catch (error) {
+      console.error(error);
+      alert("Lỗi kết nối hoặc hệ thống.");
+      setIsSubmitting(false);
+    }
+};
+
+      
+      // Backend nên trả về { status: true, payment_url: "https://sandbox.vnpayment.vn/..." }
+      // Kiểm tra kỹ key trả về là payment_url hay data.url
+      const paymentUrl = payJson.payment_url || payJson.data || payJson.url;
+
+      if (paymentUrl) {
         clearCart();
-        router.push(`/hoan-tat-thanh-toan?order_id=${orderId}`);
+        setRedirecting(true);
+        window.location.href = paymentUrl; // Chuyển hướng
         return;
-      }
+      } else {
+        alert("Server không trả về link thanh toán.");
+        return;
 
-      if (paymentMethod === "dbt") {
-        // gọi API tạo payment link
-        // const resPay = await fetch(`${API}/api/v1/don-hang/${orderId}/payment-url`, {
-        const resPay = await fetch(`${API}/api/thanh-toan/vnpay-return/${orderId}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": token ? `Bearer ${token}` : "",
-            "Accept": "application/json",
-          },
-          // nếu server cần body như { provider: "vnpay" } hãy thêm vào đây
-          // body: JSON.stringify({ provider: "vnpay" }),
-        });
 
-        const payJson = await resPay.json().catch(() => ({}));
-        console.log("payment-url response:", resPay.status, payJson);
-
-        if (!resPay.ok) {
-          alert(payJson.message || "Không thể tạo liên kết thanh toán (server trả lỗi).");
-          return;
-        }
-
-        if (payJson.status && payJson.payment_url) {
-          clearCart();
-          setRedirecting(true);
-          // chuyển hướng trực tiếp (có thể dùng window.location.href)
-          window.location.href = payJson.payment_url;
-          return;
-        } else {
-          alert(payJson.message || "Không tạo được liên kết VNPay");
-          return;
-        }
         // if (paymentMethod === "cp") {
         //     const resPay = await fetch(`${API}/api/v1/don-hang/${orderId}/payment-url`, {
         //         method: "POST",
@@ -226,8 +207,8 @@ export default function ThanhToanPage() {
         //         alert(payJson.message || "Không tạo được liên kết VietQR");
         //     }
         // }
-      }
 
+      }
       alert("Phương thức thanh toán không được hỗ trợ.");
     } catch (error) {
       console.error(error);
@@ -416,11 +397,11 @@ export default function ThanhToanPage() {
                 </h6>
 
                 <label
-                  className={`w-100 mt-10 border ${paymentMethod === "cod" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
-                  onClick={() => setPaymentMethod("cod")}
+                  className={`w-100 mt-10 border ${paymentMethod === "1" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
+                  onClick={() => setPaymentMethod("1")}
                 >
                   <div className="mb-0 form-check common-check common-radio">
-                    <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "cod"} readOnly />
+                    <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "1"} readOnly />
                     <label className="text-sm form-check-label fw-medium text-neutral-600 w-100">
                       Thanh toán khi nhận hàng (COD)
                     </label>
@@ -428,11 +409,11 @@ export default function ThanhToanPage() {
                 </label>
 
                 <label
-                  className={`w-100 mt-10 border ${paymentMethod === "dbt" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
-                  onClick={() => setPaymentMethod("dbt")}
+                  className={`w-100 mt-10 border ${paymentMethod === "3" ? "border-main-600 bg-main-50" : "border-gray-100"} hover-border-main-600 py-16 px-12 rounded-4 transition-1 cursor-pointer`}
+                  onClick={() => setPaymentMethod("3")}
                 >
                   <div className="mb-0 form-check common-check common-radio">
-                    <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "dbt"} readOnly />
+                    <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "3"} readOnly />
                     <label className="text-sm form-check-label fw-medium text-neutral-600 w-100">
                       Thanh toán qua QR Code (VNPAY)
                     </label>

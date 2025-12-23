@@ -30,7 +30,7 @@ export type AuthUser = {
     id_nguoidung: number;
     hoten?: string;
     sodienthoai?: string;
-    diachi?: string;
+    diachi: string;
     tinhthanh?: string;
     trangthai?: string;
   }[];
