@@ -77,7 +77,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
         setAddingToCart(true);
         try {
-            const mainImage = product.anh_san_pham?.[0]?.hinhanh || product.hinh_anh;
+            const mainImage = product.anh_san_pham?.[0]?.hinhanh || product.hinh_anh || "";
 
             // Lấy loại biến thể từ variant đang chọn
             const _rawVariantName = selectedVariant?.loai_bien_the ?? product?.bienthe_khichon_loaibienthe_themvaogio?.[0]?.loai_bien_the ?? "";
