@@ -39,6 +39,7 @@ export interface CartSummary {
   giamgia_voucher: number;
   tonggiatri: number;
   voucher_info: Coupon | null;
+  shipping_fee?: number;
 }
 
 export type Gia = { current?: number; before_discount?: number; discount_percent?: number };
@@ -66,7 +67,7 @@ export type CartItem = {
 export interface GiftItem {
   id_bienthe: number | string;
   soluong: number;
-  thanhtien: number;
+  thanhtien?: number;
   ten_sanpham?: string;
   ten_loaibienthe?: string;
   thuonghieu?: string;
@@ -148,10 +149,15 @@ export function useCart() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const itemsRef = useRef<CartItem[]>(items);
+  const giftsRef = useRef<GiftItem[]>(gifts);
 
   useEffect(() => {
     itemsRef.current = items;
   }, [items]);
+
+  useEffect(() => {
+    giftsRef.current = gifts;
+  }, [gifts]);
 
   const [summary, setSummary] = useState<CartSummary>({
     tamtinh: 0,
@@ -173,8 +179,8 @@ export function useCart() {
 
   // --- AUTH ---
   const hasValidToken = useCallback((): boolean => {
-    const token = Cookies.get("access_token");
-    return !!token && token.length > 0;
+    const token = Cookies.get("access_token") || Cookies.get("token");
+    return !!token && String(token).length > 0;
   }, []);
 
   const getAuthHeaders = useCallback((): Record<string, string> => {
@@ -285,10 +291,36 @@ export function useCart() {
       }
 
       // [QUAN TRỌNG]: Luôn load lại local storage mới nhất ngay thời điểm gọi API
-      const payload = {
-        cart_local: !hasToken ? loadLocalCartPayload().cart_local : [],
-        voucher_code: currentCode || ""
-      };
+      let payload: any = {};
+      if (hasToken) {
+        // Khi user đã đăng nhập: gửi cart_items (từ state hiện tại) và để cart_local rỗng
+        const cart_items = (itemsRef.current || []).map((i: any) => ({
+          id_bienthe: i.id_bienthe,
+          soluong: i.soluong
+        }));
+        payload = {
+          cart_items,
+          cart_local: [],
+          // voucher: currentCode || "",
+          voucher_code: currentCode || "", 
+          gifts: (giftsRef.current || []).map((g: any) => ({
+            id_bienthe: g.id_bienthe,
+            soluong: g.soluong
+          }))
+        };
+      } else {
+        // Guest: gửi cart_local
+        payload = {
+          cart_local: loadLocalCartPayload().cart_local,
+          cart_items: [],
+          // voucher: currentCode || "",
+          voucher_code: currentCode || "",
+          gifts: (giftsRef.current || []).map((g: any) => ({
+            id_bienthe: g.id_bienthe,
+            soluong: g.soluong
+          }))
+        };
+      }
 
       const res = await fetch(`${API}/api/v1/gio-hang`, {
         method: "POST",
@@ -663,5 +695,6 @@ export function useCart() {
     applyVoucherByCode,
     applyVoucherById,
     fetchVouchers,
+    summary,
   };
 }

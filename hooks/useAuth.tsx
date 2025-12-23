@@ -33,7 +33,7 @@ export type RegisterPayload = {
 export type AuthUser = {
   id: number | string;
   username?: string;
-  hoten?: string;
+  hoten: string;
   sodienthoai?: string;
   email?: string;
   gioitinh?: string;

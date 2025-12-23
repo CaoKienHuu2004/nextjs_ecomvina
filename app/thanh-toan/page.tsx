@@ -35,7 +35,13 @@ const getPrice = (gia: PriceInput): number => {
 export default function ThanhToanPage() {
   const router = useRouter();
   const { user, isLoggedIn } = useAuth();
-  const { items, subtotal, total, discountAmount, clearCart, loading, appliedVoucher, removeVoucher } = useCart();
+  const { items, gifts, subtotal, total, discountAmount, clearCart, loading, appliedVoucher, removeVoucher, summary } = useCart();
+
+  const shippingFee = Number(summary?.shipping_fee ?? 0); // nếu backend trả phí vận chuyển, đặt tên trường tương ứng
+  const displaySubtotal = Number(summary?.tamtinh ?? subtotal);
+  const displayVoucherDiscount = Number(summary?.giamgia_voucher ?? 0);
+  const displayTietKiem = Number(summary?.tietkiem ?? 0);
+  const displayTotal = Number(summary?.tonggiatri ?? total) + shippingFee;
 
   // State địa chỉ: Dùng Type lấy từ AuthUser["danh_sach_diachi"] cho chuẩn xác
   const [selectedAddress, setSelectedAddress] = useState<NonNullable<AuthUser["danh_sach_diachi"]>[0] | null>(null);
@@ -71,8 +77,8 @@ export default function ThanhToanPage() {
     } catch { return false; }
   };
 
-  const rawMain = items.filter((it) => !isGiftItem(it));
-  const rawGifts = items.filter((it) => isGiftItem(it));
+  const rawMain = items;
+  const rawGifts = gifts;
 
   // Gộp item giống nhau
   const groupItems = (arr: any[]) => {
@@ -258,7 +264,7 @@ export default function ThanhToanPage() {
 
                   <div className="flex-wrap flex-align">
                     <span className="text-gray-600 border-gray-600 text-md fw-semibold border-end me-8 pe-10">
-                      {selectedAddress?.ten_nguoinhan || "Bạn chưa chọn địa chỉ"}
+                      {selectedAddress?.hoten || "Bạn chưa chọn địa chỉ"}
                     </span>
                     <span className="text-gray-600 text-md fw-medium">
                       {selectedAddress?.sodienthoai || ""}
@@ -353,20 +359,40 @@ export default function ThanhToanPage() {
                     <span className="gap-8 text-lg flex-align">
                       <i className="text-xl ph-bold ph-ticket text-main-600"></i>Áp dụng Voucher
                     </span>
-                    <Link href="/gio-hang" className="gap-1 text-xs text-primary-700 flex-align fw-normal">Thay đổi</Link>
+                    <Link href="/gio-hang" className="gap-1 text-xs text-primary-700 flex-align fw-normal">
+                      <i className="ph-bold ph-pencil-simple"></i> Thay đổi
+                    </Link>
                   </h6>
 
-                  <div className="gap-8 px-12 py-10 mt-10 flex-align flex-center rounded-4">
+                  <div className="gap-8 px-12 py-10 mt-10 border-gray-200 border-dashed flex-align flex-between rounded-4">
                     {appliedVoucher ? (
-                      <div className="gap-8 text-sm text-gray-900 flex-align fw-medium">
-                        <div className="text-sm d-flex flex-column">
-                          <span className="text-sm text-gray-900 w-100">{appliedVoucher.code}</span>
-                          <span className="text-xs text-success-600">Giảm {Number(appliedVoucher.giatri).toLocaleString()}đ</span>
-                        </div>
-                        <button type="button" onClick={removeVoucher} className="text-xs text-danger-500 hover-text-danger-700 fw-medium">Bỏ chọn</button>
-                      </div>
+                      <>
+                        <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
+                          <i className="text-2xl ph-bold ph-ticket text-main-600"></i>
+                          <div className="text-sm d-flex flex-column">
+                            <span className="text-sm text-gray-900 w-100">
+                              Giảm {Number(appliedVoucher.giatri).toLocaleString()} ₫
+                            </span>
+                            <span className="text-xs text-gray-500 w-100">
+                              {appliedVoucher.code}
+                            </span>
+                          </div>
+                        </span>
+
+                        <span className="gap-8 text-xs text-gray-900 flex-align fw-medium">
+                          <button
+                            className="p-6 text-xs text-white border btn bg-main-two-600 hover-bg-white hover-border-main-two-600 hover-text-main-two-600 rounded-4"
+                            style={{ cursor: "pointer" }}
+                            disabled
+                          >
+                            Đã chọn
+                          </button>
+                        </span>
+                      </>
                     ) : (
-                      <div className="text-sm text-gray-900">Không có áp dụng Voucher !</div>
+                      <div className="gap-8 px-0 py-0 mt-0 flex-align flex-center rounded-4 w-100">
+                        <div className="text-sm text-gray-900">Không có áp dụng Voucher !</div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -374,34 +400,43 @@ export default function ThanhToanPage() {
                 <div className="px-20 py-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
                   <div className="mb-20">
                     <h6 className="gap-4 mb-6 text-lg flex-align"><i className="text-xl ph-bold ph-notepad text-main-600"></i>Đơn hàng</h6>
-                    <div className="text-sm text-gray-600"> {items.length} sản phẩm </div>
+                    <div className="text-sm text-gray-600"> {items.length} sản phẩm {giftItems.length > 0 && `+ ${giftItems.length} quà tặng`}</div>
                   </div>
 
                   <div className="gap-8 mb-20 flex-between">
                     <span className="text-gray-900 font-heading-two">Tổng tiền hàng:</span>
-                    <span className="text-gray-900 fw-semibold">{subtotal.toLocaleString()} ₫</span>
+                    <span className="text-gray-900 fw-semibold">{displaySubtotal.toLocaleString()} ₫</span>
                   </div>
 
                   <div className="gap-8 mb-20 flex-between">
                     <span className="text-gray-900 font-heading-two d-flex flex-column">
                       <span>Phí vận chuyển:</span>
-                      <span className="text-xs">Miễn phí</span>
+                      <span className="text-xs">{shippingFee > 0 ? "- Ngoại tỉnh (các vùng lân cận)" : "Miễn phí"}</span>
                     </span>
-                    <span className="text-gray-900 fw-semibold">0 ₫</span>
+                    <span className="text-gray-900 fw-semibold">{shippingFee.toLocaleString()} ₫</span>
                   </div>
+
+                  {displayVoucherDiscount > 0 && (
+                    <div className="gap-8 mb-8 flex-between">
+                      <span className="text-gray-900 font-heading-two">Giảm giá:</span>
+                      <span className="text-benefit fw-semibold">- {displayVoucherDiscount.toLocaleString()} ₫</span>
+                    </div>
+                  )}
 
                   <div className="pt-24 my-20 border-gray-100 border-top">
                     <div className="gap-8 flex-between">
                       <span className="text-lg text-gray-900 fw-semibold">Tổng thanh toán:</span>
-                      <span className="text-lg text-main-600 fw-semibold">{total.toLocaleString()} ₫</span>
+                      <span className="text-lg text-main-600 fw-semibold">{displayTotal.toLocaleString()} ₫</span>
+                    </div>
+                    <div className="gap-8 mt-8 text-end">
+                      <span className="text-benefit fw-normal">Tiết kiệm:</span>
+                      <span className="text-benefit fw-normal"> {displayTietKiem.toLocaleString()} ₫</span>
                     </div>
                   </div>
-
                   <button type="submit" disabled={isSubmitting} className="btn btn-main py-14 w-100 rounded-8">
                     {isSubmitting ? "Đang xử lý..." : "Đặt hàng"}
                   </button>
                 </div>
-
                 <span className="mt-20 w-100 d-block">
                   <Link href="/gio-hang" className="text-sm text-main-two-600 fw-medium flex-align d-flex flex-center transition-1">
                     <i className="ph-bold ph-arrow-fat-lines-left text-main-two-600 text-md pe-10"></i> <span>Quay lại giỏ hàng</span>
