@@ -46,7 +46,7 @@ export async function getUserFromServer(): Promise<AuthUser | null> {
       gioitinh: rawUser.gioitinh,
       ngaysinh: rawUser.ngaysinh,
       avatar: rawUser.avatar,
-      diachi: rawUser.diachi,
+      danh_sach_diachi: rawUser.danh_sach_diachi,
     };
   } catch (error) {
     // Không log lỗi ồn ào khi server không khả dụng
