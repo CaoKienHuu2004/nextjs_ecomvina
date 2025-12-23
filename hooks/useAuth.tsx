@@ -7,6 +7,20 @@ import { useRouter } from "next/navigation";
 const PHONE_REGEX = /^0\d{9}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// --- 1. Helper chuẩn hóa địa chỉ ---
+// Giúp chuyển đổi mọi định dạng địa chỉ từ API về một chuẩn duy nhất cho Frontend
+const normalizeAddr = (a: any) => ({
+  id: a?.id ?? a?.ID ?? undefined,
+  id_nguoidung: a?.id_nguoidung ?? a?.user_id ?? undefined,
+  // Ưu tiên ten_nguoinhan, fallback sang hoten, rồi name
+  ten_nguoinhan: typeof a?.ten_nguoinhan === "string" ? a.ten_nguoinhan : (typeof a?.hoten === "string" ? a.hoten : (a?.name ? String(a.name) : "")),
+  hoten: typeof a?.hoten === "string" ? a.hoten : undefined,
+  sodienthoai: typeof a?.sodienthoai === "string" ? a.sodienthoai : (typeof a?.phone === "string" ? a.phone : undefined),
+  diachi: typeof a?.diachi === "string" ? a.diachi : (typeof a?.address === "string" ? a.address : ""),
+  tinhthanh: typeof a?.tinhthanh === "string" ? a.tinhthanh : undefined,
+  trangthai: typeof a?.trangthai === "string" ? a.trangthai : undefined,
+});
+
 export type RegisterPayload = {
   hoten: string;
   username: string;
@@ -25,15 +39,8 @@ export type AuthUser = {
   gioitinh?: string;
   ngaysinh?: string;
   avatar?: string;
-  danh_sach_diachi?: {
-    id: number;
-    id_nguoidung: number;
-    hoten?: string;
-    sodienthoai?: string;
-    diachi: string;
-    tinhthanh?: string;
-    trangthai?: string;
-  }[];
+  // Sử dụng cấu trúc đã chuẩn hóa
+  danh_sach_diachi?: ReturnType<typeof normalizeAddr>[] | null;
 };
 
 export type AuthContextType = {
@@ -41,7 +48,6 @@ export type AuthContextType = {
   token: string | null;
   isLoggedIn: boolean;
   login: (payload: { phonemail: string; password: string }) => Promise<void>;
-  // 2. Sử dụng Type RegisterPayload thay vì any
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
   updateProfile: (payload: Partial<AuthUser> | FormData) => Promise<AuthUser | null>;
@@ -65,10 +71,15 @@ export function AuthProvider({
 
   const router = useRouter();
   const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
-
-  const REFRESH_PROFILE_MIN_INTERVAL_MS = Number(process.env.NEXT_PUBLIC_PROFILE_REFRESH_INTERVAL_MS) || 300000;//300s
+  const REFRESH_PROFILE_MIN_INTERVAL_MS = Number(process.env.NEXT_PUBLIC_PROFILE_REFRESH_INTERVAL_MS) || 300000;
   const lastRefreshRef = React.useRef<number>(0);
 
+  useEffect(() => {
+    const currentToken = Cookies.get(TOKEN_KEY);
+    if (currentToken) setToken(currentToken);
+  }, []);
+
+  // --- Change Password ---
   const changePassword = useCallback(async (current_password: string, new_password: string, new_password_confirmation: string) => {
     const t = Cookies.get(TOKEN_KEY) || token;
     if (!t) throw new Error("Chưa đăng nhập");
@@ -87,19 +98,8 @@ export function AuthProvider({
     if (!res.ok) throw new Error(j?.message ?? "Không thể đổi mật khẩu");
     return;
   }, [API, token]);
-  // Fix eslint: Thêm dependency 'token'
-  // useEffect(() => {
-  //   const currentToken = Cookies.get(TOKEN_KEY);
-  //   if (currentToken && currentToken !== token) {
-  //     setToken(currentToken);
-  //   }
-  // }, [token]);
-  useEffect(() => {
-    const currentToken = Cookies.get(TOKEN_KEY);
-    if (currentToken) setToken(currentToken);
-  }, []);
+
   // --- Fetch Me Helper ---
-  // Dùng useCallback để tránh warning dependency ở login
   const fetchMe = useCallback(async (accessToken: string) => {
     try {
       const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {
@@ -119,6 +119,8 @@ export function AuthProvider({
       const data = await res.json().catch(() => null);
       const candidate = (data && (data.user ?? data.data?.user ?? data.data ?? data)) || null;
       if (!candidate) return null;
+
+      // Áp dụng chuẩn hóa
       const mappedUser: AuthUser = {
         id: candidate.id ?? candidate.user_id ?? candidate.ID ?? "",
         username: candidate.username ?? candidate.email ?? candidate.name,
@@ -128,8 +130,11 @@ export function AuthProvider({
         gioitinh: candidate.gioitinh ?? undefined,
         ngaysinh: candidate.ngaysinh ?? undefined,
         avatar: candidate.avatar ?? candidate.photo ?? undefined,
-        danh_sach_diachi: candidate.diachi ?? candidate.address ?? undefined,
+        danh_sach_diachi: Array.isArray(candidate.danh_sach_diachi ?? candidate.diachi ?? candidate.address)
+          ? (candidate.danh_sach_diachi ?? candidate.diachi ?? candidate.address).map(normalizeAddr)
+          : null,
       };
+      
       setUserState(mappedUser);
       if (!token) setToken(accessToken);
       return mappedUser;
@@ -139,10 +144,9 @@ export function AuthProvider({
     }
   }, [API, token]);
 
-  // Public: refreshProfile - lấy dữ liệu user mới nhất từ server (dùng cookie/token)
+  // --- Refresh Profile ---
   const refreshProfile = useCallback(async (): Promise<AuthUser | null> => {
     const now = Date.now();
-    // if called too frequently, return current cached user immediately
     if (now - lastRefreshRef.current < REFRESH_PROFILE_MIN_INTERVAL_MS) {
       return user;
     }
@@ -151,11 +155,13 @@ export function AuthProvider({
       const t = Cookies.get(TOKEN_KEY) || token;
       const headers: Record<string, string> = { Accept: "application/json" };
       if (t) headers.Authorization = `Bearer ${t}`;
+      
       const res = await fetch(`${API}/api/v1/thong-tin-ca-nhan`, {
         method: "GET",
         headers,
         credentials: "include",
       });
+      
       if (!res.ok) {
         if (res.status === 401) {
           Cookies.remove(TOKEN_KEY);
@@ -164,9 +170,12 @@ export function AuthProvider({
         }
         return null;
       }
+      
       const data = await res.json().catch(() => null);
       const candidate = (data && (data.user ?? data.data ?? data)) || null;
       if (!candidate) return null;
+
+      // Áp dụng chuẩn hóa
       const mapped: AuthUser = {
         id: candidate.id ?? candidate.user_id ?? candidate.ID ?? "",
         username: candidate.username ?? candidate.email ?? undefined,
@@ -176,8 +185,11 @@ export function AuthProvider({
         gioitinh: candidate.gioitinh ?? undefined,
         ngaysinh: candidate.ngaysinh ?? undefined,
         avatar: candidate.avatar ?? candidate.photo ?? undefined,
-        danh_sach_diachi: candidate.diachi ?? candidate.address ?? undefined,
+        danh_sach_diachi: Array.isArray(candidate.danh_sach_diachi ?? candidate.diachi ?? candidate.address)
+          ? (candidate.danh_sach_diachi ?? candidate.diachi ?? candidate.address).map(normalizeAddr)
+          : null,
       };
+
       setUserState(mapped);
       try { Cookies.set("user_info", JSON.stringify(mapped), { expires: 7, path: "/" }); } catch {}
       return mapped;
@@ -185,44 +197,13 @@ export function AuthProvider({
       console.error("refreshProfile error:", e);
       return null;
     }
-  }, [API, token]);
+  }, [API, token, user]); // added user dep to safe return cached
 
   // --- Login ---
-  // Fix eslint: Thêm dependency 'API' và 'fetchMe'
-  //  const login= useCallback(async ({ phonemail, password }: { phonemail: string; password: string }) => {
-  //   if (!phonemail || !password) {
-  //     throw new Error("Vui lòng nhập Email hoặc Số điện thoại và mật khẩu.");
-  //   }
-  //   // validate phonemail: phải là email hoặc số điện thoại theo regex
-  //   if (!PHONE_REGEX.test(phonemail) && !EMAIL_REGEX.test(phonemail)) {
-  //     throw new Error("Vui lòng nhập Email hoặc Số điện thoại hợp lệ.");
-  //   }
-
-  //   const res = await fetch(`${API}/api/v1/dang-nhap`, {
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/json", Accept: "application/json" },
-  //     credentials: "include",
-  //     body: JSON.stringify({ phonemail, password }),
-  //   });
-
-  //   if (!res.ok) {
-  //     const err = await res.json().catch(() => ({}));
-  //     throw new Error(err.message || "Đăng nhập thất bại");
-  //   }
-
-  //   const data = await res.json();
-
-  //   if (data.success && data.token) {
-  //     Cookies.set(TOKEN_KEY, data.token, { expires: 1, path: '/' });
-  //     setToken(data.token);
-  //     await fetchMe(data.token);
-  //   }
-  // }, [API, fetchMe]);
-
   const login = useCallback(async ({ phonemail, password }: { phonemail: string; password: string }) => {
-    if (!phonemail || !password) {
-      throw new Error("Vui lòng nhập Email hoặc Số điện thoại và mật khẩu.");
-    }
+    if (!phonemail || !password) throw new Error("Vui lòng nhập thông tin đăng nhập.");
+    
+    // Validate sơ bộ (giữ nguyên logic cũ của bạn)
     if (!PHONE_REGEX.test(phonemail) && !EMAIL_REGEX.test(phonemail)) {
       throw new Error("Vui lòng nhập Email hoặc Số điện thoại hợp lệ.");
     }
@@ -235,21 +216,18 @@ export function AuthProvider({
     });
 
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(data?.message || "Đăng nhập thất bại");
-    }
+    if (!res.ok) throw new Error(data?.message || "Đăng nhập thất bại");
 
-    // server trả access_token và user (theo ví dụ bạn gửi)
     const accessToken = data?.access_token ?? data?.token ?? data?.accessToken ?? null;
     const userPayload = data?.user ?? data?.data ?? null;
 
     if (accessToken) {
-      // lưu cookie cục bộ (dùng fallback nếu server không dùng httpOnly cookie)
       Cookies.set(TOKEN_KEY, String(accessToken), { expires: 1, path: "/" });
       setToken(String(accessToken));
     }
 
     if (userPayload) {
+      // Áp dụng chuẩn hóa ngay khi login thành công
       const mapped: AuthUser = {
         id: userPayload.id ?? userPayload.user_id ?? "",
         username: userPayload.username ?? userPayload.email ?? undefined,
@@ -259,11 +237,13 @@ export function AuthProvider({
         gioitinh: userPayload.gioitinh ?? undefined,
         ngaysinh: userPayload.ngaysinh ?? undefined,
         avatar: userPayload.avatar ?? userPayload.photo ?? undefined,
-        danh_sach_diachi: userPayload.danh_sach_diachi ?? userPayload.diachi ?? undefined,
+        danh_sach_diachi: Array.isArray(userPayload.danh_sach_diachi ?? userPayload.diachi ?? userPayload.address)
+          ? (userPayload.danh_sach_diachi ?? userPayload.diachi ?? userPayload.address).map(normalizeAddr)
+          : null,
       };
       setUserState(mapped);
+      Cookies.set("user_info", JSON.stringify(mapped), { expires: 7, path: "/" });
     } else if (accessToken) {
-      // nếu server chỉ trả token, gọi fetchMe để lấy user
       await fetchMe(String(accessToken));
     }
   }, [API, fetchMe]);
@@ -281,14 +261,14 @@ export function AuthProvider({
       throw new Error(err.message || "Đăng ký thất bại");
     }
   }, [API]);
-  // --- Update profile ---
+
+  // --- Update Profile ---
   const updateProfile = useCallback(async (payload: Partial<AuthUser> | FormData): Promise<AuthUser | null> => {
     try {
       const t = Cookies.get(TOKEN_KEY) || token;
       if (!t) throw new Error("Chưa đăng nhập");
       
       const isForm = payload instanceof FormData;
-      // Server accepts POST only — always use POST. Send FormData as multipart, JSON as application/json.
       const method = "POST";
       const url = `${API}/api/v1/thong-tin-ca-nhan/cap-nhat`;
       const options: RequestInit = {
@@ -302,15 +282,18 @@ export function AuthProvider({
 
       if (isForm) {
         options.body = payload as FormData;
-        // do NOT set Content-Type header; browser will set multipart boundary
       } else {
         options.headers = { ...options.headers, "Content-Type": "application/json" };
         options.body = JSON.stringify(payload as Partial<AuthUser>);
       }
+
       const res = await fetch(url, options);
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.message ?? "Cập nhật thất bại");
+      
       const returned = j.user ?? j.data ?? j ?? payload;
+      
+      // Áp dụng chuẩn hóa khi cập nhật
       const mappedUser: AuthUser = {
         id: returned.id ?? user?.id ?? "",
         username: returned.username ?? returned.email ?? user?.username,
@@ -320,8 +303,11 @@ export function AuthProvider({
         gioitinh: returned.gioitinh ?? user?.gioitinh,
         ngaysinh: returned.ngaysinh ?? user?.ngaysinh,
         avatar: returned.avatar ?? user?.avatar,
-        danh_sach_diachi: returned.danh_sach_diachi ?? user?.danh_sach_diachi,
+        danh_sach_diachi: Array.isArray(returned.danh_sach_diachi ?? returned.diachi ?? user?.danh_sach_diachi)
+          ? (returned.danh_sach_diachi ?? returned.diachi ?? user?.danh_sach_diachi).map(normalizeAddr)
+          : (Array.isArray(user?.danh_sach_diachi) ? user?.danh_sach_diachi.map(normalizeAddr) : null),
       };
+
       Cookies.set("user_info", JSON.stringify(mappedUser), { expires: 7, path: "/" });
       setUserState(mappedUser);
       return mappedUser;
@@ -332,6 +318,7 @@ export function AuthProvider({
 
   const logout = useCallback(() => {
     Cookies.remove(TOKEN_KEY);
+    Cookies.remove("user_info");
     setToken(null);
     setUserState(null);
     router.refresh();
@@ -349,7 +336,7 @@ export function AuthProvider({
     refreshProfile,
     setUser: setUserState,
     changePassword,
-  }), [user, token, login, register, updateProfile, logout, changePassword]);
+  }), [user, token, login, register, updateProfile, logout, refreshProfile, changePassword]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

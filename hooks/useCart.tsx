@@ -434,7 +434,7 @@ export function useCart() {
         // Nếu token hết hạn (401), có thể cân nhắc xử lý logout tại đây
         if (res.ok) {
           fetchCart(); // Load lại giỏ hàng server
-          alert("Đã thêm vào giỏ hàng");
+          // alert("Đã thêm vào giỏ hàng");
         } else {
           const err = await res.json().catch(() => ({}));
           alert(err.message || "Không thể thêm vào giỏ (User)");
