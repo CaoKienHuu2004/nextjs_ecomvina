@@ -35,8 +35,11 @@ const getPrice = (gia: PriceInput): number => {
 export default function ThanhToanPage() {
   const router = useRouter();
   const { user, isLoggedIn } = useAuth();
-  const { items, gifts, subtotal, total, discountAmount, clearCart, loading, appliedVoucher, removeVoucher, summary } = useCart();
+  const { items, gifts, subtotal, total, discountAmount, clearCart, loading, appliedVoucher, removeVoucher,refreshCart, summary } = useCart();
 
+  useEffect(() => {
+    refreshCart(); 
+  }, [refreshCart]);
   const shippingFee = Number(summary?.shipping_fee ?? 0); // nếu backend trả phí vận chuyển, đặt tên trường tương ứng
   const displaySubtotal = Number(summary?.tamtinh ?? subtotal);
   const displayVoucherDiscount = Number(summary?.giamgia_voucher ?? 0);
