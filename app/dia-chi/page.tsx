@@ -279,7 +279,7 @@ export default function Page(): JSX.Element {
             <div className="flex-wrap gap-16 mb-20 flex-between ">
               <h6 className="mb-0 text-gray-900">Sổ địa chỉ</h6>
               <div className="flex-wrap gap-16 position-relative flex-align">
-                <button type="button" className="text-2xl border border-gray-100 w-44 h-44 d-lg-none d-flex flex-center rounded-6 sidebar-btn">
+                <button type="button" className="text-2xl border border-gray-100 w-44 h-44 d-lg-none d-flex flex-center rounded-6 sidebar-btn" aria-label="Menu địa chỉ" title="Menu địa chỉ">
                   <i className="ph-bold ph-folder-user" />
                 </button>
               </div>
@@ -388,6 +388,8 @@ export default function Page(): JSX.Element {
                   type="button"
                   className="text-2xl border border-gray-100 w-44 h-44 d-lg-none d-flex flex-center rounded-6 sidebar-btn"
                   onClick={() => setEditing(null)}
+                  aria-label="Đóng form"
+                  title="Đóng"
                 >
                   <i className="ph-bold ph-x" />
                 </button>
@@ -430,8 +432,9 @@ export default function Page(): JSX.Element {
                   />
                 </div>
                 <div className="mb-24 col-md-6">
-                  <label className="mb-8 text-neutral-900 text-md fw-medium">Tỉnh thành <span className="text-danger">*</span></label>
+                  <label htmlFor="province-select" className="mb-8 text-neutral-900 text-md fw-medium">Tỉnh thành <span className="text-danger">*</span></label>
                   <select
+                    id="province-select"
                     className="text-sm placeholder-italic common-input py-11 px-14"
                     value={selectedProvinceId || ""}
                     onChange={(e) => {
@@ -440,6 +443,8 @@ export default function Page(): JSX.Element {
                       const province = PROVINCES_FALLBACK.find(p => p.id === val);
                       setEditing({ ...editing, tinhthanh: province ? province.ten : "" });
                     }}
+                    aria-label="Chọn tỉnh thành"
+                    title="Chọn tỉnh thành"
                   >
                     <option value="">-- Chọn Tỉnh/Thành --</option>
                     {(provinces.length ? provinces : PROVINCES_FALLBACK).map((t) => (

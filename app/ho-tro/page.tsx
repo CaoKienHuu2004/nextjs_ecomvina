@@ -22,11 +22,11 @@ interface SupportHistory {
 export default function SupportPage() {
   const [tieude, setTieude] = useState("");
   const [noidung, setNoidung] = useState("");
-  
+
   const [history, setHistory] = useState<SupportHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  
+
   const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com/api/v1";
 
   const fetchHistory = React.useCallback(async () => {
@@ -34,9 +34,9 @@ export default function SupportPage() {
     try {
       const token = Cookies.get("access_token");
       const res = await fetch(`${API}/ho-tro`, {
-        headers: { 
-            "Authorization": `Bearer ${token}`,
-            "Accept": "application/json"
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/json"
         },
       });
       const j = await res.json();
@@ -92,7 +92,7 @@ export default function SupportPage() {
           <h6 className="mb-20 text-gray-900 flex-align gap-8">
             <i className="ph-bold ph-chats text-main-600"></i> Gửi yêu cầu hỗ trợ mới
           </h6>
-          
+
           <form onSubmit={handleSubmit} className="mb-40">
             <div className="mb-16">
               <label className="text-sm fw-medium text-gray-700 mb-8">Tiêu đề yêu cầu</label>
@@ -115,9 +115,9 @@ export default function SupportPage() {
                 required
               />
             </div>
-            <button 
-              type="submit" 
-              className="btn btn-main py-12 px-24" 
+            <button
+              type="submit"
+              className="btn btn-main py-12 px-24"
               disabled={submitting}
             >
               {submitting ? "Đang gửi..." : "Gửi tin nhắn ngay"}
@@ -143,14 +143,13 @@ export default function SupportPage() {
                 <div key={item.id} className="p-16 border border-gray-100 rounded-8 transition-all hover-border-main-600">
                   <div className="flex-between gap-12 mb-8">
                     <h6 className="text-md mb-0 text-gray-900">{item.tieude}</h6>
-                    <span className={`px-12 py-4 rounded-pill text-xs fw-bold ${
-                      item.trangthai === 'Đã đọc' ? 'bg-success-50 text-success-600' : 'bg-warning-50 text-warning-600'
-                    }`}>
+                    <span className={`px-12 py-4 rounded-pill text-xs fw-bold ${item.trangthai === 'Đã đọc' ? 'bg-success-50 text-success-600' : 'bg-warning-50 text-warning-600'
+                      }`}>
                       {item.trangthai}
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mb-8">{item.noidung}</p>
-                  
+
                   <div className="mt-12 text-xs text-gray-400 flex-between">
                     <span>Loại: {item.loai}</span>
                     <span>Ngày gửi: {new Date(item.created_at).toLocaleDateString('vi-VN')}</span>

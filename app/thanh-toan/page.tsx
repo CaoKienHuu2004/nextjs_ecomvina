@@ -256,6 +256,7 @@ export default function ThanhToanPage() {
                     type="button"
                     onClick={() => setShowAddressModal(true)}
                     className="gap-1 p-0 text-xs bg-transparent border-0 text-primary-700 flex-align fw-medium hover-underline"
+                    aria-label="Thay đổi địa chỉ giao hàng"
                   >
                     <i className="ph-bold ph-pencil-simple"></i> Thay đổi
                   </button>
@@ -388,6 +389,7 @@ export default function ThanhToanPage() {
                         type="button"
                         onClick={removeVoucher}
                         className="text-xs text-danger-500 hover-text-danger-700 fw-medium"
+                        aria-label="Bỏ chọn voucher"
                       >
                         Bỏ chọn
                       </button>
@@ -465,7 +467,7 @@ export default function ThanhToanPage() {
             <div className="border-0 shadow-lg modal-content rounded-12">
               <div className="pb-0 modal-header border-bottom-0">
                 <h5 className="modal-title fw-bold">Chọn địa chỉ giao hàng</h5>
-                <button type="button" className="btn-close" onClick={() => setShowAddressModal(false)}></button>
+                <button type="button" className="btn-close" onClick={() => setShowAddressModal(false)} aria-label="Đóng"></button>
               </div>
               <div className="modal-body">
                 <div className="gap-3 d-flex flex-column">

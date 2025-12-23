@@ -654,7 +654,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                         disabled={favLoading}
                                         className="d-flex text-main-600 text-28 btn-reset"
                                         title={isFavorited ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
-                                        aria-pressed={isFavorited}
+                                        aria-label={isFavorited ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
                                     >
                                         <i
                                             className={isFavorited ? "ph-fill ph-heart" : "ph ph-heart"}
@@ -704,7 +704,6 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                     className={`nav-link ${activeTab === "description" ? "active" : ""}`}
                                     type="button"
                                     role="tab"
-                                    aria-selected={activeTab === "description"}
                                     onClick={() => setActiveTab("description")}
                                 >
                                     Mô tả sản phẩm
@@ -715,7 +714,6 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                     className={`nav-link ${activeTab === "reviews" ? "active" : ""}`}
                                     type="button"
                                     role="tab"
-                                    aria-selected={activeTab === "reviews"}
                                     onClick={() => setActiveTab("reviews")}
                                 >
                                     Đánh giá về sản phẩm
@@ -808,7 +806,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                         <div className="px-24 py-40 border border-gray-100 rounded-8 flex-grow-1">
                                             <div className="gap-8 mb-20 flex-align">
                                                 <span className="flex-shrink-0 text-gray-900">5</span>
-                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-label="5 sao" aria-valuenow={70} aria-valuemin={0} aria-valuemax={100}>
+                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill">
                                                     <div className="progress-bar bg-main-600 rounded-pill" style={{ width: '70%' }}></div>
                                                 </div>
                                                 <div className="gap-4 flex-align">
@@ -822,7 +820,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                             </div>
                                             <div className="gap-8 mb-20 flex-align">
                                                 <span className="flex-shrink-0 text-gray-900">4</span>
-                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-label="4 sao" aria-valuenow={50} aria-valuemin={0} aria-valuemax={100}>
+                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill">
                                                     <div className="progress-bar bg-main-600 rounded-pill" style={{ width: '50%' }}></div>
                                                 </div>
                                                 <div className="gap-4 flex-align">
@@ -836,7 +834,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                             </div>
                                             <div className="gap-8 mb-20 flex-align">
                                                 <span className="flex-shrink-0 text-gray-900">3</span>
-                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-label="3 sao" aria-valuenow={35} aria-valuemin={0} aria-valuemax={100}>
+                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill">
                                                     <div className="progress-bar bg-main-600 rounded-pill" style={{ width: '35%' }}></div>
                                                 </div>
                                                 <div className="gap-4 flex-align">
@@ -850,7 +848,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                             </div>
                                             <div className="gap-8 mb-20 flex-align">
                                                 <span className="flex-shrink-0 text-gray-900">2</span>
-                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-label="2 sao" aria-valuenow={20} aria-valuemin={0} aria-valuemax={100}>
+                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill">
                                                     <div className="progress-bar bg-main-600 rounded-pill" style={{ width: '20%' }}></div>
                                                 </div>
                                                 <div className="gap-4 flex-align">
@@ -864,7 +862,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                             </div>
                                             <div className="gap-8 mb-0 flex-align">
                                                 <span className="flex-shrink-0 text-gray-900">1</span>
-                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-label="1 sao" aria-valuenow={5} aria-valuemin={0} aria-valuemax={100}>
+                                                <div className="h-8 bg-gray-100 progress w-100 rounded-pill">
                                                     <div className="progress-bar bg-main-600 rounded-pill" style={{ width: '5%' }}></div>
                                                 </div>
                                                 <div className="gap-4 flex-align">

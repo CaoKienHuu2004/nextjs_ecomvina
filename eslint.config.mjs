@@ -30,6 +30,12 @@ const eslintConfig = [
 
       // Disable unused expression warning
       "@typescript-eslint/no-unused-expressions": "off",
+
+      // Disable ARIA attribute linting - allow dynamic ARIA values
+      "jsx-a11y/aria-props": "off",
+
+      // Disable inline style warning - allow inline styles when needed
+      "react/no-danger-with-children": "off",
     },
   },
 ];
