@@ -22,7 +22,7 @@ export default function ThongBaoPage(): JSX.Element {
   const [list, setList] = React.useState<ApiNotification[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<string>("Đơn hàng");
-  const API = process.env.NEXT_PUBLIC_SERVER_API || "";
+  const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com/api/v1";
 
   // Shared tick to update countdowns
   const [now, setNow] = React.useState(Date.now());
