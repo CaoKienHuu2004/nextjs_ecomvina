@@ -35,14 +35,23 @@ const getPrice = (gia: PriceInput): number => {
 export default function ThanhToanPage() {
   const router = useRouter();
   const { user, isLoggedIn } = useAuth();
-  const { items, subtotal, total, discountAmount, clearCart, loading, appliedVoucher, removeVoucher } = useCart();
+  const { items, gifts, subtotal, total, discountAmount, clearCart, loading, appliedVoucher, removeVoucher,refreshCart, summary } = useCart();
+
+  useEffect(() => {
+    refreshCart(); 
+  }, [refreshCart]);
+  const shippingFee = Number(summary?.shipping_fee ?? 0); // nếu backend trả phí vận chuyển, đặt tên trường tương ứng
+  const displaySubtotal = Number(summary?.tamtinh ?? subtotal);
+  const displayVoucherDiscount = Number(summary?.giamgia_voucher ?? 0);
+  const displayTietKiem = Number(summary?.tietkiem ?? 0);
+  const displayTotal = Number(summary?.tonggiatri ?? total) + shippingFee;
 
   // State địa chỉ: Dùng Type lấy từ AuthUser["danh_sach_diachi"] cho chuẩn xác
   const [selectedAddress, setSelectedAddress] = useState<NonNullable<AuthUser["danh_sach_diachi"]>[0] | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
-
+  
   // "1": COD, "3": VNPay (Theo quy ước DB)
-  const [paymentMethod, setPaymentMethod] = useState("1");
+  const [paymentMethod, setPaymentMethod] = useState("1"); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
@@ -57,7 +66,7 @@ export default function ThanhToanPage() {
   }, [user]);
 
   // --- LOGIC XỬ LÝ SẢN PHẨM ---
-
+  
   const isGiftItem = (it: any) => {
     try {
       if (it?.bienthe_quatang) {
@@ -71,8 +80,8 @@ export default function ThanhToanPage() {
     } catch { return false; }
   };
 
-  const rawMain = items.filter((it) => !isGiftItem(it));
-  const rawGifts = items.filter((it) => isGiftItem(it));
+  const rawMain = items;
+  const rawGifts = gifts;
 
   // Gộp item giống nhau
   const groupItems = (arr: any[]) => {
@@ -120,10 +129,10 @@ export default function ThanhToanPage() {
         nguoinhan: selectedAddress.ten_nguoinhan, // Đã chuẩn hóa ở useAuth
         sodienthoai: selectedAddress.sodienthoai, // Đã chuẩn hóa ở useAuth
         diachi_chitiet: `${selectedAddress.diachi}, ${selectedAddress.tinhthanh}`,
-
+        
         id_phuongthuc: paymentMethod,
         voucher_code: appliedVoucher?.code || null,
-        ghi_chu: ""
+        ghi_chu: "" 
       };
 
       // GỌI 1 API DUY NHẤT
@@ -141,8 +150,8 @@ export default function ThanhToanPage() {
 
       if (!res.ok || json.status === false) {
         const msg = json.message;
-        const alertMsg = (typeof msg === 'object')
-          ? Object.values(msg).flat().join("\n")
+        const alertMsg = (typeof msg === 'object') 
+          ? Object.values(msg).flat().join("\n") 
           : (msg || "Đặt hàng thất bại. Vui lòng thử lại.");
         alert(alertMsg);
         setIsSubmitting(false);
@@ -153,19 +162,18 @@ export default function ThanhToanPage() {
       clearCart();
 
       // Lấy link thanh toán (kiểm tra cả ở ngoài và trong biến data)
-      const paymentUrl = json.payment_url || json.data?.payment_url;
+      const paymentUrl = json.payment_url || json.data?.payment_url; 
 
       // CASE 1: VNPay -> Redirect
       if (paymentUrl) {
         setRedirecting(true);
         // "Chạy" đường dẫn bằng cách gán cho window.location.href
-        window.location.href = paymentUrl;
+        window.location.href = paymentUrl; 
         return;
       }
 
-      // Trường hợp 2: Thanh toán COD (Thành công luôn, không có link)
-      const orderId = json.data?.id || json.data?.donhang?.id || json.id || json.order_id || json.data?.madon;
-      console.log("Order ID extracted:", orderId, "from json:", json);
+      // CASE 2: COD -> Trang Hoàn tất
+      const orderId = json.data?.id || json.order_id || json.id; 
       router.push(`/hoan-tat-thanh-toan?order_id=${orderId}`);
 
     } catch (error) {
@@ -175,9 +183,7 @@ export default function ThanhToanPage() {
     }
   };
 
-  if (redirecting) {
-    return <LoadingRedirect message="Đang chuyển sang VNPay..." />;
-  }
+  // --- RENDER ---
 
   // Helper render dòng sản phẩm
   const renderSummaryRow = (item: any, isGift = false, idx = 0) => {
@@ -190,6 +196,7 @@ export default function ThanhToanPage() {
     const category = sp.loaibienthe || item.ten_loaibienthe || "";
 
     const keyVal = (item.id_giohang ?? item.id ?? item.id_sanpham) ?? `${name}_${idx}`;
+    const imageSize = isGift ? 54 : 72;
 
     return (
       <tr key={String(keyVal)}>
@@ -200,13 +207,13 @@ export default function ThanhToanPage() {
             </span>
           )}
           <div className="gap-12 d-flex align-items-center">
-            <div className="border border-gray-100 rounded-8 flex-center" style={{ width: 64, height: 64, flexShrink: 0 }}>
-              <Image
-                src={String(img)}
-                alt={String(name)}
-                width={64}
-                height={64}
-                className="w-100 h-100 rounded-8 object-fit-contain"
+            <div className="border border-gray-100 rounded-8 flex-center" style={{ width: imageSize, height: imageSize, flexShrink: 0 }}>
+              <Image 
+                src={String(img)} 
+                alt={String(name)} 
+                width={imageSize} 
+                height={imageSize} 
+                className="w-100 h-100 rounded-8 object-fit-contain" 
               />
             </div>
             <div className="table-product__content text-start">
@@ -222,7 +229,12 @@ export default function ThanhToanPage() {
                 )}
               </div>
               <div className="product-card__price">
-                <span className="text-sm text-main-600 fw-bold">{(isGift ? 0 : totalRow).toLocaleString("vi-VN")} ₫</span>
+                {/* Ẩn giá nếu là quà tặng và giá = 0 */}
+                {!(isGift && totalRow === 0) && (
+                  <span className={isGift ? "summary-price-small fw-medium" : "summary-price-large text-main-600 fw-bold"}>
+                    {(isGift ? 0 : totalRow).toLocaleString("vi-VN")} ₫
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -239,262 +251,262 @@ export default function ThanhToanPage() {
     <>
       <FullHeader showClassicTopBar={true} showTopNav={false} />
 
-      <section className="py-20 cart bg-white-50">
-        <div className="container container-lg">
-          <form onSubmit={handlePlaceOrder} className="row gy-4">
+      <div className="page">
+        <section className="py-20 cart">
+          <div className="container container-lg">
+            <form onSubmit={handlePlaceOrder} className="row gy-4">
+              <div className="col-xl-7 col-lg-8">
+                <div className="px-20 py-20 pb-20 border border-gray-100 cart-sidebar rounded-8">
+                  <div className="gap-8 mb-20 flex-align flex-between">
+                    <h6 className="gap-4 m-0 text-lg flex-align">
+                      <i className="text-xl ph-bold ph-map-pin-area text-main-600"></i>Người nhận hàng
+                    </h6>
+                    <span
+                      id="openModalBtn"
+                      style={{ cursor: "pointer" }}
+                      className="gap-1 text-xs text-primary-700 flex-align fw-normal"
+                      onClick={() => setShowAddressModal(true)}
+                    >
+                      <i className="ph-bold ph-pencil-simple"></i> Thay đổi
+                    </span>
+                  </div>
 
-            {/* CỘT TRÁI */}
-            <div className="col-xl-7 col-lg-8">
+                  <div className="flex-wrap flex-align">
+                    <span className="text-gray-600 border-gray-600 text-md fw-semibold border-end me-8 pe-10">
+                      {selectedAddress?.hoten || "Bạn chưa chọn địa chỉ"}
+                    </span>
+                    <span className="text-gray-600 text-md fw-medium">
+                      {selectedAddress?.sodienthoai || ""}
+                    </span>
+                  </div>
 
-              {/* 1. ĐỊA CHỈ NHẬN HÀNG */}
-              <div className="px-20 py-20 pb-20 mb-20 bg-white border border-gray-100 shadow-sm cart-sidebar rounded-8">
-                <div className="gap-8 mb-3 flex-align flex-between">
-                  <h6 className="gap-4 m-0 text-lg flex-align fw-bold">
-                    <i className="text-xl ph-bold ph-map-pin-area text-main-600"></i>Người nhận hàng
+                  <div className="flex-wrap gap-4 mt-10 flex-align">
+                    {selectedAddress?.trangthai === "Mặc định" && (
+                      <span className="py-1 text-xs text-white fw-semibold rounded-4 bg-main-two-600 px-7">Mặc định</span>
+                    )}
+                    <span className="text-sm text-gray-600 fw-normal">
+                      {selectedAddress ? `${selectedAddress.diachi}, ${selectedAddress.tinhthanh}` : "Bạn chưa có địa chỉ nhận hàng."}
+                    </span>
+                  </div>
+
+                  <input type="hidden" name="id_diachinguoidung" value={String(selectedAddress?.id ?? "")} />
+
+                  {!selectedAddress && (
+                    <div className="px-8 py-4 mt-20 border border-warning-400 bg-warning-100 rounded-4 text-warning-900">
+                      <span className="gap-8 text-sm fw-medium flex-align"><i className="text-2xl ph-bold ph-warning-circle"></i> Vui lòng chọn địa chỉ để tiếp tục.</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pb-0 mt-20 border border-gray-100 cart-table rounded-8 p-30">
+                  <div className="overflow-x-auto scroll-sm scroll-sm-horizontal">
+                    <table className="table mb-20 style-three">
+                      <thead>
+                        <tr className="py-10 my-10 ">
+                          <th className="gap-24 p-0 pb-10 mb-0 text-lg h6 fw-bold flex-align" colSpan={2}>
+                            <div>
+                              <i className="text-lg ph-bold ph-shopping-cart text-main-600 pe-6"></i>
+                              Tóm tắt đơn hàng ({items.length} sản phẩm)
+                            </div>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mainItems.map((item, i) => renderSummaryRow(item, false, i))}
+                        {giftItems.length > 0 && giftItems.map((item, i) => renderSummaryRow(item, true, i))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="px-20 py-20 pb-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
+                  <h6 className="mb-20 flex-between flex-align">
+                    <span className="gap-8 text-lg flex-align">
+                      <i className="text-xl ph-bold ph-wallet text-main-600"></i>Phương thức thanh toán
+                    </span>
                   </h6>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddressModal(true)}
-                    className="gap-1 p-0 text-xs bg-transparent border-0 text-primary-700 flex-align fw-medium hover-underline"
-                    aria-label="Thay đổi địa chỉ giao hàng"
-                  >
-                    <i className="ph-bold ph-pencil-simple"></i> Thay đổi
+
+                  <label className={`w-100 mt-10 border py-16 px-12 rounded-4 transition-1 ${paymentMethod === "1" ? "border-main-600 bg-main-50" : "border-gray-100"}`} style={{ cursor: "pointer" }}>
+                    <div className="">
+                      <div className="mb-0 form-check common-check common-radio">
+                        <input
+                          className="form-check-input"
+                          type="radio"
+                          name="id_phuongthuc"
+                          id="phuongthuc1"
+                          value="1"
+                          checked={paymentMethod === "1"}
+                          onChange={() => setPaymentMethod("1")}
+                        />
+                        <label className="text-sm form-check-label fw-medium text-neutral-600 w-100" htmlFor="phuongthuc1">Thanh toán khi nhận hàng (COD)</label>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className={`w-100 mt-10 border py-16 px-12 rounded-4 transition-1 ${paymentMethod === "3" ? "border-main-600 bg-main-50" : "border-gray-100"}`} style={{ cursor: "pointer" }}>
+                    <div className="">
+                      <div className="mb-0 form-check common-check common-radio">
+                        <input
+                          className="form-check-input"
+                          type="radio"
+                          name="id_phuongthuc"
+                          id="phuongthuc3"
+                          value="3"
+                          checked={paymentMethod === "3"}
+                          onChange={() => setPaymentMethod("3")}
+                        />
+                        <label className="text-sm form-check-label fw-medium text-neutral-600 w-100" htmlFor="phuongthuc3">Thanh toán qua QR Code</label>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="col-xl-5 col-lg-4">
+                <div className="px-20 py-20 pb-20 border border-gray-100 cart-sidebar rounded-8">
+                  <h6 className="mb-20 flex-between flex-align">
+                    <span className="gap-8 text-lg flex-align">
+                      <i className="text-xl ph-bold ph-ticket text-main-600"></i>Áp dụng Voucher
+                    </span>
+                    <Link href="/gio-hang" className="gap-1 text-xs text-primary-700 flex-align fw-normal">
+                      <i className="ph-bold ph-pencil-simple"></i> Thay đổi
+                    </Link>
+                  </h6>
+
+                  <div className="gap-8 px-12 py-10 mt-10 border-gray-200 border-dashed flex-align flex-between rounded-4">
+                    {appliedVoucher ? (
+                      <>
+                        <span className="gap-8 text-sm text-gray-900 flex-align fw-medium pe-10">
+                          <i className="text-2xl ph-bold ph-ticket text-main-600"></i>
+                          <div className="text-sm d-flex flex-column">
+                            <span className="text-sm text-gray-900 w-100">
+                              Giảm {Number(appliedVoucher.giatri).toLocaleString()} ₫
+                            </span>
+                            <span className="text-xs text-gray-500 w-100">
+                              {appliedVoucher.code}
+                            </span>
+                          </div>
+                        </span>
+
+                        <span className="gap-8 text-xs text-gray-900 flex-align fw-medium">
+                          <button
+                            className="p-6 text-xs text-white border btn bg-main-two-600 hover-bg-white hover-border-main-two-600 hover-text-main-two-600 rounded-4"
+                            style={{ cursor: "pointer" }}
+                            disabled
+                          >
+                            Đã chọn
+                          </button>
+                        </span>
+                        <span className="gap-8 text-xs text-gray-900 flex-align fw-medium">
+                          <button
+                            type="button"
+                            onClick={removeVoucher}
+                            className="text-xs text-danger-500 hover-text-danger-700 fw-medium"
+                            aria-label="Bỏ chọn voucher"
+                          >
+                            Bỏ chọn
+                          </button>
+                        </span>
+                      </>
+                    ) : (
+                      <div className="gap-8 px-0 py-0 mt-0 flex-align flex-center rounded-4 w-100">
+                        <div className="text-sm text-gray-900">Không có áp dụng Voucher !</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="px-20 py-20 mt-20 border border-gray-100 cart-sidebar rounded-8">
+                  <div className="mb-20">
+                    <h6 className="gap-4 mb-6 text-lg flex-align"><i className="text-xl ph-bold ph-notepad text-main-600"></i>Đơn hàng</h6>
+                    <div className="text-sm text-gray-600"> {items.length} sản phẩm {giftItems.length > 0 && `+ ${giftItems.length} quà tặng`}</div>
+                  </div>
+
+                  <div className="gap-8 mb-20 flex-between">
+                    <span className="text-gray-900 font-heading-two">Tổng tiền hàng:</span>
+                    <span className="text-gray-900 fw-semibold">{displaySubtotal.toLocaleString()} ₫</span>
+                  </div>
+
+                  <div className="gap-8 mb-20 flex-between">
+                    <span className="text-gray-900 font-heading-two d-flex flex-column">
+                      <span>Phí vận chuyển:</span>
+                      <span className="text-xs">{shippingFee > 0 ? "- Ngoại tỉnh (các vùng lân cận)" : "Miễn phí"}</span>
+                    </span>
+                    <span className="text-gray-900 fw-semibold">{shippingFee.toLocaleString()} ₫</span>
+                  </div>
+
+                  {displayVoucherDiscount > 0 && (
+                    <div className="gap-8 mb-8 flex-between">
+                      <span className="text-gray-900 font-heading-two">Giảm giá:</span>
+                      <span className="text-benefit fw-semibold">- {displayVoucherDiscount.toLocaleString()} ₫</span>
+                    </div>
+                  )}
+
+                  <div className="pt-24 my-20 border-gray-100 border-top">
+                    <div className="gap-8 flex-between">
+                      <span className="text-lg text-gray-900 fw-semibold">Tổng thanh toán:</span>
+                      <span className="text-lg text-main-600 fw-semibold">{displayTotal.toLocaleString()} ₫</span>
+                    </div>
+                    <div className="gap-8 mt-8 text-end">
+                      <span className="text-benefit fw-normal">Tiết kiệm:</span>
+                      <span className="text-benefit fw-normal"> {displayTietKiem.toLocaleString()} ₫</span>
+                    </div>
+                  </div>
+                  <button type="submit" disabled={isSubmitting} className="btn btn-main py-14 w-100 rounded-8">
+                    {isSubmitting ? "Đang xử lý..." : "Đặt hàng"}
                   </button>
                 </div>
-
-                {selectedAddress ? (
-                  <>
-                    <div className="flex-wrap mb-1 flex-align">
-                      <span className="text-gray-900 border-gray-400 fw-bold border-end me-2 pe-2">
-                        {/* Dùng trường chuẩn hóa từ useAuth, không cần fallback phức tạp */}
-                        {selectedAddress.ten_nguoinhan}
-                      </span>
-                      <span className="text-gray-900 fw-medium">
-                        {selectedAddress.sodienthoai}
-                      </span>
-                    </div>
-                    <div className="flex-wrap gap-2 flex-align">
-                      <span className="text-sm text-gray-600">
-                        {selectedAddress.trangthai === "Mặc định" && (
-                          <span className="px-6 py-2 text-xs text-white fw-semibold rounded-4 bg-success-500 me-2">Mặc định</span>
-                        )}
-                        {selectedAddress.diachi}, {selectedAddress.tinhthanh}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="py-4 text-center">
-                    <p className="mb-2 text-sm text-gray-500">Bạn chưa có địa chỉ nhận hàng.</p>
-                    <Link href="/dia-chi" className="text-sm text-main-600 fw-medium hover-underline">
-                      + Thêm địa chỉ mới
-                    </Link>
-                  </div>
-                )}
-
-                {!selectedAddress && (
-                  <div className="px-12 py-8 mt-3 border border-warning-200 bg-warning-50 rounded-4 text-warning-700">
-                    <span className="gap-8 text-sm fw-medium flex-align">
-                      <i className="text-lg ph-bold ph-warning-circle"></i> Vui lòng chọn địa chỉ để tiếp tục.
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* 2. DANH SÁCH SẢN PHẨM */}
-              <div className="px-20 py-20 mb-20 bg-white border border-gray-100 shadow-sm rounded-8">
-                <h6 className="gap-2 mb-3 text-lg fw-bold flex-align">
-                  <i className="text-xl ph-bold ph-shopping-bag text-main-600"></i>
-                  Danh sách sản phẩm ({items.length})
-                </h6>
-                <div className="overflow-y-auto max-h-400 custom-scrollbar">
-                  <table className="table mb-0 style-three">
-                    <tbody>
-                      {mainItems.map((item, i) => renderSummaryRow(item, false, i))}
-                      {giftItems.length > 0 && giftItems.map((item, i) => renderSummaryRow(item, true, i))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* 3. PHƯƠNG THỨC THANH TOÁN */}
-              <div className="px-20 py-20 bg-white border border-gray-100 shadow-sm rounded-8">
-                <h6 className="gap-2 mb-3 text-lg fw-bold flex-align">
-                  <i className="text-xl ph-bold ph-wallet text-main-600"></i>
-                  Phương thức thanh toán
-                </h6>
-
-                <div className="gap-3 d-flex flex-column">
-                  {/* COD */}
-                  <label
-                    className={`w-100 border rounded-8 p-16 cursor-pointer transition-2 ${paymentMethod === "1" ? "border-main-600 bg-main-50" : "border-gray-200"}`}
-                    onClick={() => setPaymentMethod("1")}
-                  >
-                    <div className="gap-3 d-flex align-items-center">
-                      <div className="m-0 form-check common-check common-radio">
-                        <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "1"} readOnly />
-                      </div>
-                      <div className="flex-grow-1">
-                        <div className="text-sm text-gray-900 fw-bold">Thanh toán khi nhận hàng (COD)</div>
-                        <div className="mt-1 text-xs text-gray-500">Thanh toán bằng tiền mặt khi shipper giao hàng đến.</div>
-                      </div>
-                      <i className="text-3xl text-gray-400 ph-fill ph-money" />
-                    </div>
-                  </label>
-
-                  {/* VNPAY */}
-                  <label
-                    className={`w-100 border rounded-8 p-16 cursor-pointer transition-2 ${paymentMethod === "3" ? "border-main-600 bg-main-50" : "border-gray-200"}`}
-                    onClick={() => setPaymentMethod("3")}
-                  >
-                    <div className="gap-3 d-flex align-items-center">
-                      <div className="m-0 form-check common-check common-radio">
-                        <input className="form-check-input" type="radio" name="payment" checked={paymentMethod === "3"} readOnly />
-                      </div>
-                      <div className="flex-grow-1">
-                        <div className="text-sm text-gray-900 fw-bold">Thanh toán qua VNPAY</div>
-                        <div className="mt-1 text-xs text-gray-500">Quét mã QR hoặc thẻ ATM/Visa nội địa.</div>
-                      </div>
-                      <i className="text-3xl text-blue-600 ph-fill ph-qr-code" />
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* CỘT PHẢI */}
-            <div className="col-xl-5 col-lg-4">
-
-              {/* Voucher Widget */}
-              <div className="px-20 py-20 mb-20 bg-white border border-gray-100 shadow-sm rounded-8">
-                <div className="mb-3 flex-between">
-                  <h6 className="gap-2 text-md fw-bold flex-align">
-                    <i className="ph-bold ph-ticket text-main-600"></i> Voucher
-                  </h6>
-                  <Link href="/gio-hang" className="text-xs text-primary-600 hover-underline">Chọn mã khác</Link>
-                </div>
-
-                <div className="p-12 border border-gray-100 border-dashed bg-gray-50 rounded-8">
-                  {appliedVoucher ? (
-                    <div className="flex-between align-items-center">
-                      <div className="gap-2 d-flex align-items-center">
-                        <i className="text-xl ph-fill ph-ticket text-main-600"></i>
-                        <div>
-                          <div className="text-sm text-gray-900 fw-bold">{appliedVoucher.code}</div>
-                          <div className="text-xs text-success-600">
-                            Giảm {Number(appliedVoucher.giatri).toLocaleString()}đ
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={removeVoucher}
-                        className="text-xs text-danger-500 hover-text-danger-700 fw-medium"
-                        aria-label="Bỏ chọn voucher"
-                      >
-                        Bỏ chọn
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-center text-gray-500">
-                      Chưa áp dụng mã giảm giá nào.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Order Summary Widget */}
-              <div className="px-20 py-20 bg-white border border-gray-100 shadow-sm rounded-8 sticky-top" style={{ top: 100 }}>
-                <h6 className="gap-2 mb-3 text-lg fw-bold flex-align">
-                  <i className="ph-bold ph-receipt text-main-600"></i> Chi tiết thanh toán
-                </h6>
-
-                <div className="mb-2 text-sm d-flex justify-content-between">
-                  <span className="text-gray-600">Tổng tiền hàng</span>
-                  <span className="fw-medium">{subtotal.toLocaleString()} ₫</span>
-                </div>
-
-                {discountAmount > 0 && (
-                  <div className="mb-2 text-sm d-flex justify-content-between text-success-600">
-                    <span>Giảm giá Voucher</span>
-                    <span>- {discountAmount.toLocaleString()} ₫</span>
-                  </div>
-                )}
-
-                <div className="mb-2 text-sm d-flex justify-content-between">
-                  <span className="text-gray-600">Phí vận chuyển</span>
-                  <span className="fw-medium">0 ₫</span>
-                </div>
-
-                <div className="pt-16 mt-16 border-gray-100 border-top">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <span className="text-gray-900 text-md fw-bold">Tổng thanh toán</span>
-                    <span className="text-xl fw-bold text-main-600">{total.toLocaleString()} ₫</span>
-                  </div>
-                  <div className="mt-1 text-xs text-gray-500 text-end">(Đã bao gồm VAT)</div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="mt-20 btn btn-main w-100 py-14 rounded-8 fw-bold shadow-main"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <span className="gap-2 d-flex align-items-center justify-content-center">
-                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                      Đang xử lý...
-                    </span>
-                  ) : (
-                    `Đặt hàng (${total.toLocaleString()} ₫)`
-                  )}
-                </button>
-
-                <div className="mt-3 text-center">
-                  <Link href="/gio-hang" className="gap-1 text-sm text-gray-500 hover-text-main-600 flex-center">
-                    <i className="ph-bold ph-arrow-left"></i> Quay lại giỏ hàng
+                <span className="mt-20 w-100 d-block">
+                  <Link href="/gio-hang" className="text-sm text-main-two-600 fw-medium flex-align d-flex flex-center transition-1">
+                    <i className="ph-bold ph-arrow-fat-lines-left text-main-two-600 text-md pe-10"></i> <span>Quay lại giỏ hàng</span>
                   </Link>
-                </div>
+                </span>
               </div>
+            </form>
+          </div>
+        </section>
+
+        {/* Modal: Thay đổi địa chỉ (JSX controlled bằng state) */}
+        <div
+          id="deliveryAddressModal"
+          className={`modal ${showAddressModal ? "d-block" : ""}`}
+          style={{ display: showAddressModal ? "block" : "none", backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1050 }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAddressModal(false); }}
+        >
+          <div className="container modal-content container-lg">
+            <div className="flex-align flex-between">
+              <span className="pb-10 text-lg text-gray-900 fw-semibold">Thay đổi địa chỉ giao hàng</span>
+              <button className="pb-10 text-2xl text-gray-900 rounded-circle 0 fw-semibold close-btn" style={{ cursor: "pointer", border: 0, background: "transparent" }} onClick={() => setShowAddressModal(false)}>&times;</button>
             </div>
 
-          </form>
-        </div>
-      </section>
-
-      {/* MODAL CHỌN ĐỊA CHỈ */}
-      {showAddressModal && (
-        <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
-          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable" style={{ maxWidth: 600 }}>
-            <div className="border-0 shadow-lg modal-content rounded-12">
-              <div className="pb-0 modal-header border-bottom-0">
-                <h5 className="modal-title fw-bold">Chọn địa chỉ giao hàng</h5>
-                <button type="button" className="btn-close" onClick={() => setShowAddressModal(false)} aria-label="Đóng"></button>
-              </div>
-              <div className="modal-body">
-                <div className="gap-3 d-flex flex-column">
-                  {user?.danh_sach_diachi?.map((addr) => (
-                    <div
-                      key={addr.id}
-                      className={`p-16 border rounded-8 cursor-pointer transition-2 ${selectedAddress?.id === addr.id ? 'border-main-600 bg-main-50 shadow-sm' : 'border-gray-200 hover-border-main-200'}`}
-                      onClick={() => { setSelectedAddress(addr); setShowAddressModal(false); }}
-                    >
-                      <div className="mb-1 d-flex justify-content-between align-items-start">
-                        <div className="text-gray-900 fw-bold">{addr.ten_nguoinhan} <span className="text-gray-400 fw-normal">|</span> {addr.sodienthoai}</div>
-                        {addr.trangthai === "Mặc định" && <span className="badge bg-main-100 text-main-600 rounded-pill">Mặc định</span>}
+            <div className="row gy-4">
+              {user?.danh_sach_diachi?.map((addr) => (
+                <div className="col-lg-6 col-xl-6" key={addr.id}>
+                  <div
+                    className={`border-dashed border-2 text-main-900 rounded-8 px-10 py-8 mb-10 ${selectedAddress?.id === addr.id ? "bg-main-50 border-main-600" : ""}`}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => { setSelectedAddress(addr); setShowAddressModal(false); }}
+                  >
+                    <div className="gap-24 d-flex flex-align flex-between">
+                      <div className="gap-12 flex-align">
+                        <span className="text-gray-900 border-gray-600 fw-semibold text-md border-end pe-10">{addr.ten_nguoinhan}</span>
+                        <span className="text-gray-900 fw-semibold text-md">{addr.sodienthoai}</span>
                       </div>
-                      <div className="text-sm text-gray-600">{addr.diachi}, {addr.tinhthanh}</div>
+                      {addr.trangthai === "Mặc định" && <span className="px-6 py-2 text-xs fw-medium text-main-two-700 bg-main-two-100 rounded-4">Mặc định</span>}
                     </div>
-                  ))}
+                    <div className="gap-24 pt-10 d-flex flex-align">
+                      <div className="gap-12 flex-align">
+                        <span className="text-sm text-gray-900 fw-medium">Địa chỉ: {addr.diachi}, {addr.tinhthanh}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="pt-0 modal-footer border-top-0 justify-content-center">
-                <Link href="/dia-chi" className="px-4 py-2 text-sm btn btn-outline-main rounded-pill fw-bold">
-                  <i className="ph-bold ph-plus me-1"></i> Thêm địa chỉ mới
-                </Link>
-              </div>
+              ))}
             </div>
           </div>
         </div>
-      )}
+
+      </div>
 
       <BenefitsStrip />
     </>
