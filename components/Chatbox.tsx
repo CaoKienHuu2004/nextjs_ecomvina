@@ -18,7 +18,6 @@ export default function Chatbox() {
   const [loading, setLoading] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  // Lấy API từ env, nếu không có thì fallback về localhost hoặc domain thật
   const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
   const scrollToBottom = () => {
@@ -41,7 +40,7 @@ export default function Chatbox() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API}/api/chat`, {
+      const res = await fetch(`${API}/api/v1/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -183,7 +182,6 @@ export default function Chatbox() {
         </div>
       )}
 
-      {/* --- NÚT TRÒN MỞ CHAT --- */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="bg-main-600 hover-bg-main-800"
@@ -193,7 +191,7 @@ export default function Chatbox() {
           borderRadius: '50%',
           color: 'white',
           border: 'none',
-          boxShadow: '0 4px 15px rgba(209, 54, 39, 0.4)', // Shadow màu theme
+          boxShadow: '0 4px 15px rgba(209, 54, 39, 0.4)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
