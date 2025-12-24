@@ -1,331 +1,262 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import AccountShell from "@/components/AccountShell";
 import Cookies from "js-cookie";
+import { matchesFilter, formatPrice } from "@/utils/chitietdh"; // Import helper lọc trạng thái
 
+// --- Type Definitions ---
 type Review = {
   id: number;
-  id_sanpham?: number | null;
-  id_chitietdonhang?: number | null;
+  id_chitietdonhang: number;
   diem: number;
-  tieu_de?: string | null;
-  noi_dung?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
+  noi_dung: string;
+  created_at?: string;
+  sanpham?: { ten?: string; hinhanh?: string }; // Tuỳ backend trả về gì khi get reviews
 };
 
 type OrderItem = {
-  id: number;
-  id_chitietdonhang: number;
-  name: string;
-  id_sanpham: number;
+  id: number; // Đây chính là id_chitietdonhang
+  soluong: number;
+  dongia: number;
+  tensanpham?: string;
+  hinhanh?: string;
+  bienthe?: {
+    sanpham?: { ten?: string; hinhanh?: string; hinhanhsanpham?: { hinhanh?: string }[] };
+  };
 };
 
-type ProductOption = { id: number; name: string };
+type Order = {
+  id: number;
+  madon: string;
+  trangthai: string;
+  trangthaithanhtoan: string;
+  created_at: string;
+  chitietdonhang: OrderItem[];
+};
 
 export default function ReviewsPage() {
   const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<Review | null>(null);
-  const [form, setForm] = useState<{ id_chitietdonhang: number; diem: number; noidung: string }>({
+  // State
+  const [loading, setLoading] = useState(false);
+  const [completedOrders, setCompletedOrders] = useState<Order[]>([]); // Danh sách đơn thành công
+  
+  // Form State
+  const [selectedOrderId, setSelectedOrderId] = useState<string>("");
+  const [selectableItems, setSelectableItems] = useState<OrderItem[]>([]); // List sản phẩm của đơn đã chọn
+  
+  const [form, setForm] = useState({
     id_chitietdonhang: 0,
     diem: 5,
     noidung: "",
   });
-  const [orders, setOrders] = useState<any[]>([]);
-  const [selectedOrderId, setSelectedOrderId] = useState<string>("");
 
-  // Fetch reviews - Currently no GET endpoint available
-  // Reviews are created via POST to /api/v1/danh-gia
-  const fetchReviews = async () => {
-    try {
+  // --- 1. LẤY DANH SÁCH ĐƠN HÀNG & LỌC ĐƠN THÀNH CÔNG ---
+  useEffect(() => {
+    const fetchReviewableOrders = async () => {
       setLoading(true);
-      // TODO: Backend needs to provide GET endpoint for user's reviews
-      // For now, we'll show empty list or fetch from orders
-      setReviews([]);
-    } catch (e) {
-      console.error("fetchReviews error", e);
-      setReviews([]);
-    } finally {
-      setLoading(false);
+      try {
+        const token = Cookies.get("access_token");
+        if (!token) return;
+
+        // Gọi API lấy toàn bộ đơn hàng (GET)
+        // Lưu ý: Nên dùng logic fetch all pages như trang don-hang nếu user mua nhiều
+        const res = await fetch(`${API}/api/v1/don-hang?page=1`, {
+            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
+        });
+        
+        const json = await res.json();
+        const allOrders: Order[] = json?.data?.data || [];
+
+        // LỌC: Chỉ lấy đơn "Thành công" bằng hàm chuẩn trong utils
+        const validOrders = allOrders.filter(o => 
+            matchesFilter('completed', o.trangthai, o.trangthaithanhtoan)
+        );
+
+        setCompletedOrders(validOrders);
+
+        // Nếu URL có ?order_id=... thì tự động chọn đơn đó
+        const urlOrderId = searchParams.get('order_id');
+        if (urlOrderId) {
+            const target = validOrders.find(o => String(o.id) === urlOrderId);
+            if (target) {
+                setSelectedOrderId(String(target.id));
+                setSelectableItems(target.chitietdonhang);
+            }
+        }
+
+      } catch (e) {
+        console.error("Lỗi tải đơn hàng:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReviewableOrders();
+  }, [API, searchParams]);
+
+  // --- 2. XỬ LÝ KHI CHỌN ĐƠN HÀNG ---
+  const handleSelectOrder = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const orderId = e.target.value;
+    setSelectedOrderId(orderId);
+    
+    // Tìm đơn hàng tương ứng để lấy danh sách sản phẩm
+    const order = completedOrders.find(o => String(o.id) === orderId);
+    if (order) {
+        setSelectableItems(order.chitietdonhang);
+        // Reset form sản phẩm
+        setForm(prev => ({ ...prev, id_chitietdonhang: 0 }));
+    } else {
+        setSelectableItems([]);
     }
   };
 
-  // Fetch products from user's orders (to allow rating only purchased products)
-  const fetchProductsFromOrders = async (urlOrderId?: string) => {
-    try {
-      const token = Cookies.get("access_token");
-      const res = await fetch(`${API}/api/v1/don-hang`, {
-        headers: { Authorization: token ? `Bearer ${token}` : "", Accept: "application/json" },
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        console.error("fetchOrders failed", res.status);
+  // --- 3. GỬI ĐÁNH GIÁ (POST) ---
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!form.id_chitietdonhang) {
+        alert("Vui lòng chọn sản phẩm cần đánh giá!");
         return;
-      }
-      const json = await res.json().catch(() => ({}));
-      const groups = (json && json.data) || [];
-      // Flatten groups -> orders -> items -> product id/name
-      const orders = Array.isArray(groups) ? groups.flatMap((g: any) => g.donhang || []) : [];
-      const isOrderCompleted = (status?: string) => {
-        const s = (status || "").toString().toLowerCase();
-        return s.includes("đã giao") || s.includes("đã giao hàng") || s.includes("thành công") || s.includes("delivered");
-      };
-      const completedOrders = orders
-        .filter((o: any) => isOrderCompleted(o.trangthai))
-        .map((o: any) => {
-          const items: OrderItem[] = (o.chitietdonhang || []).map((it: any) => {
-            const sp = it.bienthe?.sanpham || {};
-            const id_sanpham = sp.id ?? it.id ?? null;
-            const name = sp.ten ?? it.name ?? `#${id_sanpham ?? "?"}`;
-            const id_chitietdonhang = it.id ?? null;
-            return (id_sanpham && id_chitietdonhang) ? {
-              id: Number(id_sanpham),
-              id_chitietdonhang: Number(id_chitietdonhang),
-              id_sanpham: Number(id_sanpham),
-              name
-            } : null;
-          }).filter(Boolean) as OrderItem[];
-          return { raw: o, id: String(o.id ?? o.madon ?? ""), madon: o.madon, created_at: o.created_at, items };
+    }
+    if (!form.noidung.trim()) {
+        alert("Vui lòng viết nội dung đánh giá!");
+        return;
+    }
+
+    try {
+        const token = Cookies.get("access_token");
+        // Payload đúng chuẩn Postman của bạn
+        const payload = {
+            id_chitietdonhang: Number(form.id_chitietdonhang), // ID từ bảng chitietdonhang
+            diem: Number(form.diem),
+            noidung: form.noidung
+        };
+
+        const res = await fetch(`${API}/api/v1/danh-gia`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify(payload)
         });
 
-      setOrders(completedOrders);
+        const json = await res.json();
 
-      // Check if there's an order_id from URL params
-      let targetOrderId = urlOrderId;
-
-      // If order_id from URL, try to find and select that order
-      if (targetOrderId) {
-        const targetOrder = completedOrders.find(o => o.id === targetOrderId);
-        if (targetOrder) {
-          setSelectedOrderId(targetOrderId);
-          setOrderItems(targetOrder.items);
-          if (targetOrder.items.length > 0) {
-            setForm(f => ({ ...f, id_chitietdonhang: targetOrder.items[0].id_chitietdonhang }));
-          }
-          return;
+        if (res.ok) {
+            alert("Gửi đánh giá thành công! Cảm ơn bạn.");
+            // Reset form
+            setForm({ id_chitietdonhang: 0, diem: 5, noidung: "" });
+            // Có thể redirect hoặc fetch lại danh sách đánh giá cũ nếu có API get
+        } else {
+            alert(json.message || "Lỗi khi gửi đánh giá.");
         }
-      }
 
-      // Otherwise select first order by default (if any)
-      if (completedOrders.length > 0) {
-        const firstOrderId = completedOrders[0].id;
-        setSelectedOrderId(firstOrderId);
-        setOrderItems(completedOrders[0].items);
-        // default product selection = first product of that order
-        if (completedOrders[0].items.length > 0) {
-          setForm(f => ({ ...f, id_chitietdonhang: completedOrders[0].items[0].id_chitietdonhang }));
-        }
-      } else {
-        setOrderItems([]);
-      }
     } catch (e) {
-      console.error("fetchProductsFromOrders error", e);
-    }
-  };
-
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const orderIdFromUrl = searchParams.get('order_id');
-    fetchProductsFromOrders(orderIdFromUrl || undefined);
-    fetchReviews();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
-  const startCreate = () => {
-    setEditing(null);
-    const selectedOrder = orders.find(o => o.id === selectedOrderId);
-    const defaultItemId = selectedOrder?.items?.[0]?.id_chitietdonhang ?? orderItems[0]?.id_chitietdonhang ?? 0;
-    setForm({ id_chitietdonhang: defaultItemId, diem: 5, noidung: "" });
-  };
-
-  const onSelectOrder = (orderId: string) => {
-    setSelectedOrderId(orderId);
-    const order = orders.find(o => o.id === orderId);
-    if (order && Array.isArray(order.items) && order.items.length > 0) {
-      setOrderItems(order.items);
-      setForm(f => ({ ...f, id_chitietdonhang: order.items[0].id_chitietdonhang }));
-    } else {
-      setOrderItems([]);
-      setForm(f => ({ ...f, id_chitietdonhang: 0 }));
-    }
-  };
-
-  const startEdit = (r: Review) => {
-    setEditing(r);
-    setForm({
-      id_chitietdonhang: r.id_chitietdonhang ?? 0,
-      diem: r.diem ?? 5,
-      noidung: r.noi_dung ?? "",
-    });
-  };
-
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!form.id_chitietdonhang) {
-      alert("Vui lòng chọn sản phẩm để đánh giá.");
-      return;
-    }
-    try {
-      const token = Cookies.get("access_token");
-      const payload: any = {
-        id_chitietdonhang: form.id_chitietdonhang,
-        diem: form.diem,
-        noidung: form.noidung,
-      };
-
-      const url = `${API}/api/v1/danh-gia`;
-      const method = "POST";
-      const res = await fetch(url, {
-        method,
-        headers: { Authorization: token ? `Bearer ${token}` : "", Accept: "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (res.ok) {
-        await fetchReviews();
-        setEditing(null);
-        setForm({ id_chitietdonhang: orderItems[0]?.id_chitietdonhang ?? 0, diem: 5, noidung: "" });
-        alert(json.message || "Lưu đánh giá thành công.");
-      } else {
-        alert(json.message || "Lỗi khi lưu đánh giá.");
-      }
-    } catch (e) {
-      console.error("handleSubmit error", e);
-      alert("Lỗi kết nối.");
-    }
-  };
-
-  const handleDelete = async (id?: number) => {
-    if (!id) return;
-    if (!confirm("Bạn có chắc muốn xóa đánh giá này?")) return;
-    try {
-      const token = Cookies.get("access_token");
-      const res = await fetch(`${API}/api/toi/danhgias/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: token ? `Bearer ${token}` : "", Accept: "application/json" },
-      });
-      if (res.ok) {
-        await fetchReviews();
-        alert("Đã xóa.");
-      } else {
-        const json = await res.json().catch(() => ({}));
-        alert(json.message || "Không xóa được.");
-      }
-    } catch (e) {
-      console.error("handleDelete error", e);
-      alert("Lỗi kết nối.");
+        console.error(e);
+        alert("Lỗi kết nối.");
     }
   };
 
   return (
-    <AccountShell title="Đánh giá của tôi" current="reviews">
-      <div className="gap-12 d-flex flex-column">
-        <div className="d-flex flex-between">
-          <h3 className="mb-0">Đánh giá của tôi</h3>
-          <div>
-            <button type="button" className="btn btn-main" onClick={startCreate}>
-              Viết đánh giá mới
-            </button>
-          </div>
-        </div>
+    <AccountShell title="Đánh giá sản phẩm" current="reviews">
+      <div className="p-24 bg-white border rounded-8">
+        <h5 className="mb-20 fw-bold">Viết đánh giá sản phẩm</h5>
+        
+        {loading && <p>Đang tải danh sách đơn hàng...</p>}
 
-        {loading ? (
-          <div>Đang tải...</div>
-        ) : (
-          <>
-            {reviews.length === 0 ? (
-              <div className="p-12 border rounded-8">Bạn chưa có đánh giá nào.</div>
-            ) : (
-              <div className="gap-8 d-flex flex-column">
-                {reviews.map(r => (
-                  <div key={r.id} className="p-12 border rounded-8 d-flex flex-between">
-                    <div style={{ maxWidth: "72%" }}>
-                      {/* <div className="fw-semibold">{r.tieu_de || "(Không có tiêu đề)"}</div> */}
-                      <div className="text-sm text-gray-600" style={{ whiteSpace: "pre-wrap" }}>{r.noi_dung}</div>
-                      <div className="text-xs text-gray-400">{r.created_at}</div>
-                      <div className="mt-8 text-sm">Sản phẩm: {orderItems.find(p => p.id_chitietdonhang === (r.id_chitietdonhang ?? 0))?.name ?? `#${r.id_chitietdonhang ?? "?"}`}</div>
-                    </div>
-
-                    <div className="gap-8 d-flex flex-column align-items-end">
-                      <div className="text-sm">{r.diem} ⭐</div>
-                      <div className="d-flex flex-column">
-                        <button type="button" onClick={() => startEdit(r)} className="px-10 py-8 mb-8 border btn">Sửa</button>
-                        <button type="button" onClick={() => handleDelete(r.id)} className="px-10 py-8 btn border-danger">Xóa</button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
+        {!loading && completedOrders.length === 0 && (
+            <div className="alert alert-info">
+                Bạn chưa có đơn hàng nào hoàn thành để đánh giá. 
+                <Link href="/shop" className="fw-bold ms-2">Mua sắm ngay</Link>
+            </div>
         )}
 
-        <div className="p-12 mt-12 border rounded-8">
-          <form onSubmit={handleSubmit}>
-            <div className="mb-8">
-              <label className="mb-4 d-block">Sản phẩm</label>
-              <label className="mb-2 d-block">Đơn hàng</label>
-              {orders.length === 0 ? (
-                <div className="mb-6 text-sm text-gray-500">Không tìm thấy đơn hàng hoàn thành.</div>
-              ) : (
-                <select
-                  value={selectedOrderId}
-                  onChange={e => onSelectOrder(e.target.value)}
-                  className="px-8 py-6 mb-4 border w-100 rounded-6"
-                  aria-label="Chọn đơn hàng"
-                >
-                  <option value="">-- Chọn đơn hàng --</option>
-                  {orders.map(o => (
-                    <option key={o.id} value={o.id}>
-                      {o.madon ?? `#${o.id}`} {o.created_at ? `— ${String(o.created_at).slice(0, 16)}` : ""}
-                    </option>
-                  ))}
-                </select>
-              )}
+        {completedOrders.length > 0 && (
+            <form onSubmit={handleSubmit}>
+                {/* 1. Chọn Đơn Hàng */}
+                <div className="mb-16">
+                    <label className="mb-8 fw-semibold d-block">Chọn đơn hàng đã mua</label>
+                    <select 
+                        className="form-select common-input rounded-8"
+                        value={selectedOrderId}
+                        onChange={handleSelectOrder}
+                    >
+                        <option value="">-- Chọn đơn hàng --</option>
+                        {completedOrders.map(order => (
+                            <option key={order.id} value={order.id}>
+                                Đơn #{order.madon} — {new Date(order.created_at).toLocaleDateString('vi-VN')}
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
-              {/* Product select filtered by order */}
-              {orderItems.length === 0 ? (
-                <div className="text-sm text-gray-500">Không tìm thấy sản phẩm để đánh giá.</div>
-              ) : (
-                <select
-                  value={form.id_chitietdonhang}
-                  onChange={e => setForm(f => ({ ...f, id_chitietdonhang: Number(e.target.value) }))}
-                  className="px-8 py-6 mb-8 border w-100 rounded-6"
-                  aria-label="Chọn sản phẩm"
-                >
-                  <option value={0}>-- Chọn sản phẩm --</option>
-                  {orderItems.map(item => (
-                    <option key={item.id_chitietdonhang} value={item.id_chitietdonhang}>{item.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
+                {/* 2. Chọn Sản Phẩm trong đơn đó */}
+                {selectedOrderId && (
+                    <div className="mb-16 animation-fade-in">
+                        <label className="mb-8 fw-semibold d-block">Chọn sản phẩm</label>
+                        <select 
+                            className="form-select common-input rounded-8"
+                            value={form.id_chitietdonhang}
+                            onChange={e => setForm({...form, id_chitietdonhang: Number(e.target.value)})}
+                        >
+                            <option value="0">-- Chọn sản phẩm --</option>
+                            {selectableItems.map(item => {
+                                const name = item.tensanpham || item.bienthe?.sanpham?.ten || "Sản phẩm";
+                                return (
+                                    <option key={item.id} value={item.id}>
+                                        {name} (x{item.soluong})
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    </div>
+                )}
 
-            <div className="mb-8 d-flex flex-column">
-              <label className="mb-4">Số sao</label>
-              <select value={form.diem} onChange={e => setForm(f => ({ ...f, diem: Number(e.target.value) }))} className="px-8 py-6 border rounded-6" aria-label="Chọn số sao đánh giá">
-                {[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n} sao</option>)}
-              </select>
-            </div>
+                {/* 3. Form Nhập liệu (Chỉ hiện khi đã chọn sản phẩm) */}
+                {form.id_chitietdonhang > 0 && (
+                    <div className="animation-fade-in">
+                        <div className="mb-16">
+                            <label className="mb-8 fw-semibold d-block">Mức độ hài lòng</label>
+                            <div className="gap-8 d-flex">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => setForm({...form, diem: star})}
+                                        className={`btn btn-sm ${form.diem >= star ? 'btn-warning text-white' : 'btn-outline-gray'}`}
+                                    >
+                                        {star} <i className="ph-fill ph-star"></i>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
 
-            <div className="mb-8">
-              <label className="mb-4 d-block">Nội dung</label>
-              <textarea value={form.noidung} onChange={e => setForm(f => ({ ...f, noidung: e.target.value }))} className="px-8 py-6 border w-100 rounded-6" rows={6} aria-label="Nội dung đánh giá" placeholder="Viết đánh giá của bạn..." />
-            </div>
+                        <div className="mb-24">
+                            <label className="mb-8 fw-semibold d-block">Nội dung đánh giá</label>
+                            <textarea
+                                rows={4}
+                                className="p-12 common-input rounded-8 w-100"
+                                placeholder="Hãy chia sẻ cảm nhận của bạn về sản phẩm này..."
+                                value={form.noidung}
+                                onChange={e => setForm({...form, noidung: e.target.value})}
+                            ></textarea>
+                        </div>
 
-            <div className="gap-8 d-flex">
-              <button type="submit" className="btn btn-main">{editing ? "Cập nhật" : "Lưu"}</button>
-              <button type="button" onClick={() => { setEditing(null); setForm({ id_chitietdonhang: orderItems[0]?.id_chitietdonhang ?? 0, diem: 5, noidung: "" }); }} className="border btn">Hủy</button>
-            </div>
-          </form>
-        </div>
+                        <button type="submit" className="btn btn-main w-100 rounded-8 fw-bold">
+                            Gửi đánh giá
+                        </button>
+                    </div>
+                )}
+            </form>
+        )}
       </div>
     </AccountShell>
   );
