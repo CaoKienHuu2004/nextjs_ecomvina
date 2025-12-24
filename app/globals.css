@@ -1,4 +1,4 @@
-@import "slick-carousel/slick/slick.css";
+﻿@import "slick-carousel/slick/slick.css";
 @import "slick-carousel/slick/slick-theme.css";
 @import "swiper/css";
 @import "swiper/css/navigation";
@@ -167,7 +167,7 @@
 
 .banner-item-two-wrapper .swiper-button-prev:hover,
 .banner-item-two-wrapper .swiper-button-next:hover {
-  background: #FF6B35;
+  background: #FF6B00;
   color: white;
 }
 
@@ -209,45 +209,48 @@
   --main-two-l: 47%;
 }
 
-/* Utility màu cam chính #f39016 cho text-main-600 & border-main-600
+/* Utility màu cam chính #FF6B00 cho text-main-600 & border-main-600
    Tăng specificity với :root để thắng rule trong main.css (load sau) */
 :root .text-main-600 {
-  color: #f39016 !important;
+  color: #FF6B00 !important;
 }
 
 :root .border-main-600 {
-  border-color: #f39016 !important;
+  border-color: #FF6B00 !important;
 }
 
 :root .hover-border-main-600:hover,
 :root .product-card.hover-border-main-600:hover {
-  border-color: #f39016 !important;
+  border-color: #FF6B00 !important;
 }
 
 .header-login-btn {
   background: #fff5f0;
   border: none;
-  color: #ff8c37 !important;
+  color: #FF6B00 !important;
   transition: all 0.3s ease;
 }
 
 .header-login-btn:hover {
-  background: linear-gradient(180deg, #ff8c37 0%, #ff6b1a 100%);
+  background: linear-gradient(180deg, #FF6B00 0%, #FF6B00 100%);
   color: #fff !important;
-  box-shadow: 0 10px 30px rgba(255, 140, 55, 0.35);
+  box-shadow: 0 10px 30px rgba(255, 107, 0, 0.35);
 }
 
 /*màu của herder dark orange*/
+:root .bg-main-600,
 .bg-main-600,
+button.bg-main-600,
+.btn.bg-main-600,
 .header-top.bg-main-600 {
-  background-color: #F07800 !important;
+  background-color: #FF6B00 !important;
 }
 
-/*màu của badge giỏ hàng - xanh ngọc #009999*/
+/*màu của badge giỏ hàng - xanh ngọc  #008080*/
 .bg-main-two-600,
 .badge.bg-main-two-600,
 span.badge.bg-main-two-600 {
-  background-color: #009999 !important;
+  background-color: #008080 !important;
 }
 
 .featured-products__viewport {
@@ -371,8 +374,8 @@ span.badge.bg-main-two-600 {
 }
 
 .top-brand .btn-outline-primary {
-  border: 1px solid #FF7A1B;
-  color: #FF7A1B;
+  border: 1px solid #FF6B00;
+  color: #FF6B00;
   padding: 8px 16px;
   border-radius: 4px;
   font-size: 14px;
@@ -380,9 +383,8 @@ span.badge.bg-main-two-600 {
   transition: all 0.3s ease;
 }
 
-
 .top-brand__item:hover {
-  border-color: #FF7A1B;
+  border-color: #FF6B00;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
@@ -682,10 +684,10 @@ span.badge.bg-main-two-600 {
 }
 
 :root .top-categories-section .custom-categories-tabs .nav-link {
-  border: 1px solid #009999 !important;
+  border: 1px solid #008080 !important;
   border-radius: 999px !important;
   /* pill shape */
-  color: #009999 !important;
+  color: #008080 !important;
   background-color: #ffffff !important;
   padding: 8px 18px;
   line-height: 1.2;
@@ -695,14 +697,14 @@ span.badge.bg-main-two-600 {
 }
 
 :root .top-categories-section .custom-categories-tabs .nav-link:hover {
-  border-color: #009999 !important;
-  color: #009999 !important;
+  border-color: #008080 !important;
+  color: #008080 !important;
   background-color: #fff !important;
 }
 
 :root .top-categories-section .custom-categories-tabs .nav-link.active {
-  background-color: #009999 !important;
-  border-color: #009999 !important;
+  background-color: #008080 !important;
+  border-color: #008080 !important;
   color: #ffffff !important;
 }
 
@@ -1025,11 +1027,11 @@ button.btn-more-orange,
   justify-content: center !important;
   padding: 12px 32px !important;
   border-radius: 8px !important;
-  border: 1px solid #f39016 !important;
+  border: 1px solid #FF6B00 !important;
   font-weight: 500 !important;
   font-size: 14px !important;
   background-color: #ffffff !important;
-  color: #f39016 !important;
+  color: #FF6B00 !important;
   text-decoration: none !important;
   transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease !important;
 }
@@ -1037,8 +1039,8 @@ button.btn-more-orange,
 a.btn-more-orange:hover,
 button.btn-more-orange:hover,
 .btn-more-orange:hover {
-  background-color: #f39016 !important;
-  border-color: #f39016 !important;
+  background-color: #FF6B00 !important;
+  border-color: #FF6B00 !important;
   color: #ffffff !important;
 }
 
@@ -1055,14 +1057,14 @@ button.btn-more-orange:hover,
   align-items: center;
 }
 
-/* Màu cam #f39016 cho radio trong sidebar shop */
+/* Màu cam #FF6B00 cho radio trong sidebar shop */
 .shop .common-check .form-check-input[type="radio"] {
   -webkit-appearance: none !important;
   appearance: none !important;
   width: 18px;
   height: 18px;
   border-radius: 50% !important;
-  border: 2px solid #f39016 !important;
+  border: 2px solid #FF6B00 !important;
   background-color: #fff !important;
   box-shadow: none !important;
   position: relative;
@@ -1077,7 +1079,7 @@ button.btn-more-orange:hover,
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #f39016;
+  background-color: #FF6B00;
   transform: translate(-50%, -50%);
   opacity: 0;
   transition: opacity 0.2s ease;
@@ -1085,7 +1087,7 @@ button.btn-more-orange:hover,
 
 .shop .common-check .form-check-input[type="radio"]:checked {
   background-color: #fff !important;
-  border-color: #f39016 !important;
+  border-color: #FF6B00 !important;
 }
 
 .shop .common-check .form-check-input[type="radio"]:checked::after {
@@ -1166,9 +1168,11 @@ button.btn-more-orange:hover,
 }
 
 /* Biến theme (nếu muốn dễ thay đổi sau) */
-:root{
-  --benefit-color: #0ea5a4; /* thay bằng màu thực tế của BenefitsStrip nếu biết */
-  --benefit-strong: #ff6a00; /* nếu cần màu khác cho tổng hoặc nhấn mạnh */
+:root {
+  --benefit-color: #0ea5a4;
+  /* thay bằng màu thực tế của BenefitsStrip nếu biết */
+  --benefit-strong: #ff6a00;
+  /* nếu cần màu khác cho tổng hoặc nhấn mạnh */
 }
 
 /* Lớp tiện ích dùng cho giảm giá / tiết kiệm */
@@ -1188,3 +1192,254 @@ button.btn-more-orange:hover,
   color: #fff;
 }
 
+/* ====================================================================
+   OVERRIDE MÀU CHO TẤT CẢ BUTTONS - CAM #FF6B00 & XANH #008080
+   ==================================================================== */
+
+/* Button màu cam chính - btn-main */
+:root .btn-main,
+.btn-main,
+button.btn-main,
+a.btn-main {
+  background-color: #FF6B00 !important;
+  border-color: #FF6B00 !important;
+}
+
+:root .btn-main:hover,
+.btn-main:hover,
+button.btn-main:hover,
+a.btn-main:hover {
+  background-color: #e55f00 !important;
+  border-color: #e55f00 !important;
+}
+
+/* Button outline màu cam */
+:root .btn-outline-main,
+.btn-outline-main {
+  color: #FF6B00 !important;
+  border-color: #FF6B00 !important;
+}
+
+:root .btn-outline-main:hover,
+.btn-outline-main:hover {
+  background-color: #FF6B00 !important;
+  color: #fff !important;
+}
+
+/* Hover effects màu cam */
+:root .hover-bg-main-600:hover,
+.hover-bg-main-600:hover {
+  background-color: #FF6B00 !important;
+}
+
+:root .hover-text-main-600:hover,
+.hover-text-main-600:hover {
+  color: #FF6B00 !important;
+}
+
+/* Text màu xanh */
+:root .text-main-two-600,
+.text-main-two-600 {
+  color: #008080 !important;
+}
+
+/* Border màu xanh */
+:root .border-main-two-600,
+.border-main-two-600 {
+  border-color: #008080 !important;
+}
+
+/* Hover effects màu xanh */
+:root .hover-bg-main-two-600:hover,
+.hover-bg-main-two-600:hover {
+  background-color: #008080 !important;
+}
+
+/* Background màu cam nhạt */
+:root .bg-main-50,
+.bg-main-50 {
+  background-color: rgba(255, 107, 0, 0.1) !important;
+}
+
+:root .bg-main-100,
+.bg-main-100 {
+  background-color: rgba(255, 107, 0, 0.15) !important;
+}
+
+/* Background màu xanh nhạt */
+:root .bg-main-two-50,
+.bg-main-two-50 {
+  background-color: rgba(0, 128, 128, 0.1) !important;
+}
+
+:root .bg-main-two-100,
+.bg-main-two-100 {
+  background-color: rgba(0, 128, 128, 0.15) !important;
+}
+
+/* Nav tabs active - màu cam */
+:root .nav-link.active,
+.nav-link.active,
+button.nav-link.active {
+  background-color: #FF6B00 !important;
+  border-color: #FF6B00 !important;
+  color: #fff !important;
+}
+
+/* Pagination active - màu cam */
+:root .page-link.active,
+.pagination .page-link.active,
+.page-link.active,
+button.page-link.active,
+.pagination button.page-link.active,
+:root .page-item.active .page-link,
+.page-item.active .page-link,
+.pagination .page-item.active .page-link {
+  background-color: #FF6B00 !important;
+  border-color: #FF6B00 !important;
+  color: #fff !important;
+}
+
+/* Hover cho pagination */
+:root .page-link:hover,
+.page-link:hover,
+button.page-link:hover {
+  background-color: rgba(255, 107, 0, 0.1) !important;
+  border-color: #FF6B00 !important;
+  color: #FF6B00 !important;
+}
+
+/* Hover cho nav-link */
+:root .nav-link:hover,
+.nav-link:hover,
+button.nav-link:hover {
+  color: #FF6B00 !important;
+}
+
+/* Hover cho bg-main-300 */
+:root .hover-bg-main-300:hover,
+.hover-bg-main-300:hover {
+  background-color: rgba(255, 107, 0, 0.2) !important;
+}
+
+/* ====================================================================
+   OVERRIDE MẠNH HƠN CHO NAV-TABS VÀ BUTTONS
+   ==================================================================== */
+
+/* Nav tabs - tăng specificity cao hơn */
+.nav-tabs .nav-link.active,
+.nav-tabs button.nav-link.active,
+ul.nav-tabs .nav-link.active,
+ul.nav-tabs button.nav-link.active {
+  background-color: #FF6B00 !important;
+  border-color: #FF6B00 !important;
+  color: #fff !important;
+}
+
+/* Pagination - tăng specificity */
+.pagination .page-item.active .page-link,
+ul.pagination .page-item.active .page-link,
+.pagination .page-link.active,
+ul.pagination .page-link.active {
+  background-color: #FF6B00 !important;
+  border-color: #FF6B00 !important;
+  color: #fff !important;
+}
+
+/* Tất cả button với bg-main-600 */
+button[class*="bg-main-600"],
+.btn[class*="bg-main-600"],
+a[class*="bg-main-600"] {
+  background-color: #FF6B00 !important;
+}
+
+/* Button viền cam - text luôn hiển thị */
+.btn.border-main-600.text-main-600,
+button.border-main-600.text-main-600 {
+  color: #FF6B00 !important;
+  border-color: #FF6B00 !important;
+  background-color: transparent !important;
+}
+
+/* Hover cho button viền cam */
+.btn.border-main-600.text-main-600:hover,
+button.border-main-600.text-main-600:hover,
+.btn.hover-bg-main-600:hover,
+button.hover-bg-main-600:hover {
+  background-color: #FF6B00 !important;
+  color: #fff !important;
+  border-color: #FF6B00 !important;
+}
+
+/* Đảm bảo text và icon trong button luôn hiển thị */
+.btn.text-main-600 span,
+.btn.text-main-600 i,
+button.text-main-600 span,
+button.text-main-600 i {
+  color: inherit !important;
+}
+
+/* Hover text white */
+.hover-text-white:hover,
+.hover-text-white:hover span,
+.hover-text-white:hover i {
+  color: #fff !important;
+}
+
+/* ====================================================================
+   NÚT TĂNG/GIẢM SỐ LƯỢNG - QUANTITY BUTTONS
+   ==================================================================== */
+
+/* Nút tăng/giảm số lượng - màu xám mặc định */
+.quantity__minus,
+.quantity__plus,
+button.quantity__minus,
+button.quantity__plus {
+  background-color: #f3f4f6 !important;
+  color: #6b7280 !important;
+  border-color: #e5e7eb !important;
+}
+
+.quantity__minus i,
+.quantity__plus i {
+  color: #6b7280 !important;
+}
+
+/* Hover cho nút tăng/giảm - màu cam khi hover */
+.quantity__minus:hover,
+.quantity__plus:hover,
+button.quantity__minus:hover,
+button.quantity__plus:hover {
+  background-color: #FF6B00 !important;
+  color: #fff !important;
+  border-color: #FF6B00 !important;
+}
+
+.quantity__minus:hover i,
+.quantity__plus:hover i {
+  color: #fff !important;
+}
+
+/* Button them vao gio hang - mac dinh xam */
+.bg-gray-50.hover-bg-main-600,
+button.bg-gray-50.hover-bg-main-600 {
+  background-color: #f9fafb !important;
+  color: #111827 !important;
+}
+
+.bg-gray-50.hover-bg-main-600 i,
+button.bg-gray-50.hover-bg-main-600 i {
+  color: #111827 !important;
+}
+
+/* Hover - mau cam */
+.bg-gray-50.hover-bg-main-600:hover,
+button.bg-gray-50.hover-bg-main-600:hover {
+  background-color: #FF6B00 !important;
+  color: #fff !important;
+}
+
+.bg-gray-50.hover-bg-main-600:hover i,
+button.bg-gray-50.hover-bg-main-600:hover i {
+  color: #fff !important;
+}

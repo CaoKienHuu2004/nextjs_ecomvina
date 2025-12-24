@@ -436,7 +436,6 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                     <span className="text-xl fw-medium text-warning-600 d-flex"><i className="ph-fill ph-star"></i></span>
                                                 </div>
                                                 <span className="text-md fw-medium text-neutral-600">{getRating()} </span>
-                                                <span className="text-sm text-gray-500 fw-medium">(21,676)</span>
                                             </div>
 
                                             <span className="text-gray-500 text-md fw-medium">|</span>
@@ -853,24 +852,8 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                     <h5 className="mb-0">Sản phẩm tương tự</h5>
                                     <div className="gap-16 flex-align">
                                         <div className="gap-8 flex-align">
-                                            <button
-                                                type="button"
-                                                title="Sản phẩm trước"
-                                                aria-label="Xem sản phẩm trước"
-                                                className="text-xl border border-gray-100 slick-prev flex-center rounded-circle hover-border-main-600 hover-bg-main-600 hover-text-white transition-1 similar-nav-btn"
-                                                onClick={() => sliderRef.current?.slickPrev()}
-                                            >
-                                                <i className="ph ph-caret-left"></i>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                title="Sản phẩm tiếp"
-                                                aria-label="Xem sản phẩm tiếp theo"
-                                                className="text-xl border border-gray-100 slick-next flex-center rounded-circle hover-border-main-600 hover-bg-main-600 hover-text-white transition-1 similar-nav-btn"
-                                                onClick={() => sliderRef.current?.slickNext()}
-                                            >
-                                                <i className="ph ph-caret-right"></i>
-                                            </button>
+
+
                                         </div>
                                     </div>
                                 </div>

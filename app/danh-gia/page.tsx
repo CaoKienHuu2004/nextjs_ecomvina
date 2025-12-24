@@ -267,6 +267,7 @@ export default function ReviewsPage() {
                   value={selectedOrderId}
                   onChange={e => onSelectOrder(e.target.value)}
                   className="px-8 py-6 mb-4 border w-100 rounded-6"
+                  aria-label="Chọn đơn hàng"
                 >
                   <option value="">-- Chọn đơn hàng --</option>
                   {orders.map(o => (
@@ -285,6 +286,7 @@ export default function ReviewsPage() {
                   value={form.id_sanpham}
                   onChange={e => setForm(f => ({ ...f, id_sanpham: Number(e.target.value) }))}
                   className="px-8 py-6 mb-8 border w-100 rounded-6"
+                  aria-label="Chọn sản phẩm"
                 >
                   <option value={0}>-- Chọn sản phẩm --</option>
                   {products.map(p => (
@@ -296,14 +298,14 @@ export default function ReviewsPage() {
 
             <div className="mb-8 d-flex flex-column">
               <label className="mb-4">Số sao</label>
-              <select value={form.diem} onChange={e => setForm(f => ({ ...f, diem: Number(e.target.value) }))} className="px-8 py-6 border rounded-6">
+              <select value={form.diem} onChange={e => setForm(f => ({ ...f, diem: Number(e.target.value) }))} className="px-8 py-6 border rounded-6" aria-label="Chọn số sao đánh giá">
                 {[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n} sao</option>)}
               </select>
             </div>
 
             <div className="mb-8">
               <label className="mb-4 d-block">Nội dung</label>
-              <textarea value={form.noidung} onChange={e => setForm(f => ({ ...f, noidung: e.target.value }))} className="px-8 py-6 border w-100 rounded-6" rows={6} />
+              <textarea value={form.noidung} onChange={e => setForm(f => ({ ...f, noidung: e.target.value }))} className="px-8 py-6 border w-100 rounded-6" rows={6} aria-label="Nội dung đánh giá" placeholder="Viết đánh giá của bạn..." />
             </div>
 
             <div className="gap-8 d-flex">

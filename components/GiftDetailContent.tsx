@@ -456,13 +456,13 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
                                                 <li className="text-gray-400 mb-14 flex-align gap-14">
                                                     <span
                                                         className={`w-30 h-30 text-md flex-center rounded-circle`}
-                                                        style={{ backgroundColor: hasEnoughProducts ? '#e6f7f7' : '#fff3e6', color: hasEnoughProducts ? '#009999' : '#f39016' }}
+                                                        style={{ backgroundColor: hasEnoughProducts ? '#e6f7f7' : '#fff3e6', color: hasEnoughProducts ? '#008080' : '#FF6B00' }}
                                                     >
                                                         <i className={`ph-bold ${hasEnoughProducts ? 'ph-check' : 'ph-x'}`}></i>
                                                     </span>
                                                     <span className="text-heading fw-medium">
                                                         Mua tối thiểu{' '}
-                                                        <span style={{ color: hasEnoughProducts ? '#009999' : '#f39016' }}>
+                                                        <span style={{ color: hasEnoughProducts ? '#008080' : '#FF6B00' }}>
                                                             {currentCount}/{targetCount} sản phẩm
                                                         </span>{' '}
                                                         từ {gift.sanphamduoctang?.[0]?.sanpham?.thuonghieu?.ten || 'nhà cung cấp'}
@@ -472,12 +472,12 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
                                                     <li className="text-gray-400 mb-14 flex-align gap-14">
                                                         <span
                                                             className={`w-30 h-30 text-md flex-center rounded-circle`}
-                                                            style={{ backgroundColor: hasEnoughAmount ? '#e6f7f7' : '#fff3e6', color: hasEnoughAmount ? '#009999' : '#f39016' }}
+                                                            style={{ backgroundColor: hasEnoughAmount ? '#e6f7f7' : '#fff3e6', color: hasEnoughAmount ? '#008080' : '#FF6B00' }}
                                                         >
                                                             <i className={`ph-bold ${hasEnoughAmount ? 'ph-check' : 'ph-x'}`}></i>
                                                         </span>
                                                         <span className="text-heading fw-medium">
-                                                            Giá trị đơn hàng tối thiểu <span style={{ color: hasEnoughAmount ? '#009999' : '#f39016' }}>{formatPrice(gift.dieukiengiatri)} đ</span>
+                                                            Giá trị đơn hàng tối thiểu <span style={{ color: hasEnoughAmount ? '#008080' : '#FF6B00' }}>{formatPrice(gift.dieukiengiatri)} đ</span>
                                                         </span>
                                                     </li>
                                                 )}
@@ -487,9 +487,9 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
 
                                             {/* Alert khi đủ điều kiện và đã tự động thêm quà */}
                                             {showCartAlert && (
-                                                <div className="alert alert-success alert-dismissible fade show mb-20" role="alert" style={{ backgroundColor: '#e6f7f7', borderColor: '#009999', color: '#006666' }}>
+                                                <div className="alert alert-success alert-dismissible fade show mb-20" role="alert" style={{ backgroundColor: '#e6f7f7', borderColor: '#008080', color: '#006666' }}>
                                                     <div className="flex-align gap-8">
-                                                        <i className="ph-fill ph-gift text-xl" style={{ color: '#009999' }}></i>
+                                                        <i className="ph-fill ph-gift text-xl" style={{ color: '#008080' }}></i>
                                                         <strong>🎉 Chúc mừng!</strong> Quà tặng đã được tự động thêm vào giỏ hàng của bạn.
                                                     </div>
                                                     <button
@@ -582,7 +582,7 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
                                                         <div
                                                             className="progress-bar rounded-pill text-center"
                                                             style={{
-                                                                backgroundColor: progressPercent >= 100 ? '#009999' : '#f39016',
+                                                                backgroundColor: progressPercent >= 100 ? '#008080' : '#FF6B00',
                                                                 width: `${Math.max(progressPercent, 10)}%`,
                                                                 transition: 'width 0.5s ease, background-color 0.3s ease' // ✅ THÊM ANIMATION
                                                             }}
@@ -727,22 +727,7 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
                                 </h6>
                                 <div className="flex-align gap-16">
                                     <div className="flex-align gap-8">
-                                        <button
-                                            type="button"
-                                            id="new-arrival-prev"
-                                            className="slick-prev flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1"
-                                            aria-label="Sản phẩm trước"
-                                        >
-                                            <i className="ph ph-caret-left"></i>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            id="new-arrival-next"
-                                            className="slick-next flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1"
-                                            aria-label="Sản phẩm tiếp theo"
-                                        >
-                                            <i className="ph ph-caret-right"></i>
-                                        </button>
+
                                     </div>
                                 </div>
                             </div>

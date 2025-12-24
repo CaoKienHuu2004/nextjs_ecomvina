@@ -71,13 +71,13 @@ const TopCategoriesProducts: React.FC<TopCategoriesProductsProps> = () => {
                                     type="button"
                                     role="tab"
                                     aria-controls={`content-${cat.id}`}
-                                    aria-selected={activeTab === idx}
+                                    aria-selected={activeTab === idx ? "true" : "false"}
                                     onClick={() => setActiveTab(idx)}
                                     style={{
                                         borderRadius: "999px",
-                                        borderColor: "#009999",
-                                        color: activeTab === idx ? "#fff" : "#009999",
-                                        backgroundColor: activeTab === idx ? "#009999" : "#fff",
+                                        borderColor: "#008080",
+                                        color: activeTab === idx ? "#fff" : "#008080",
+                                        backgroundColor: activeTab === idx ? "#008080" : "#fff",
                                         padding: "14px 30px",
                                         fontSize: "14px",
                                         transition: "all 0.2s ease"

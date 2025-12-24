@@ -94,7 +94,6 @@ export default function Page() {
                           {Array.from({ length: 5 }).map((_, k) => <i key={k} className="ph-fill ph-star" />)}
                         </div>
                         <span className="text-sm fw-medium text-neutral-600 ms-8">4.7 sao</span>
-                        <span className="text-sm text-gray-500 fw-medium">(21,676)</span>
                       </div>
 
                       <span className="text-sm text-gray-500 fw-medium">|</span>
@@ -216,7 +215,7 @@ export default function Page() {
                                   {[{ w: 70, c: 124 }, { w: 50, c: 52 }, { w: 35, c: 31 }].map((it, idx) => (
                                     <div key={idx} className="gap-8 mb-20 flex-align">
                                       <span className="flex-shrink-0 text-gray-900">{5 - idx}</span>
-                                      <div className="h-8 bg-gray-100 progress w-100 rounded-pill" role="progressbar" aria-valuenow={it.w} aria-valuemin={0} aria-valuemax={100}>
+                                      <div className="h-8 bg-gray-100 progress w-100 rounded-pill">
                                         <div className="progress-bar bg-main-600 rounded-pill" style={{ width: `${it.w}%` }} />
                                       </div>
                                       <span className="flex-shrink-0 text-gray-900">{it.c}</span>
@@ -240,9 +239,9 @@ export default function Page() {
                   <h6 className="mb-8 text-heading fw-semibold d-block">Giỏ hàng</h6>
                   <span className="text-xl d-flex"><i className="ph ph-location" /></span>
                   <div className="overflow-hidden d-flex rounded-4">
-                    <button type="button" className="flex-shrink-0 w-48 h-48 quantity__minus text-neutral-600 bg-gray-50 flex-center hover-bg-main-600 hover-text-white"><i className="ph ph-minus" /></button>
-                    <input type="number" className="w-32 px-16 text-center border border-gray-100 quantity__input flex-grow-1" defaultValue={1} min={1} />
-                    <button type="button" className="flex-shrink-0 w-48 h-48 quantity__plus text-neutral-600 bg-gray-50 flex-center hover-bg-main-600 hover-text-white"><i className="ph ph-plus" /></button>
+                    <button type="button" className="flex-shrink-0 w-48 h-48 quantity__minus text-neutral-600 bg-gray-50 flex-center hover-bg-main-600 hover-text-white" aria-label="Giảm số lượng"><i className="ph ph-minus" /></button>
+                    <input type="number" className="w-32 px-16 text-center border border-gray-100 quantity__input flex-grow-1" defaultValue={1} min={1} aria-label="Số lượng" />
+                    <button type="button" className="flex-shrink-0 w-48 h-48 quantity__plus text-neutral-600 bg-gray-50 flex-center hover-bg-main-600 hover-text-white" aria-label="Tăng số lượng"><i className="ph ph-plus" /></button>
                   </div>
                 </div>
 
@@ -266,10 +265,10 @@ export default function Page() {
 
                 <div className="mt-32">
                   <div className="gap-8 px-32 py-16 border border-gray-100 rounded-8 flex-between">
-                    <a href="#" className="d-flex text-main-600 text-28"><i className="ph-fill ph-chats-teardrop" /></a>
+                    <a href="#" className="d-flex text-main-600 text-28" aria-label="Chat với cửa hàng"><i className="ph-fill ph-chats-teardrop" /></a>
                     <span className="border border-gray-100 h-26" />
                     <div className="dropdown on-hover-item">
-                      <button className="d-flex text-main-600 text-28" type="button"><i className="ph-fill ph-share-network" /></button>
+                      <button className="d-flex text-main-600 text-28" type="button" aria-label="Chia sẻ sản phẩm"><i className="ph-fill ph-share-network" /></button>
                       <div className="border-0 on-hover-dropdown common-dropdown inset-inline-start-auto inset-inline-end-0">
                         <ul className="gap-16 flex-align">
                           <li><a href="https://www.facebook.com" className="text-xl w-44 h-44 flex-center bg-main-100 text-main-600 rounded-circle hover-bg-main-600 hover-text-white"><i className="ph-fill ph-facebook-logo" /></a></li>
@@ -295,8 +294,8 @@ export default function Page() {
               <div className="gap-16 flex-align">
                 <a href="/shop" className="text-sm text-gray-700 fw-medium hover-text-main-600 hover-text-decoration-underline">Xem đầy đủ</a>
                 <div className="gap-8 flex-align">
-                  <button type="button" className="text-xl border border-gray-100 slick-prev slick-arrow flex-center rounded-circle hover-border-main-600 hover-bg-main-600 hover-text-white transition-1"><i className="ph ph-caret-left" /></button>
-                  <button type="button" className="text-xl border border-gray-100 slick-next slick-arrow flex-center rounded-circle hover-border-main-600 hover-bg-main-600 hover-text-white transition-1"><i className="ph ph-caret-right" /></button>
+                  <button type="button" className="text-xl border border-gray-100 slick-prev slick-arrow flex-center rounded-circle hover-border-main-600 hover-bg-main-600 hover-text-white transition-1" aria-label="Sản phẩm trước"><i className="ph ph-caret-left" /></button>
+                  <button type="button" className="text-xl border border-gray-100 slick-next slick-arrow flex-center rounded-circle hover-border-main-600 hover-bg-main-600 hover-text-white transition-1" aria-label="Sản phẩm tiếp theo"><i className="ph ph-caret-right" /></button>
                 </div>
               </div>
             </div>
