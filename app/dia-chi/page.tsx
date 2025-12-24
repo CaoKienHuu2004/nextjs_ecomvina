@@ -18,77 +18,79 @@ type Address = {
 };
 
 type Tinh = {
-  id: number;
-  ten: string;
-  code?: string;
+  name: string;      // ← Đổi từ "ten" sang "name"
+  code: number;      // ← Đổi từ string sang number
+  division_type?: string;
+  codename?: string;
+  phone_code?: number;
 };
 
+// 2. Cập nhật PROVINCES_FALLBACK
 const PROVINCES_FALLBACK: Tinh[] = [
-  { id: 1, ten: "Thành phố Hà Nội", code: "01" },
-  { id: 2, ten: "Tỉnh Hà Giang", code: "02" },
-  { id: 3, ten: "Tỉnh Cao Bằng", code: "04" },
-  { id: 4, ten: "Tỉnh Bắc Kạn", code: "06" },
-  { id: 5, ten: "Tỉnh Tuyên Quang", code: "08" },
-  { id: 6, ten: "Tỉnh Lào Cai", code: "10" },
-  { id: 7, ten: "Tỉnh Điện Biên", code: "11" },
-  { id: 8, ten: "Tỉnh Lai Châu", code: "12" },
-  { id: 9, ten: "Tỉnh Sơn La", code: "14" },
-  { id: 10, ten: "Tỉnh Yên Bái", code: "15" },
-  { id: 11, ten: "Tỉnh Hoà Bình", code: "17" },
-  { id: 12, ten: "Tỉnh Thái Nguyên", code: "19" },
-  { id: 13, ten: "Tỉnh Lạng Sơn", code: "20" },
-  { id: 14, ten: "Tỉnh Quảng Ninh", code: "22" },
-  { id: 15, ten: "Tỉnh Bắc Giang", code: "24" },
-  { id: 16, ten: "Tỉnh Phú Thọ", code: "25" },
-  { id: 17, ten: "Tỉnh Vĩnh Phúc", code: "26" },
-  { id: 18, ten: "Tỉnh Bắc Ninh", code: "27" },
-  { id: 19, ten: "Tỉnh Hải Dương", code: "30" },
-  { id: 20, ten: "Thành phố Hải Phòng", code: "31" },
-  { id: 21, ten: "Tỉnh Hưng Yên", code: "33" },
-  { id: 22, ten: "Tỉnh Thái Bình", code: "34" },
-  { id: 23, ten: "Tỉnh Hà Nam", code: "35" },
-  { id: 24, ten: "Tỉnh Nam Định", code: "36" },
-  { id: 25, ten: "Tỉnh Ninh Bình", code: "37" },
-  { id: 26, ten: "Tỉnh Thanh Hóa", code: "38" },
-  { id: 27, ten: "Tỉnh Nghệ An", code: "40" },
-  { id: 28, ten: "Tỉnh Hà Tĩnh", code: "42" },
-  { id: 29, ten: "Tỉnh Quảng Bình", code: "44" },
-  { id: 30, ten: "Tỉnh Quảng Trị", code: "45" },
-  { id: 31, ten: "Tỉnh Thừa Thiên Huế", code: "46" },
-  { id: 32, ten: "Thành phố Đà Nẵng", code: "48" },
-  { id: 33, ten: "Tỉnh Quảng Nam", code: "49" },
-  { id: 34, ten: "Tỉnh Quảng Ngãi", code: "51" },
-  { id: 35, ten: "Tỉnh Bình Định", code: "52" },
-  { id: 36, ten: "Tỉnh Phú Yên", code: "54" },
-  { id: 37, ten: "Tỉnh Khánh Hòa", code: "56" },
-  { id: 38, ten: "Tỉnh Ninh Thuận", code: "58" },
-  { id: 39, ten: "Tỉnh Bình Thuận", code: "60" },
-  { id: 40, ten: "Tỉnh Kon Tum", code: "62" },
-  { id: 41, ten: "Tỉnh Gia Lai", code: "64" },
-  { id: 42, ten: "Tỉnh Đắk Lắk", code: "66" },
-  { id: 43, ten: "Tỉnh Đắk Nông", code: "67" },
-  { id: 44, ten: "Tỉnh Lâm Đồng", code: "68" },
-  { id: 45, ten: "Tỉnh Bình Phước", code: "70" },
-  { id: 46, ten: "Tỉnh Tây Ninh", code: "72" },
-  { id: 47, ten: "Tỉnh Bình Dương", code: "74" },
-  { id: 48, ten: "Tỉnh Đồng Nai", code: "75" },
-  { id: 49, ten: "Tỉnh Bà Rịa - Vũng Tàu", code: "77" },
-  { id: 50, ten: "Thành phố Hồ Chí Minh", code: "79" },
-  { id: 51, ten: "Tỉnh Long An", code: "80" },
-  { id: 52, ten: "Tỉnh Tiền Giang", code: "82" },
-  { id: 53, ten: "Tỉnh Bến Tre", code: "83" },
-  { id: 54, ten: "Tỉnh Trà Vinh", code: "84" },
-  { id: 55, ten: "Tỉnh Vĩnh Long", code: "86" },
-  { id: 56, ten: "Tỉnh Đồng Tháp", code: "87" },
-  { id: 57, ten: "Tỉnh An Giang", code: "89" },
-  { id: 58, ten: "Tỉnh Kiên Giang", code: "91" },
-  { id: 59, ten: "Thành phố Cần Thơ", code: "92" },
-  { id: 60, ten: "Tỉnh Hậu Giang", code: "93" },
-  { id: 61, ten: "Tỉnh Sóc Trăng", code: "94" },
-  { id: 62, ten: "Tỉnh Bạc Liêu", code: "95" },
-  { id: 63, ten: "Tỉnh Cà Mau", code: "96" }
+  { name: "Thành phố Hà Nội", code: 1 },
+  { name: "Tỉnh Hà Giang", code: 2 },
+  { name: "Tỉnh Cao Bằng", code: 4 },
+  { name: "Tỉnh Bắc Kạn", code: 6 },
+  { name: "Tỉnh Tuyên Quang", code: 8 },
+  { name: "Tỉnh Lào Cai", code: 10 },
+  { name: "Tỉnh Điện Biên", code: 11 },
+  { name: "Tỉnh Lai Châu", code: 12 },
+  { name: "Tỉnh Sơn La", code: 14 },
+  { name: "Tỉnh Yên Bái", code: 15 },
+  { name: "Tỉnh Hoà Bình", code: 17 },
+  { name: "Tỉnh Thái Nguyên", code: 19 },
+  { name: "Tỉnh Lạng Sơn", code: 20 },
+  { name: "Tỉnh Quảng Ninh", code: 22 },
+  { name: "Tỉnh Bắc Giang", code: 24 },
+  { name: "Tỉnh Phú Thọ", code: 25 },
+  { name: "Tỉnh Vĩnh Phúc", code: 26 },
+  { name: "Tỉnh Bắc Ninh", code: 27 },
+  { name: "Tỉnh Hải Dương", code: 30 },
+  { name: "Thành phố Hải Phòng", code: 31 },
+  { name: "Tỉnh Hưng Yên", code: 33 },
+  { name: "Tỉnh Thái Bình", code: 34 },
+  { name: "Tỉnh Hà Nam", code: 35 },
+  { name: "Tỉnh Nam Định", code: 36 },
+  { name: "Tỉnh Ninh Bình", code: 37 },
+  { name: "Tỉnh Thanh Hóa", code: 38 },
+  { name: "Tỉnh Nghệ An", code: 40 },
+  { name: "Tỉnh Hà Tĩnh", code: 42 },
+  { name: "Tỉnh Quảng Bình", code: 44 },
+  { name: "Tỉnh Quảng Trị", code: 45 },
+  { name: "Tỉnh Thừa Thiên Huế", code: 46 },
+  { name: "Thành phố Đà Nẵng", code: 48 },
+  { name: "Tỉnh Quảng Nam", code: 49 },
+  { name: "Tỉnh Quảng Ngãi", code: 51 },
+  { name: "Tỉnh Bình Định", code: 52 },
+  { name: "Tỉnh Phú Yên", code: 54 },
+  { name: "Tỉnh Khánh Hòa", code: 56 },
+  { name: "Tỉnh Ninh Thuận", code: 58 },
+  { name: "Tỉnh Bình Thuận", code: 60 },
+  { name: "Tỉnh Kon Tum", code: 62 },
+  { name: "Tỉnh Gia Lai", code: 64 },
+  { name: "Tỉnh Đắk Lắk", code: 66 },
+  { name: "Tỉnh Đắk Nông", code: 67 },
+  { name: "Tỉnh Lâm Đồng", code: 68 },
+  { name: "Tỉnh Bình Phước", code: 70 },
+  { name: "Tỉnh Tây Ninh", code: 72 },
+  { name: "Tỉnh Bình Dương", code: 74 },
+  { name: "Tỉnh Đồng Nai", code: 75 },
+  { name: "Tỉnh Bà Rịa - Vũng Tàu", code: 77 },
+  { name: "Thành phố Hồ Chí Minh", code: 79 },
+  { name: "Tỉnh Long An", code: 80 },
+  { name: "Tỉnh Tiền Giang", code: 82 },
+  { name: "Tỉnh Bến Tre", code: 83 },
+  { name: "Tỉnh Trà Vinh", code: 84 },
+  { name: "Tỉnh Vĩnh Long", code: 86 },
+  { name: "Tỉnh Đồng Tháp", code: 87 },
+  { name: "Tỉnh An Giang", code: 89 },
+  { name: "Tỉnh Kiên Giang", code: 91 },
+  { name: "Thành phố Cần Thơ", code: 92 },
+  { name: "Tỉnh Hậu Giang", code: 93 },
+  { name: "Tỉnh Sóc Trăng", code: 94 },
+  { name: "Tỉnh Bạc Liêu", code: 95 },
+  { name: "Tỉnh Cà Mau", code: 96 }
 ];
-
 export default function Page(): JSX.Element {
   const { user } = useAuth(); // Lấy thông tin user để truyền vào AccountShell
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -99,6 +101,7 @@ export default function Page(): JSX.Element {
   const [selectedProvinceId, setSelectedProvinceId] = useState<number | string>("");
 
   const [provinces, setProvinces] = useState<Tinh[]>([]);
+  // 3. Trong useEffect fetch provinces, cập nhật cách parse
   useEffect(() => {
     let mounted = true;
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://sieuthivina.com";
@@ -110,7 +113,8 @@ export default function Page(): JSX.Element {
         if (!mounted) return;
         if (res.ok) {
           const json = await res.json();
-          const data = Array.isArray(json) ? json : (json.data || []);
+          // API trả về { status: 200, data: [...] }
+          const data = json.data || [];
           setProvinces(data);
         } else {
           setProvinces(PROVINCES_FALLBACK);
@@ -217,12 +221,10 @@ export default function Page(): JSX.Element {
   // Chuẩn bị form Chỉnh sửa
   const handleEdit = (a: Address) => {
     setEditing({ ...a });
-    // Tìm ID tỉnh dựa vào tên tỉnh (reverse lookup) để hiển thị đúng trên Select
     const list = provinces.length ? provinces : PROVINCES_FALLBACK;
-    const foundProvince = list.find(p => p.ten === a.tinhthanh);
-    setSelectedProvinceId(foundProvince ? foundProvince.id : "");
+    const foundProvince = list.find(p => p.name === a.tinhthanh);
+    setSelectedProvinceId(foundProvince ? foundProvince.code : "");
   };
-
   // 5. SAVE: Lưu (Thêm hoặc Sửa)
   const handleSaveEdit = async () => {
     if (!editing) return;
@@ -233,6 +235,22 @@ export default function Page(): JSX.Element {
       return;
     }
 
+    const token = getToken();
+    if (!token) {
+      alert("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+      console.error("❌ Token không tồn tại");
+      return;
+    }
+
+    console.log("🔐 Token:", token);
+    console.log("📝 Data gửi đi:", {
+      hoten: editing.ten_nguoinhan,
+      sodienthoai: editing.sodienthoai,
+      diachi: editing.diachi,
+      tinhthanh: editing.tinhthanh,
+      trangthai: editing.trangthai || "Khác"
+    });
+
     const isEdit = editing.id !== 0;
     const url = isEdit
       ? `https://sieuthivina.com/api/v1/dia-chi/${editing.id}`
@@ -240,11 +258,13 @@ export default function Page(): JSX.Element {
 
     const method = isEdit ? "PUT" : "POST";
 
+    console.log(`🔄 Calling ${method} ${url}`);
+
     try {
       const res = await fetch(url, {
         method,
         headers: {
-          "Authorization": `Bearer ${getToken()}`,
+          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
           "Accept": "application/json"
         },
@@ -254,18 +274,31 @@ export default function Page(): JSX.Element {
           diachi: editing.diachi,
           tinhthanh: editing.tinhthanh,
           trangthai: editing.trangthai || "Khác"
-          // Nếu thêm mới, có thể gửi kèm trạng thái nếu user muốn (tuỳ logic UI)
         })
       });
 
+      console.log("📡 Response status:", res.status);
+
+      if (res.status === 401) {
+        alert("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+        console.error("❌ 401 Unauthorized - Token không hợp lệ hoặc hết hạn");
+        return;
+      }
+
       if (res.ok) {
+        const responseData = await res.json();
+        console.log("✅ Success response:", responseData);
         setEditing(null);
         fetchAddresses();
+        alert(isEdit ? "Cập nhật địa chỉ thành công!" : "Thêm địa chỉ mới thành công!");
       } else {
-        alert("Lỗi khi lưu địa chỉ. Vui lòng thử lại.");
+        const errorText = await res.text();
+        console.error("❌ Error response:", errorText);
+        alert(`Lỗi khi lưu địa chỉ (${res.status}): ${errorText || "Vui lòng thử lại"}`);
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Lỗi khi gọi API:", e);
+      alert("Có lỗi xảy ra khi lưu địa chỉ. Vui lòng thử lại.");
     }
   };
 
@@ -440,17 +473,18 @@ export default function Page(): JSX.Element {
                     onChange={(e) => {
                       const val = Number(e.target.value);
                       setSelectedProvinceId(val);
-                      const province = PROVINCES_FALLBACK.find(p => p.id === val);
-                      setEditing({ ...editing, tinhthanh: province ? province.ten : "" });
+                      const province = (provinces.length ? provinces : PROVINCES_FALLBACK).find(p => p.code === val);
+                      setEditing({ ...editing, tinhthanh: province ? province.name : "" });
                     }}
                     aria-label="Chọn tỉnh thành"
                     title="Chọn tỉnh thành"
                   >
                     <option value="">-- Chọn Tỉnh/Thành --</option>
                     {(provinces.length ? provinces : PROVINCES_FALLBACK).map((t) => (
-                      <option key={t.id} value={t.id}>{t.ten}</option>
+                      <option key={t.code} value={t.code}>{t.name}</option>
                     ))}
                   </select>
+
                 </div>
               </div>
 

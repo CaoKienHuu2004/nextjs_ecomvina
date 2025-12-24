@@ -183,10 +183,10 @@ export default function GiftEventsSection() {
                 className="mb-0 wow fadeInLeft flex-align gap-8"
                 style={{ visibility: "visible", animationName: "fadeInLeft" }}
               >
-                <i className="ph-bold ph-gift text-warning-700"></i> Chương trình ưu đãi quà tặng
+                <i className="ph-bold ph-gift text-main-600"></i> Chương trình ưu đãi quà tặng
               </h6>
               <div
-                className="border-bottom border-2 border-warning-700 mb-3 mt-4"
+                className="border-bottom border-2 border-main-600 mb-3 mt-4"
                 style={{ width: "55%" }}
               ></div>
               <div
@@ -195,10 +195,32 @@ export default function GiftEventsSection() {
               >
                 <Link
                   href="/qua-tang"
-                  className="text-sm fw-semibold text-warning-700 hover-text-warning-700 hover-text-decoration-underline"
+                  className="text-sm fw-semibold text-main-600 hover-text-main-600 hover-text-decoration-underline"
                 >
                   Xem tất cả
                 </Link>
+                <div className="flex-align gap-8">
+                  <button
+                    type="button"
+                    id="gift-event-prev"
+                    className="flex-center rounded-circle border border-main-600 text-xl text-main-600 hover-bg-main-600 hover-text-white transition-1"
+                    style={{ width: "32px", height: "32px", background: "white" }}
+                    onClick={handlePrev}
+                    aria-label="Quà tặng trước"
+                  >
+                    <i className="ph ph-caret-left"></i>
+                  </button>
+                  <button
+                    type="button"
+                    id="gift-event-next"
+                    className="flex-center rounded-circle border border-main-600 text-xl text-main-600 hover-bg-main-600 hover-text-white transition-1"
+                    style={{ width: "32px", height: "32px", background: "white" }}
+                    onClick={handleNext}
+                    aria-label="Quà tặng tiếp theo"
+                  >
+                    <i className="ph ph-caret-right"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

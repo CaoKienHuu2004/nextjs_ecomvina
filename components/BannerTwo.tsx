@@ -172,7 +172,10 @@ export default function BannerTwo() {
                 >
                   {homeSlides.map((b) => {
                     const img = buildImgUrl(b.hinhanh || "");
-                    const href = b.lienket || "#";
+                    // Nếu banner chứa "qua-tang" hoặc "quatang" trong URL ảnh, link đến trang quà tặng
+                    const imgLower = img.toLowerCase();
+                    const isQuaTangBanner = imgLower.includes("qua-tang") || imgLower.includes("quatang");
+                    const href = isQuaTangBanner ? "/qua-tang" : (b.lienket || "#");
                     const alt = b.mota || "Banner";
                     return (
                       <SwiperSlide key={`main-${b.id}`}>
@@ -240,7 +243,21 @@ export default function BannerTwo() {
               <div className="col-12 col-lg-6 mt-20 ps-10 pe-5 d-lg-block d-none">
                 {sideCol1.map((b, idx) => {
                   const img = buildImgUrl(b.hinhanh || "");
-                  const href = b.lienket || "#";
+                  // Kiểm tra banner theo URL ảnh và link đến shop với filter thương hiệu tương ứng
+                  const imgLower = img.toLowerCase();
+                  const isNest100Banner = imgLower.includes("nest100");
+                  const isChatVietBanner = imgLower.includes("chatviet");
+                  const isQuaTangSideBanner = imgLower.includes("uudaiquatang") || imgLower.includes("uu-dai-qua-tang");
+
+                  let href = b.lienket || "#";
+                  if (isNest100Banner) {
+                    href = "/shop?thuonghieu=global-yen-sao-nest100";
+                  } else if (isChatVietBanner) {
+                    href = "/shop?thuonghieu=chat-viet-group";
+                  } else if (isQuaTangSideBanner) {
+                    href = "/qua-tang";
+                  }
+
                   const alt = b.mota || "Banner";
                   return (
                     <div key={`s1-${b.id}-${idx}`} className={idx === 1 ? "row g-24 mt-10 me-0" : "row g-24 me-0"}>
@@ -261,7 +278,21 @@ export default function BannerTwo() {
               <div className="col-12 col-lg-6 mt-20 px-5 d-lg-block d-none">
                 {sideCol2.map((b, idx) => {
                   const img = buildImgUrl(b.hinhanh || "");
-                  const href = b.lienket || "#";
+                  // Kiểm tra banner theo URL ảnh và link đến trang phù hợp
+                  const imgLower = img.toLowerCase();
+                  const isNest100Banner = imgLower.includes("nest100");
+                  const isChatVietBanner = imgLower.includes("chatviet");
+                  const isQuaTangSideBanner = imgLower.includes("uudaiquatang") || imgLower.includes("uu-dai-qua-tang");
+
+                  let href = b.lienket || "#";
+                  if (isNest100Banner) {
+                    href = "/shop?thuonghieu=global-yen-sao-nest100";
+                  } else if (isChatVietBanner) {
+                    href = "/shop?thuonghieu=chat-viet-group";
+                  } else if (isQuaTangSideBanner) {
+                    href = "/qua-tang";
+                  }
+
                   const alt = b.mota || "Banner";
                   return (
                     <div key={`s2-${b.id}-${idx}`} className={idx === 1 ? "row g-24 mt-10 ms-0 w-100" : "row g-24 ms-0 w-100"}>

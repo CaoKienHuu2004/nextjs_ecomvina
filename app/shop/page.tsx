@@ -93,6 +93,7 @@ export default function ShopPage() {
   const queryParam = searchParams.get("query") || "";
   const categoryParam = searchParams.get("category") || "";
   const sourceParam = searchParams.get("source") || "";
+  const thuonghieuParam = searchParams.get("thuonghieu") || "";
 
   const [allProducts, setAllProducts] = useState<Product[]>([]); // Lưu TẤT CẢ sản phẩm từ API
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -108,7 +109,7 @@ export default function ShopPage() {
   const [filters, setFilters] = useState({
     danhmuc: categoryParam,
     locgia: "",
-    thuonghieu: "",
+    thuonghieu: thuonghieuParam,
     rating: ""
   });
 
@@ -116,7 +117,7 @@ export default function ShopPage() {
   const [tempFilters, setTempFilters] = useState({
     danhmuc: categoryParam,
     locgia: "",
-    thuonghieu: "",
+    thuonghieu: thuonghieuParam,
     rating: ""
   });
 
@@ -138,6 +139,17 @@ export default function ShopPage() {
       setTempFilters(prev => ({ ...prev, danhmuc: "" }));
     }
   }, [categoryParam]);
+
+  // Sync filters khi thuonghieuParam thay đổi
+  useEffect(() => {
+    if (thuonghieuParam) {
+      setFilters(prev => ({ ...prev, thuonghieu: thuonghieuParam }));
+      setTempFilters(prev => ({ ...prev, thuonghieu: thuonghieuParam }));
+    } else {
+      setFilters(prev => ({ ...prev, thuonghieu: "" }));
+      setTempFilters(prev => ({ ...prev, thuonghieu: "" }));
+    }
+  }, [thuonghieuParam]);
 
   // Helper function để suy luận category từ tên sản phẩm
   const inferCategory = (name: string): string => {

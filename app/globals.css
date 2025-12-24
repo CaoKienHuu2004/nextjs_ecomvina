@@ -1443,3 +1443,31 @@ button.bg-gray-50.hover-bg-main-600:hover {
 button.bg-gray-50.hover-bg-main-600:hover i {
   color: #fff !important;
 }
+
+/* Banner navigation buttons - mac dinh trang, hover moi cam */
+#banner-prev,
+#banner-next,
+button#banner-prev,
+button#banner-next {
+  background-color: #fff !important;
+  color: #FF6B00 !important;
+}
+
+#banner-prev i,
+#banner-next i {
+  color: #FF6B00 !important;
+}
+
+/* Hover - background cam, text trang */
+#banner-prev:hover,
+#banner-next:hover,
+button#banner-prev:hover,
+button#banner-next:hover {
+  background-color: #FF6B00 !important;
+  color: #fff !important;
+}
+
+#banner-prev:hover i,
+#banner-next:hover i {
+  color: #fff !important;
+}
