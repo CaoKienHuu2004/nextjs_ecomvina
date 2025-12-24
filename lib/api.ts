@@ -1162,9 +1162,15 @@ export async function fetchHeaderData(): Promise<HeaderDataResponse['data']> {
 export interface ProductReviewItem {
   id: number;
   hoten: string;
+  avatar?: string;
   diem: number;
   noidung: string;
   created_at?: string;
+  nguoidung?: {
+    id: number;
+    hoten: string;
+    avatar?: string;
+  };
 }
 
 export interface ProductReviewStats {

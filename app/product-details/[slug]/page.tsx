@@ -417,14 +417,14 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                         <div className="flex-wrap gap-12 flex-align">
                                             {product.danhmuc && product.danhmuc.length > 0 ? (
                                                 product.danhmuc.map((cat: { slug?: string; id?: number; ten?: string; name?: string }, idx: number) => (
-                                                    <a key={idx} href={`/san-pham?danhmuc=${cat.slug || cat.id}`} className="px-8 py-6 text-sm btn btn-main rounded-8">
+                                                    <a key={idx} href={`/shop?category=${cat.slug || cat.id}`} className="px-8 py-6 text-sm btn btn-main rounded-8">
                                                         {cat.ten || cat.name}
                                                     </a>
                                                 ))
                                             ) : (
                                                 <>
-                                                    <a href="/san-pham" className="px-8 py-6 text-sm btn btn-main rounded-8">Bách hoá</a>
-                                                    <a href="/san-pham" className="px-8 py-6 text-sm btn btn-main rounded-8">Khu ăn uống</a>
+                                                    <a href="/shop?category=bach-hoa" className="px-8 py-6 text-sm btn btn-main rounded-8">Bách hoá</a>
+                                                    <a href="/shop?category=khu-an-uong" className="px-8 py-6 text-sm btn btn-main rounded-8">Khu ăn uống</a>
                                                 </>
                                             )}
                                         </div>
@@ -537,8 +537,8 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 <div className="flex-wrap gap-16 flex-align">
                                                     <div className="flex-align gap-8">
                                                         <span className="text-md fw-medium text-neutral-600">Trạng thái:</span>
-                                                        <span className={`text-md fw-semibold ${(selectedVariant.trangthai === 'Còn hàng' && (selectedVariant.soluong ?? 0) > 0) ? 'text-success-600' : 'text-danger-600'}`}>
-                                                            {(selectedVariant.trangthai === 'Còn hàng' && (selectedVariant.soluong ?? 0) > 0) ? 'Còn hàng' : 'Hết hàng'}
+                                                        <span className={`text-md fw-semibold ${(selectedVariant.soluong ?? 0) > 0 ? 'text-success-600' : 'text-danger-600'}`}>
+                                                            {(selectedVariant.soluong ?? 0) > 0 ? 'Còn hàng' : 'Hết hàng'}
                                                         </span>
                                                     </div>
                                                     {selectedVariant.soluong !== undefined && (
@@ -754,33 +754,49 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                         </div>
                                     </div>
                                 ) : reviews.length > 0 ? (
-                                    reviews.map((review) => (
-                                        <div key={review.id} className="gap-24 border-gray-100 d-flex align-items-start pb-44 border-bottom mb-44">
-                                            <div className="flex-shrink-0 w-52 h-52 bg-main-100 rounded-circle flex-center">
-                                                <span className="text-lg text-main-600 fw-bold">
-                                                    {review.hoten?.charAt(0)?.toUpperCase() || 'K'}
-                                                </span>
-                                            </div>
-                                            <div className="flex-grow-1">
-                                                <div className="gap-8 flex-between align-items-start">
-                                                    <div>
-                                                        <h6 className="mb-12 text-md">{review.hoten || 'Khách hàng'}</h6>
-                                                        <div className="gap-8 flex-align">
-                                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                                <span
-                                                                    key={star}
-                                                                    className={`text-md fw-medium d-flex ${star <= review.diem ? 'text-warning-600' : 'text-gray-400'}`}
-                                                                >
-                                                                    <i className="ph-fill ph-star"></i>
-                                                                </span>
-                                                            ))}
+                                    reviews.map((review) => {
+                                        const userName = review.nguoidung?.hoten || review.hoten || 'Khách hàng';
+                                        const userAvatar = review.nguoidung?.avatar || review.avatar;
+                                        return (
+                                            <div key={review.id} className="gap-24 border-gray-100 d-flex align-items-start pb-44 border-bottom mb-44">
+                                                <div className="flex-shrink-0 w-52 h-52 bg-main-100 rounded-circle flex-center overflow-hidden">
+                                                    {userAvatar ? (
+                                                        <img
+                                                            src={userAvatar}
+                                                            alt={userName}
+                                                            className="w-100 h-100 object-fit-cover"
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = 'none';
+                                                                e.currentTarget.parentElement!.innerHTML = `<span class="text-lg text-main-600 fw-bold">${userName.charAt(0).toUpperCase()}</span>`;
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <span className="text-lg text-main-600 fw-bold">
+                                                            {userName.charAt(0).toUpperCase()}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex-grow-1">
+                                                    <div className="gap-8 flex-between align-items-start">
+                                                        <div>
+                                                            <h6 className="mb-12 text-md">{userName}</h6>
+                                                            <div className="gap-8 flex-align">
+                                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                                    <span
+                                                                        key={star}
+                                                                        className={`text-md fw-medium d-flex ${star <= review.diem ? 'text-warning-600' : 'text-gray-400'}`}
+                                                                    >
+                                                                        <i className="ph-fill ph-star"></i>
+                                                                    </span>
+                                                                ))}
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                    <p className="mt-10 text-gray-700">{review.noidung}</p>
                                                 </div>
-                                                <p className="mt-10 text-gray-700">{review.noidung}</p>
                                             </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <p className="text-gray-500">Chưa có đánh giá nào cho sản phẩm này.</p>
                                 )}
@@ -875,11 +891,62 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                             <div className="section-heading">
                                 <div className="flex-wrap gap-8 flex-between">
                                     <h5 className="mb-0">Sản phẩm tương tự</h5>
-                                    <div className="gap-16 flex-align">
-                                        <div className="gap-8 flex-align">
-
-
-                                        </div>
+                                    <div className="gap-8 flex-align">
+                                        <button
+                                            type="button"
+                                            onClick={() => sliderRef.current?.slickPrev()}
+                                            style={{
+                                                width: '32px',
+                                                height: '32px',
+                                                borderRadius: '50%',
+                                                border: '1px solid #e5e7eb',
+                                                backgroundColor: 'white',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                fontSize: '16px',
+                                                transition: 'all 0.3s'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.borderColor = '#ff6b35';
+                                                e.currentTarget.style.backgroundColor = '#ff6b35';
+                                                e.currentTarget.style.color = 'white';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.borderColor = '#e5e7eb';
+                                                e.currentTarget.style.backgroundColor = 'white';
+                                                e.currentTarget.style.color = 'black';
+                                            }}
+                                        >
+                                            <i className="ph ph-caret-left"></i>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => sliderRef.current?.slickNext()}
+                                            style={{
+                                                width: '32px',
+                                                height: '32px',
+                                                borderRadius: '50%',
+                                                border: 'none',
+                                                backgroundColor: '#ff6b35',
+                                                color: 'white',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                fontSize: '16px',
+                                                transition: 'all 0.3s'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = '#e55a28';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = '#ff6b35';
+                                            }}
+                                        >
+                                            <i className="ph ph-caret-right"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>

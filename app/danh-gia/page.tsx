@@ -1,17 +1,26 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import AccountShell from "@/components/AccountShell";
 import Cookies from "js-cookie";
 
 type Review = {
   id: number;
   id_sanpham?: number | null;
+  id_chitietdonhang?: number | null;
   diem: number;
   tieu_de?: string | null;
   noi_dung?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+};
+
+type OrderItem = {
+  id: number;
+  id_chitietdonhang: number;
+  name: string;
+  id_sanpham: number;
 };
 
 type ProductOption = { id: number; name: string };
@@ -20,35 +29,25 @@ export default function ReviewsPage() {
   const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Review | null>(null);
-  const [form, setForm] = useState<{ id_sanpham: number; diem: number; noidung: string }>({
-    id_sanpham: 0,
+  const [form, setForm] = useState<{ id_chitietdonhang: number; diem: number; noidung: string }>({
+    id_chitietdonhang: 0,
     diem: 5,
     noidung: "",
   });
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
 
-  // Fetch reviews
+  // Fetch reviews - Currently no GET endpoint available
+  // Reviews are created via POST to /api/v1/danh-gia
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const token = Cookies.get("access_token");
-      const res = await fetch(`${API}/api/toi/danhgias`, {
-        headers: { Authorization: token ? `Bearer ${token}` : "", Accept: "application/json" },
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        console.error("fetchReviews failed", res.status);
-        setReviews([]);
-        return;
-      }
-      const json = await res.json().catch(() => ({}));
-      // API likely returns { data: [...] }
-      const list = (json && json.data) || [];
-      setReviews(list);
+      // TODO: Backend needs to provide GET endpoint for user's reviews
+      // For now, we'll show empty list or fetch from orders
+      setReviews([]);
     } catch (e) {
       console.error("fetchReviews error", e);
       setReviews([]);
@@ -58,7 +57,7 @@ export default function ReviewsPage() {
   };
 
   // Fetch products from user's orders (to allow rating only purchased products)
-  const fetchProductsFromOrders = async () => {
+  const fetchProductsFromOrders = async (urlOrderId?: string) => {
     try {
       const token = Cookies.get("access_token");
       const res = await fetch(`${API}/api/v1/don-hang`, {
@@ -80,75 +79,88 @@ export default function ReviewsPage() {
       const completedOrders = orders
         .filter((o: any) => isOrderCompleted(o.trangthai))
         .map((o: any) => {
-          const items: ProductOption[] = (o.chitietdonhang || []).map((it: any) => {
+          const items: OrderItem[] = (o.chitietdonhang || []).map((it: any) => {
             const sp = it.bienthe?.sanpham || {};
-            const id = sp.id ?? it.id ?? null;
-            const name = sp.ten ?? it.name ?? `#${id ?? "?"}`;
-            return id ? { id: Number(id), name } : null;
-          }).filter(Boolean) as ProductOption[];
+            const id_sanpham = sp.id ?? it.id ?? null;
+            const name = sp.ten ?? it.name ?? `#${id_sanpham ?? "?"}`;
+            const id_chitietdonhang = it.id ?? null;
+            return (id_sanpham && id_chitietdonhang) ? {
+              id: Number(id_sanpham),
+              id_chitietdonhang: Number(id_chitietdonhang),
+              id_sanpham: Number(id_sanpham),
+              name
+            } : null;
+          }).filter(Boolean) as OrderItem[];
           return { raw: o, id: String(o.id ?? o.madon ?? ""), madon: o.madon, created_at: o.created_at, items };
         });
 
       setOrders(completedOrders);
-      // select first order by default (if any)
+
+      // Check if there's an order_id from URL params
+      let targetOrderId = urlOrderId;
+
+      // If order_id from URL, try to find and select that order
+      if (targetOrderId) {
+        const targetOrder = completedOrders.find(o => o.id === targetOrderId);
+        if (targetOrder) {
+          setSelectedOrderId(targetOrderId);
+          setOrderItems(targetOrder.items);
+          if (targetOrder.items.length > 0) {
+            setForm(f => ({ ...f, id_chitietdonhang: targetOrder.items[0].id_chitietdonhang }));
+          }
+          return;
+        }
+      }
+
+      // Otherwise select first order by default (if any)
       if (completedOrders.length > 0) {
         const firstOrderId = completedOrders[0].id;
         setSelectedOrderId(firstOrderId);
-        setProducts(completedOrders[0].items);
+        setOrderItems(completedOrders[0].items);
         // default product selection = first product of that order
         if (completedOrders[0].items.length > 0) {
-          setForm(f => ({ ...f, id_sanpham: completedOrders[0].items[0].id }));
+          setForm(f => ({ ...f, id_chitietdonhang: completedOrders[0].items[0].id_chitietdonhang }));
         }
       } else {
-        // fallback: aggregated unique products from all orders (previous behavior)
-        const map = new Map<number, string>();
-        orders.forEach((o: any) => {
-          (o.chitietdonhang || []).forEach((it: any) => {
-            const sp = it.bienthe?.sanpham || {};
-            const id = sp.id ?? it.id ?? null;
-            const name = sp.ten ?? it.name ?? "Sản phẩm";
-            if (id) map.set(Number(id), name);
-          });
-        });
-        const list = Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-        setProducts(list);
-        if (list.length > 0) setForm(f => ({ ...f, id_sanpham: list[0].id }));
+        setOrderItems([]);
       }
     } catch (e) {
       console.error("fetchProductsFromOrders error", e);
     }
   };
 
+  const searchParams = useSearchParams();
+
   useEffect(() => {
-    fetchProductsFromOrders();
+    const orderIdFromUrl = searchParams.get('order_id');
+    fetchProductsFromOrders(orderIdFromUrl || undefined);
     fetchReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   const startCreate = () => {
     setEditing(null);
     const selectedOrder = orders.find(o => o.id === selectedOrderId);
-    const defaultProductId = selectedOrder?.items?.[0]?.id ?? products[0]?.id ?? 0;
-    setForm(f => ({ ...f, diem: 5, noidung: "", id_sanpham: defaultProductId }));
+    const defaultItemId = selectedOrder?.items?.[0]?.id_chitietdonhang ?? orderItems[0]?.id_chitietdonhang ?? 0;
+    setForm({ id_chitietdonhang: defaultItemId, diem: 5, noidung: "" });
   };
 
   const onSelectOrder = (orderId: string) => {
     setSelectedOrderId(orderId);
     const order = orders.find(o => o.id === orderId);
     if (order && Array.isArray(order.items) && order.items.length > 0) {
-      setProducts(order.items);
-      setForm(f => ({ ...f, id_sanpham: order.items[0].id }));
+      setOrderItems(order.items);
+      setForm(f => ({ ...f, id_chitietdonhang: order.items[0].id_chitietdonhang }));
     } else {
-      // no items -> clear product list
-      setProducts([]);
-      setForm(f => ({ ...f, id_sanpham: 0 }));
+      setOrderItems([]);
+      setForm(f => ({ ...f, id_chitietdonhang: 0 }));
     }
   };
 
   const startEdit = (r: Review) => {
     setEditing(r);
     setForm({
-      id_sanpham: r.id_sanpham ?? 0,
+      id_chitietdonhang: r.id_chitietdonhang ?? 0,
       diem: r.diem ?? 5,
       noidung: r.noi_dung ?? "",
     });
@@ -156,20 +168,20 @@ export default function ReviewsPage() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!form.id_sanpham) {
+    if (!form.id_chitietdonhang) {
       alert("Vui lòng chọn sản phẩm để đánh giá.");
       return;
     }
     try {
       const token = Cookies.get("access_token");
       const payload: any = {
-        id_sanpham: form.id_sanpham,
+        id_chitietdonhang: form.id_chitietdonhang,
         diem: form.diem,
         noidung: form.noidung,
       };
 
-      const url = editing ? `${API}/api/toi/danhgias/${editing.id}` : `${API}/api/toi/danhgias`;
-      const method = editing ? "PUT" : "POST";
+      const url = `${API}/api/v1/danh-gia`;
+      const method = "POST";
       const res = await fetch(url, {
         method,
         headers: { Authorization: token ? `Bearer ${token}` : "", Accept: "application/json", "Content-Type": "application/json" },
@@ -179,8 +191,8 @@ export default function ReviewsPage() {
       if (res.ok) {
         await fetchReviews();
         setEditing(null);
-        setForm({ id_sanpham: products[0]?.id ?? 0, diem: 5, noidung: "" });
-        alert("Lưu đánh giá thành công.");
+        setForm({ id_chitietdonhang: orderItems[0]?.id_chitietdonhang ?? 0, diem: 5, noidung: "" });
+        alert(json.message || "Lưu đánh giá thành công.");
       } else {
         alert(json.message || "Lỗi khi lưu đánh giá.");
       }
@@ -238,7 +250,7 @@ export default function ReviewsPage() {
                       {/* <div className="fw-semibold">{r.tieu_de || "(Không có tiêu đề)"}</div> */}
                       <div className="text-sm text-gray-600" style={{ whiteSpace: "pre-wrap" }}>{r.noi_dung}</div>
                       <div className="text-xs text-gray-400">{r.created_at}</div>
-                      <div className="mt-8 text-sm">Sản phẩm: {products.find(p => p.id === (r.id_sanpham ?? 0))?.name ?? `#${r.id_sanpham ?? "?"}`}</div>
+                      <div className="mt-8 text-sm">Sản phẩm: {orderItems.find(p => p.id_chitietdonhang === (r.id_chitietdonhang ?? 0))?.name ?? `#${r.id_chitietdonhang ?? "?"}`}</div>
                     </div>
 
                     <div className="gap-8 d-flex flex-column align-items-end">
@@ -279,18 +291,18 @@ export default function ReviewsPage() {
               )}
 
               {/* Product select filtered by order */}
-              {products.length === 0 ? (
+              {orderItems.length === 0 ? (
                 <div className="text-sm text-gray-500">Không tìm thấy sản phẩm để đánh giá.</div>
               ) : (
                 <select
-                  value={form.id_sanpham}
-                  onChange={e => setForm(f => ({ ...f, id_sanpham: Number(e.target.value) }))}
+                  value={form.id_chitietdonhang}
+                  onChange={e => setForm(f => ({ ...f, id_chitietdonhang: Number(e.target.value) }))}
                   className="px-8 py-6 mb-8 border w-100 rounded-6"
                   aria-label="Chọn sản phẩm"
                 >
                   <option value={0}>-- Chọn sản phẩm --</option>
-                  {products.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
+                  {orderItems.map(item => (
+                    <option key={item.id_chitietdonhang} value={item.id_chitietdonhang}>{item.name}</option>
                   ))}
                 </select>
               )}
@@ -310,7 +322,7 @@ export default function ReviewsPage() {
 
             <div className="gap-8 d-flex">
               <button type="submit" className="btn btn-main">{editing ? "Cập nhật" : "Lưu"}</button>
-              <button type="button" onClick={() => { setEditing(null); setForm({ id_sanpham: products[0]?.id ?? 0, diem: 5, noidung: "" }); }} className="border btn">Hủy</button>
+              <button type="button" onClick={() => { setEditing(null); setForm({ id_chitietdonhang: orderItems[0]?.id_chitietdonhang ?? 0, diem: 5, noidung: "" }); }} className="border btn">Hủy</button>
             </div>
           </form>
         </div>
