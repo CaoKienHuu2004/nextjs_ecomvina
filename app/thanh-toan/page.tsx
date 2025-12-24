@@ -397,16 +397,6 @@ export default function ThanhToanPage() {
                             Đã chọn
                           </button>
                         </span>
-                        <span className="gap-8 text-xs text-gray-900 flex-align fw-medium">
-                          <button
-                            type="button"
-                            onClick={removeVoucher}
-                            className="text-xs text-danger-500 hover-text-danger-700 fw-medium"
-                            aria-label="Bỏ chọn voucher"
-                          >
-                            Bỏ chọn
-                          </button>
-                        </span>
                       </>
                     ) : (
                       <div className="gap-8 px-0 py-0 mt-0 flex-align flex-center rounded-4 w-100">
