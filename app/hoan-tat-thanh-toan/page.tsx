@@ -11,7 +11,7 @@ import BenefitsStrip from "@/components/BenefitsStrip";
 export default function HoanTatThanhToanPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   // State quản lý trạng thái xác thực
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
   const [message, setMessage] = useState("Đang xác thực giao dịch với VNPAY...");
@@ -19,21 +19,39 @@ export default function HoanTatThanhToanPage() {
 
   // Ref để đảm bảo API chỉ được gọi 1 lần (React 18 Strict Mode hay gọi 2 lần)
   const hasVerified = useRef(false);
-  
+
   const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
   useEffect(() => {
     // Nếu đã verify rồi thì không chạy lại
     if (hasVerified.current) return;
-    
+
     const verifyTransaction = async () => {
       // 1. Lấy thông tin từ URL
       const vnpSecureHash = searchParams.get("vnp_SecureHash");
       const vnpResponseCode = searchParams.get("vnp_ResponseCode");
       // Lấy Order ID từ vnp_TxnRef (hoặc order_id nếu là COD)
       const txnRef = searchParams.get("vnp_TxnRef") || searchParams.get("order_id");
-      
-      setOrderId(txnRef);
+      const directMadon = searchParams.get("madon");
+      if (directMadon) {
+        hasVerified.current = true;
+        setOrderId(directMadon);
+        setStatus("success");
+        setMessage("Đặt hàng thành công!");
+        return; // không gọi API nữa
+      }
+      const extractMadon = (obj: any): string | null => {
+        if (!obj) return null;
+        return obj.madon
+          || obj.data?.madon
+          || obj.order?.madon
+          || obj.data?.order?.madon
+          || obj.result?.madon
+          || obj.payload?.madon
+          || null;
+      };
+
+      // setOrderId(txnRef); // bỏ dòng này — sẽ ưu tiên madon từ server nếu có
 
       // --- TRƯỜNG HỢP A: THANH TOÁN VNPAY (Có SecureHash) ---
       if (vnpSecureHash) {
@@ -42,30 +60,29 @@ export default function HoanTatThanhToanPage() {
         try {
           // Lấy toàn bộ query string (vnp_Amount=...&vnp_BankCode=...)
           const queryString = searchParams.toString();
-          
+
           console.log("Đang gửi verify về server:", queryString);
 
-          // GỌI API BACKEND ĐỂ CHECK HASH
-          // Backend sẽ dùng SecretKey để tính lại Hash và so sánh
           const res = await fetch(`${API}/api/v1/thanh-toan/vnpay-return?${queryString}`, {
             method: "GET",
             headers: {
               "Accept": "application/json",
-              // Nếu API yêu cầu đăng nhập thì gửi token, nhưng thường return url là public
-              // "Authorization": `Bearer ${Cookies.get("access_token")}` 
             }
           });
 
           const data = await res.json().catch(() => ({}));
 
+          // Lưu mã đơn server trả về nếu có (madon), ngược lại dùng txnRef
+          const serverMadon = data?.madon || data?.order?.madon || null;
+          if (serverMadon) setOrderId(serverMadon);
+          else if (txnRef) setOrderId(txnRef);
+
           // Kiểm tra kết quả từ Backend
-          // Backend trả về { status: 200, RspCode: '00', ... } nếu thành công
           if (res.ok && (data.RspCode === '00' || data.status === 200 || data.code === '00')) {
             setStatus('success');
             setMessage("Giao dịch thành công! Đơn hàng đã được thanh toán.");
           } else {
             setStatus('failed');
-            // Hiển thị lỗi từ Backend hoặc từ VNPAY (ví dụ: Giao dịch bị hủy)
             setMessage(data.message || getVnpayErrorMessage(vnpResponseCode));
           }
 
@@ -74,15 +91,38 @@ export default function HoanTatThanhToanPage() {
           setStatus('failed');
           setMessage("Lỗi kết nối đến hệ thống. Vui lòng liên hệ CSKH.");
         }
-      } 
-      
+      }
+
       // --- TRƯỜNG HỢP B: THANH TOÁN COD (Không có Hash, chỉ có order_id) ---
       else if (txnRef) {
         hasVerified.current = true;
-        setStatus('success');
-        setMessage("Đặt hàng thành công! (Thanh toán khi nhận hàng)");
+        try {
+          // Gọi backend để lấy mã đơn (madon) thực tế theo reference/txnRef
+          const resOrder = await fetch(`${API}/api/v1/don-hang/get-by-ref?ref=${encodeURIComponent(txnRef)}`, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+          });
+          const orderJson = await resOrder.json().catch(() => ({}));
+          console.log("get-by-ref response:", resOrder.status, orderJson);
+
+          const serverMadon = extractMadon(orderJson);
+          if (serverMadon) {
+            setOrderId(serverMadon);
+            setMessage("Đặt hàng thành công!");
+          } else {
+            setOrderId(txnRef);
+            setMessage("Đặt hàng thành công! (Không lấy được mã đơn từ server)");
+          }
+
+          setStatus('success');
+        } catch (err) {
+          console.error("Lỗi khi lấy madon từ server:", err);
+          setOrderId(txnRef);
+          setStatus('success');
+          setMessage("Đặt hàng thành công! (Không thể kết nối server để lấy mã đơn)");
+        }
       }
-      
+
       // --- TRƯỜNG HỢP C: KHÔNG CÓ THÔNG TIN ---
       else {
         setStatus('failed');
@@ -116,11 +156,11 @@ export default function HoanTatThanhToanPage() {
           <div className="row justify-content-center">
             <div className="col-lg-6">
               <div className="p-40 text-center bg-white shadow-sm rounded-16">
-                
+
                 {/* 1. ĐANG XỬ LÝ */}
                 {status === 'loading' && (
                   <div className="py-5">
-                    <div className="mb-3 spinner-border text-main-600" role="status" style={{width: '3rem', height: '3rem'}}></div>
+                    <div className="mb-3 spinner-border text-main-600" role="status" style={{ width: '3rem', height: '3rem' }}></div>
                     <h5 className="text-gray-600 fw-medium">{message}</h5>
                     <p className="mt-2 text-sm text-gray-400">Vui lòng không tắt trình duyệt...</p>
                   </div>
@@ -135,7 +175,7 @@ export default function HoanTatThanhToanPage() {
                     <h3 className="mb-2 text-gray-900 fw-bold">Thanh toán thành công!</h3>
                     <p className="mb-2 text-gray-600">{message}</p>
                     {orderId && <p className="mb-32 text-sm text-gray-500">Mã đơn hàng: <span className="text-gray-900 fw-bold">#{orderId}</span></p>}
-                    
+
                     <div className="gap-3 d-flex justify-content-center">
                       <Link href="/don-hang" className="px-32 py-12 btn btn-outline-main rounded-pill fw-bold">
                         Xem đơn hàng
@@ -155,7 +195,7 @@ export default function HoanTatThanhToanPage() {
                     </div>
                     <h3 className="mb-2 text-gray-900 fw-bold">Thanh toán thất bại</h3>
                     <p className="mb-4 text-danger-600 fw-medium">{message}</p>
-                    
+
                     <div className="gap-3 d-flex justify-content-center">
                       <Link href="/thanh-toan" className="px-32 py-12 btn btn-main rounded-pill fw-bold">
                         Thử lại

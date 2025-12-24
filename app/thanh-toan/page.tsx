@@ -173,8 +173,16 @@ export default function ThanhToanPage() {
       }
 
       // CASE 2: COD -> Trang Hoàn tất
-      const orderId = json.data?.id || json.order_id || json.id; 
-      router.push(`/hoan-tat-thanh-toan?order_id=${orderId}`);
+      const orderData = json.data ?? json;
+      const orderCode = orderData?.madon || orderData?.id || orderData?.donhang?.madon;
+      console.log("Order created, code=", orderCode);
+
+      if (!orderCode) {
+        alert("Không lấy được mã đơn hàng từ server.");
+        setIsSubmitting(false);
+        return;
+      }
+      router.push(`/hoan-tat-thanh-toan?madon=${encodeURIComponent(orderCode)}`);
 
     } catch (error) {
       console.error(error);
