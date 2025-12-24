@@ -901,6 +901,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 borderRadius: '50%',
                                                 border: '1px solid #e5e7eb',
                                                 backgroundColor: 'white',
+                                                color: 'black',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
@@ -909,8 +910,8 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 transition: 'all 0.3s'
                                             }}
                                             onMouseEnter={(e) => {
-                                                e.currentTarget.style.borderColor = '#ff6b35';
-                                                e.currentTarget.style.backgroundColor = '#ff6b35';
+                                                e.currentTarget.style.borderColor = '#FF6B00';
+                                                e.currentTarget.style.backgroundColor = '#FF6B00';
                                                 e.currentTarget.style.color = 'white';
                                             }}
                                             onMouseLeave={(e) => {
@@ -928,9 +929,9 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 width: '32px',
                                                 height: '32px',
                                                 borderRadius: '50%',
-                                                border: 'none',
-                                                backgroundColor: '#ff6b35',
-                                                color: 'white',
+                                                border: '1px solid #e5e7eb',
+                                                backgroundColor: 'white',
+                                                color: 'black',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
@@ -939,10 +940,14 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 transition: 'all 0.3s'
                                             }}
                                             onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#e55a28';
+                                                e.currentTarget.style.borderColor = '#FF6B00';
+                                                e.currentTarget.style.backgroundColor = '#FF6B00';
+                                                e.currentTarget.style.color = 'white';
                                             }}
                                             onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#ff6b35';
+                                                e.currentTarget.style.borderColor = '#e5e7eb';
+                                                e.currentTarget.style.backgroundColor = 'white';
+                                                e.currentTarget.style.color = 'black';
                                             }}
                                         >
                                             <i className="ph ph-caret-right"></i>
