@@ -20,7 +20,7 @@ type WishProduct = {
   slug?: string;
 };
 
-// Kiểu record trả về từ /api/tai-khoan/yeuthichs
+// Kiểu record trả về từ /api/v1/yeu-thich
 type FavoriteRecord = {
   id: number;
   id_sanpham?: number;
@@ -82,7 +82,7 @@ export default function WishlistPage() {
   // Add favorite (POST)
   const addFavorite = React.useCallback(async (productId: number) => {
     try {
-      const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
+      const res = await fetch(`${API}/api/v1/yeu-thich`, {
         method: 'POST',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         // credentials: 'include',
@@ -119,7 +119,7 @@ export default function WishlistPage() {
     setFavoriteRecords(prev => prev.filter(r => r.id !== favId));
 
     try {
-      const res = await fetch(`${API}/api/tai-khoan/yeuthichs/${favId}`, {
+      const res = await fetch(`${API}/api/v1/yeu-thich/${favId}`, {
         method: 'PATCH',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         // credentials: 'include',

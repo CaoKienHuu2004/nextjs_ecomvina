@@ -145,7 +145,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     useEffect(() => {
         if (!product) return;
         setFavLoading(true);
-        fetch(`${API}/api/tai-khoan/yeuthichs`, { credentials: "include", headers: { ...getAuthHeaders() } })
+        fetch(`${API}/api/v1/yeu-thich`, { credentials: "include", headers: { ...getAuthHeaders() } })
             .then(async (res) => {
                 if (!res.ok) return { status: false, data: [] as FavoriteItem[] };
                 return await res.json();
@@ -176,7 +176,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
         setFavLoading(true);
         try {
             if (!isFavorited) {
-                const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
+                const res = await fetch(`${API}/api/v1/yeu-thich`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", ...getAuthHeaders() },
                     credentials: "include",
@@ -195,7 +195,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                 let idToToggle = favoriteId;
                 if (!idToToggle) {
                     // không có favoriteId: refetch list nhanh để tìm id
-                    const r = await fetch(`${API}/api/tai-khoan/yeuthichs`, { credentials: "include", headers: { ...getAuthHeaders() } });
+                    const r = await fetch(`${API}/api/v1/yeu-thich`, { credentials: "include", headers: { ...getAuthHeaders() } });
                     const j = await r.json().catch(() => ({}));
                     const list = Array.isArray(j?.data) ? j.data as FavoriteItem[] : [];
                     const found = list.find(item => item.id_sanpham == product.id || item.sanpham?.id == product.id);
@@ -204,7 +204,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                 if (!idToToggle) {
                     console.error("Cannot find favorite record id to remove");
                 } else {
-                    const res = await fetch(`${API}/api/tai-khoan/yeuthichs/${idToToggle}`, {
+                    const res = await fetch(`${API}/api/v1/yeu-thich/${idToToggle}`, {
                         method: "PATCH",
                         credentials: "include",
                         headers: { ...getAuthHeaders() },

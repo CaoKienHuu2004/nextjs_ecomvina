@@ -29,7 +29,7 @@ function useWishlistCore(): Ctx {
         const token = typeof window !== "undefined" ? (Cookies.get("access_token") || Cookies.get("token")) : null;
         const headers: Record<string, string> = { Accept: "application/json" };
         if (token) headers.Authorization = `Bearer ${token}`;
-        const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
+        const res = await fetch(`${API}/api/v1/yeu-thich`, {
           headers,
           // credentials: "include",
         });
@@ -110,7 +110,7 @@ function useWishlistCore(): Ctx {
       const token = typeof window !== 'undefined' ? (Cookies.get('access_token') || Cookies.get('token')) : null;
       const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${API}/api/tai-khoan/yeuthichs`, {
+      const res = await fetch(`${API}/api/v1/yeu-thich`, {
         method: "POST",
         headers,
         // credentials: "include",
@@ -135,7 +135,7 @@ function useWishlistCore(): Ctx {
       const token = typeof window !== 'undefined' ? (Cookies.get('access_token') || Cookies.get('token')) : null;
       const headers: Record<string, string> = { Accept: "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${API}/api/tai-khoan/yeuthichs/${id}`, {
+      const res = await fetch(`${API}/api/v1/yeu-thich/${id}`, {
         method: "PATCH",
         headers,
         // credentials: "include",

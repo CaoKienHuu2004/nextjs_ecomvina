@@ -1,5 +1,5 @@
 {
-  "/api/tai-khoan/yeuthichs*": "/yeuthichs",
+  "/api/v1/yeu-thich*": "/yeuthichs",
   "/api/bannerquangcaos*": "/bannerquangcaos",
   "/api/danhmucs-selection*": "/danhmucs_selection",
   "/api/danhmucs*": "/danhmucs",

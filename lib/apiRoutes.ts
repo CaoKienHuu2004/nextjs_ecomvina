@@ -27,8 +27,8 @@ export const API_ROUTES = {
   TOI_DIA_CHI_ITEM: (id: string | number) => `/api/tai-khoan/diachis/${id}`,
   TOI_DANH_GIAS: "/api/toi/danhgias",
   TOI_DANH_GIA_ITEM: (id: string | number) => `/api/toi/danhgias/${id}`,
-  TOI_YEU_THICHS: "/api/tai-khoan/yeuthichs",
-  TOI_YEU_THICH_ITEM: (idSanPham: string | number) => `/api/tai-khoan/yeuthichs/${idSanPham}`,
+  TOI_YEU_THICHS: "/api/v1/yeu-thich",
+  TOI_YEU_THICH_ITEM: (idSanPham: string | number) => `/api/v1/yeu-thich/${idSanPham}`,
 
   // xac-thuc-tai-khoan  Auth
   AUTH_DANG_KY: "/api/v1/dang-ky", //POST
