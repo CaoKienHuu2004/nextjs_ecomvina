@@ -531,6 +531,31 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
 
                                         <span className="mt-32 text-gray-700 border-gray-100 border-top d-block"></span>
 
+                                        {/* Hiển thị trạng thái và số lượng của biến thể đang chọn */}
+                                        {selectedVariant && (
+                                            <div className="mt-20">
+                                                <div className="flex-wrap gap-16 flex-align">
+                                                    <div className="flex-align gap-8">
+                                                        <span className="text-md fw-medium text-neutral-600">Trạng thái:</span>
+                                                        <span className={`text-md fw-semibold ${(selectedVariant.trangthai === 'Còn hàng' && (selectedVariant.soluong ?? 0) > 0) ? 'text-success-600' : 'text-danger-600'}`}>
+                                                            {(selectedVariant.trangthai === 'Còn hàng' && (selectedVariant.soluong ?? 0) > 0) ? 'Còn hàng' : 'Hết hàng'}
+                                                        </span>
+                                                    </div>
+                                                    {selectedVariant.soluong !== undefined && (
+                                                        <>
+                                                            <span className="text-gray-500 text-md fw-medium">|</span>
+                                                            <div className="flex-align gap-8">
+                                                                <span className="text-md fw-medium text-neutral-600">Còn lại:</span>
+                                                                <span className="text-md fw-semibold text-main-600">
+                                                                    {selectedVariant.soluong} sản phẩm
+                                                                </span>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
                                     </div>
                                 </div>
                             </div>
