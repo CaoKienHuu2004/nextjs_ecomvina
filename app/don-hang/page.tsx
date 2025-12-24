@@ -119,70 +119,7 @@ export default function OrdersPage() {
   const [reorderSelection, setReorderSelection] = useState<{ id_bienthe: number; soluong: number }[]>([]);
   const [reorderProcessing, setReorderProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<OrderStatusKey>("pending");
-  // --- FETCH DATA ---
-  // useEffect(() => {
-  //   const fetchOrders = async () => {
-  //     try {
-  //       setLoading(true);
-  //       const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
-  //       const token = Cookies.get("access_token");
-  //       console.log("don-hang: fetching orders with token:", token ? token.substring(0, 20) + "..." : null);
-
-  //       const res = await fetch(`${API}/api/v1/don-hang`, {
-  //         method: "GET",
-  //         headers: {
-  //           "Authorization": token ? `Bearer ${token}` : "",
-  //           "Accept": "application/json",
-  //         },
-  //         cache: "no-store",
-  //         credentials: "include",
-  //       });
-  //       console.log("don-hang: API response status:", res.status);
-
-  //       if (res.ok) {
-  //         const json: any = await res.json().catch(() => ({}));
-  //         console.log("don-hang: API response data:", json);
-
-  //         // API trả về: { status: 200, message: "...", data: { current_page: 1, data: [...orders], ... } }
-  //         // Orders nằm ở json.data.data
-  //         const ordersArray = json?.data?.data ?? [];
-  //         console.log("don-hang: orders array:", ordersArray, "length:", ordersArray.length);
-
-  //         // Đây là array trực tiếp của orders, không có groups
-  //         const allOrders: Order[] = Array.isArray(ordersArray) ? ordersArray : [];
-
-  //         // Sort by id descending
-  //         const sortedList = [...allOrders].sort((a, b) => b.id - a.id);
-
-  //         setOrders(sortedList);
-  //         console.log("don-hang: set orders complete, count:", sortedList.length);
-  //       } else {
-  //         console.error("Lỗi API:", res.status);
-  //       }
-  //     } catch (error) {
-  //       console.error("Lỗi tải đơn hàng:", error);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-
-
-  //   console.log("don-hang: isLoggedIn =", isLoggedIn);
-  //   if (isLoggedIn) {
-  //     fetchOrders();
-  //   } else {
-  //     // Nếu chưa đăng nhập, kiểm tra xem có token không để fetch trực tiếp
-  //     const token = Cookies.get("access_token");
-  //     if (token) {
-  //       console.log("don-hang: có token nhưng isLoggedIn=false, vẫn fetch orders");
-  //       fetchOrders();
-  //     } else {
-  //       setLoading(false);
-  //     }
-  //   }
-  // }, [isLoggedIn]);
-
+  
   // --- STATE MỚI: Lưu toàn bộ đơn hàng ---
   const [allOrders, setAllOrders] = useState<Order[]>([]); 
 
@@ -421,6 +358,54 @@ export default function OrdersPage() {
       alert("Lỗi kết nối đến hệ thống.");
     }
   };
+
+  // --- MUA LẠI NHANH (Không cần Modal) ---
+  const handleQuickReorder = async (order: Order) => {
+    // 1. Lọc lấy danh sách sản phẩm (Bỏ qua quà tặng giá = 0)
+    const itemsToReorder = (order.chitietdonhang ?? [])
+      .filter(it => Number(it.dongia ?? it.price ?? 0) > 0)
+      .map(it => ({
+        // Logic lấy ID biến thể chuẩn như cũ
+        id_bienthe: Number((it as any).id_bienthe ?? it.bienthe?.id ?? it.id ?? 0),
+        soluong: Number(it.soluong ?? it.quantity ?? 1)
+      }));
+
+    if (itemsToReorder.length === 0) {
+      alert("Đơn hàng này không có sản phẩm nào có thể mua lại (hoặc toàn bộ là quà tặng).");
+      return;
+    }
+
+    try {
+      // Hiển thị loading nhẹ nếu muốn (hoặc dùng toast)
+      // setLoading(true); // Tùy chọn
+
+      const token = Cookies.get("access_token");
+      
+      // 2. Gọi API thêm vào giỏ
+      const res = await fetch(`${API}/api/v1/don-hang/mua-lai`, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "Authorization": token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({ items: itemsToReorder }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        // 3. Thành công -> Chuyển hướng ngay sang giỏ hàng
+        router.push("/gio-hang"); 
+      } else {
+        alert(json.message || "Không thể mua lại đơn hàng này.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Lỗi kết nối. Vui lòng thử lại.");
+    }
+  };
+  
   // Cho phép hủy khi trạng thái còn 'chờ' (cập nhật theo rule dự án)
   const isCancellable = (status?: string) => {
     const s = (status || "").toLowerCase();
@@ -907,7 +892,6 @@ export default function OrdersPage() {
                         if (String(imgFileName).startsWith("http")) {
                           imgSrc = String(imgFileName);
                         } else {
-                          // Đường dẫn theo cấu trúc API: /assets/client/images/thumbs/{filename}
                           imgSrc = `${API}/assets/client/images/thumbs/${imgFileName}`;
                         }
                       }
@@ -960,6 +944,16 @@ export default function OrdersPage() {
                                     </button>
                                   </div>
                                 )}
+                                {matchesFilter("pending", detailOrder.trangthai, detailOrder.trangthaithanhtoan) && isQRMethod(detailOrder) && (
+                                <button
+                                  type="button"
+                                  onClick={() => retryPayment(detailOrder.id, "3")}
+                                  className="gap-8 px-8 py-4 text-sm text-white border fw-medium rounded-4 transition-1 flex-right"
+                                  style={{ background: "#008080" }}
+                                >
+                                  <i className="ph-bold ph-credit-card" /> Thanh toán lại
+                                </button>
+                              )}
                               </>
                             )}
                           </div>
@@ -1310,7 +1304,7 @@ export default function OrdersPage() {
                               {displayStatusLabel(order.trangthai, order.trangthaithanhtoan) === "Thành công" && (
                                 <button
                                   type="button"
-                                  onClick={() => openReorderModal(order)}
+                                  onClick={() => handleQuickReorder(order)}
                                   className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
                                 >
                                   <i className="ph ph-shopping-cart" /> Mua lại
@@ -1370,43 +1364,107 @@ export default function OrdersPage() {
           </div>
         )}
 
+        {/* --- MODAL MUA LẠI (Đã sửa CSS để hiện thị đúng) --- */}
         {reorderModalOpen && reorderOrder && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ background: "rgba(0,0,0,0.4)" }}
-            onMouseDown={(e) => { if (e.target === e.currentTarget) { setReorderModalOpen(false); setReorderOrder(null); } }}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              backgroundColor: "rgba(0,0,0,0.5)",
+              zIndex: 9999, // Đảm bảo nổi lên trên cùng
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) {
+                setReorderModalOpen(false);
+                setReorderOrder(null);
+              }
+            }}
           >
-            <div className="w-full max-w-xl p-20 bg-white rounded-8" onMouseDown={e => e.stopPropagation()}>
-              <h5 className="mb-4 fw-semibold">Mua lại đơn {reorderOrder.madon}</h5>
-              <div className="mb-6 text-sm text-gray-600">Chọn sản phẩm và số lượng để thêm vào giỏ hàng. (Quà tặng/0₫ không hiển thị)</div>
-
-              <div className="mb-6">
-                {(reorderOrder.chitietdonhang ?? []).filter(it => Number(it.dongia ?? it.price ?? 0) > 0).map(it => {
-                  const id_bienthe = Number(it.bienthe?.id ?? it.id ?? 0);
-                  const price = Number(it.dongia ?? it.price ?? 0);
-                  const title = it.bienthe?.sanpham?.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
-                  const qtySel = reorderSelection.find(s => s.id_bienthe === id_bienthe)?.soluong ?? 0;
-                  return (
-                    <div key={id_bienthe} className="gap-12 py-8 d-flex flex-between border-bottom">
-                      <div style={{ minWidth: 0 }}>
-                        <div className="text-sm fw-medium text-truncate" style={{ maxWidth: 420 }}>{title}</div>
-                        <div className="text-xs text-gray-500">{formatPrice(price)}</div>
-                      </div>
-                      <div className="gap-8 d-flex flex-align">
-                        <input type="number" value={qtySel} min={0} onChange={e => updateReorderQty(id_bienthe, Number(e.target.value || 0))} className="px-8 py-6 border rounded-4" style={{ width: 80 }} />
-                        <button disabled={reorderProcessing} onClick={() => quickReorderItem(it)} className="px-10 py-6 text-sm border fw-medium rounded-6">
-                          Mua sản phẩm
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+            <div
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "12px",
+                padding: "24px",
+                width: "90%",
+                maxWidth: "600px",
+                boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <h5 className="mb-4 text-lg fw-bold">Mua lại đơn #{reorderOrder.madon}</h5>
+              <div className="mb-3 text-sm text-gray-600">
+                Chọn sản phẩm và số lượng để thêm vào giỏ hàng:
               </div>
 
-              <div className="gap-8 text-end d-flex justify-content-end">
-                <button disabled={reorderProcessing} onClick={() => { setReorderModalOpen(false); setReorderOrder(null); }} className="px-12 py-8 text-sm border rounded-6">Hủy</button>
-                <button disabled={reorderProcessing} onClick={submitReorder} className="px-12 py-8 text-sm text-white border fw-medium rounded-6" style={{ background: "#008080" }}>
-                  {reorderProcessing ? "Đang xử lý..." : "Mua tất cả đã chọn"}
+              <div
+                className="p-10 mb-4 border rounded-8 custom-scrollbar"
+                style={{ maxHeight: "300px", overflowY: "auto" }}
+              >
+                {(reorderOrder.chitietdonhang ?? [])
+                  .filter((it) => Number(it.dongia ?? it.price ?? 0) > 0)
+                  .map((it) => {
+                    // Logic lấy ID an toàn hơn
+                    const id_bienthe = Number((it as any).id_bienthe ?? it.bienthe?.id ?? it.id ?? 0);
+                    const price = Number(it.dongia ?? it.price ?? 0);
+                    const title = it.bienthe?.sanpham?.ten ?? it.tensanpham ?? it.name ?? "Sản phẩm";
+                    const qtySel = reorderSelection.find((s) => s.id_bienthe === id_bienthe)?.soluong ?? 0;
+
+                    return (
+                      <div key={id_bienthe} className="pb-3 mb-3 d-flex align-items-center justify-content-between border-bottom last-no-border">
+                        <div style={{ flex: 1, paddingRight: 10 }}>
+                          <div className="text-sm text-gray-900 fw-bold line-clamp-1">{title}</div>
+                          <div className="text-xs text-main-600">{formatPrice(price)}</div>
+                        </div>
+                        <div className="gap-2 d-flex align-items-center">
+                          <input
+                            type="number"
+                            min={0}
+                            value={qtySel}
+                            onChange={(e) => updateReorderQty(id_bienthe, Number(e.target.value || 0))}
+                            className="text-center form-control form-control-sm"
+                            style={{ width: "60px" }}
+                          />
+                          <button
+                            disabled={reorderProcessing}
+                            onClick={() => quickReorderItem(it)}
+                            className="px-2 btn btn-sm btn-outline-main rounded-4"
+                            title="Mua ngay món này"
+                          >
+                            <i className="ph-bold ph-plus"/>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              <div className="gap-2 d-flex justify-content-end">
+                <button
+                  disabled={reorderProcessing}
+                  onClick={() => {
+                    setReorderModalOpen(false);
+                    setReorderOrder(null);
+                  }}
+                  className="px-4 btn btn-outline-gray rounded-8"
+                >
+                  Hủy
+                </button>
+                <button
+                  disabled={reorderProcessing}
+                  onClick={submitReorder}
+                  className="px-4 btn btn-main rounded-8"
+                >
+                  {reorderProcessing ? (
+                    <span><i className="ph-bold ph-spinner animate-spin"/> Đang xử lý...</span>
+                  ) : (
+                    "Thêm tất cả vào giỏ"
+                  )}
                 </button>
               </div>
             </div>

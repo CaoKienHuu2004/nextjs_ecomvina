@@ -14,7 +14,7 @@ type Review = {
   diem: number;
   noi_dung: string;
   created_at?: string;
-  sanpham?: { ten?: string; hinhanh?: string }; // Tuỳ backend trả về gì khi get reviews
+  sanpham?: { ten?: string; hinhanh?: string };
 };
 
 type OrderItem = {
