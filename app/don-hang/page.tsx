@@ -1323,7 +1323,7 @@ export default function OrdersPage() {
                               {/* Nút Quay lại thanh toán đã được ẩn theo yêu cầu */}
 
                               {isReviewableStatus(order.trangthai, order.trangthaithanhtoan) ? (
-                                <Link href={`/danh-gia?order_id=${order.id}`} className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align">
+                                <Link href={`/danh-gia?order_id=${order.id}`} className="gap-8 px-8 py-4 text-sm bg-white border fw-medium text-main-600 border-main-600 rounded-4 transition-1 flex-align">
                                   <i className="ph ph-star" /> Đánh giá
                                 </Link>
                               ) : (
