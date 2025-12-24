@@ -160,7 +160,7 @@ export default function HoanTatThanhToanPage() {
                       <Link href="/thanh-toan" className="px-32 py-12 btn btn-main rounded-pill fw-bold">
                         Thử lại
                       </Link>
-                      <Link href="/" className="px-32 py-12 btn btn-outline-gray rounded-pill fw-bold">
+                      <Link href="/" className="px-32 py-12 btn btn-gray rounded-pill fw-bold">
                         Về trang chủ
                       </Link>
                     </div>

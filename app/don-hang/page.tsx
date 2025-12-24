@@ -63,7 +63,7 @@ type Order = {
 type OrderGroup = { label?: string; trangthai?: string; soluong?: number; donhang: Order[] };
 
 type DetailedOrder = Order & {
-  phuongthuc?: { id?: number; ten?: string; ma_phuongthuc?: string };
+  phuongthuc: { id?: number; ten?: string; id_phuongthuc?: string; maphuongthuc?: string; ma_phuongthuc?: string };
   phivanchuyen?: { id?: number; ten?: string; phi?: number };
   diachigiaohang?: { hoten?: string; sodienthoai?: string; diachi?: string; tinhthanh?: string; trangthai?: string };
   magiamgia?: { magiamgia?: string; giatri?: number; mota?: string };
@@ -80,11 +80,12 @@ type FilterStatus = "all" | "pending" | "processing" | "shipping" | "delivered" 
 
 // Map mã phương thức thanh toán (ma_phuongthuc) sang label hiển thị
 const formatPaymentMethod = (ph?: DetailedOrder["phuongthuc"]) => {
-  const code = ph?.ma_phuongthuc ?? "";
-  if (code === "cod") return "Thanh toán khi nhận hàng (COD)";
-  if (code === "dbt") return "Chuyển khoản ngân hàng (tự động)";
-  if (code === "cp") return "Thanh toán trực tiếp (thủ công)";
-  return ph?.ten ?? getPhuongThucThanhToan(ph?.id ?? undefined) ?? "-";
+  const id = ph?.id ?? ph?.id_phuongthuc;
+  const map = (ph?.maphuongthuc ?? ph?.ma_phuongthuc ?? "").toString().toLowerCase();
+  if (String(id) === "1") return "Thanh toán khi nhận hàng (COD)";
+  if (String(id) === "3" || map.includes("qr") || map.includes("qrcode")) return "Thanh toán qua QR Code / VNPay";
+  if (map === "cp") return "Thanh toán trực tiếp (thủ công)";
+  return ph?.ten ?? getPhuongThucThanhToan(typeof id === "number" ? id : undefined) ?? "-";
 };
 
 // --- 2. COMPONENT CHÍNH ---
@@ -290,9 +291,19 @@ export default function OrdersPage() {
     if (!order) return false;
     const pay = (order.trangthaithanhtoan || "").toString().toLowerCase();
     const state = (order.trangthai || "").toString().toLowerCase();
-    if (pay.includes("chưa") || pay.includes("pending") || pay.includes("unpaid")) return true;
+    if (pay.includes("Chờ") || pay.includes("pending") || pay.includes("unpaid")) return true;
     if (state.includes("chờ") || state.includes("pending")) return true;
     return false;
+  };
+
+  // Kiểm tra xem phương thức thanh toán là QR/VNPAY (id 3 hoặc maphuongthuc/hinhthucthanhtoan chứa "qr")
+  const isQRMethod = (o?: DetailedOrder | Order | null) => {
+    if (!o) return false;
+    const ph = (o as any).phuongthuc ?? {};
+    const id = ph?.id ?? ph?.id_phuongthuc ?? ph?.ma_phuongthuc;
+    const map = (ph?.maphuongthuc ?? ph?.ma_phuongthuc ?? "").toString().toLowerCase();
+    const hinh = ((o as any).hinhthucthanhtoan ?? "").toString().toLowerCase();
+    return String(id) === "3" || map.includes("qr") || map.includes("qrcode") || hinh.includes("qr");
   };
 
   // Kiểm tra trạng thái có thể đánh giá
@@ -303,27 +314,37 @@ export default function OrdersPage() {
   };
 
   // Gọi API để lấy payment_url rồi chuyển hướng
-  const retryPayment = async (orderId: number, provider?: string) => {
+  // Gọi API để lấy payment_url rồi chuyển hướng
+  const retryPayment = async (orderId: number, methodCode?: string) => {
     try {
       const token = Cookies.get("access_token");
-      const url = `${API}/api/v1/don-hang/${orderId}/payment-url`;
-      const body = provider ? JSON.stringify({ provider }) : undefined;
+
+      // nếu yêu cầu VNPay trước, gán phương thức + set trạng thái
+      if (methodCode === "3") {
+        await setOrderPaymentMethod(orderId, "3");
+        await setOrderStatus(orderId, { status: "Chờ xử lý", trangthaithanhtoan: "Chưa thanh toán" });
+      }
+
+      const url = `${API}/api/v1/thanh-toan/thanh-toan-lai/${orderId}`;
+
       const res = await fetch(url, {
         method: "POST",
         headers: {
           "Accept": "application/json",
-          "Content-Type": body ? "application/json" : "application/json",
+          "Content-Type": "application/json",
           "Authorization": token ? `Bearer ${token}` : "",
         },
-        body,
       });
+
       const json = await res.json().catch(() => ({}));
-      if (res.ok && json.payment_url) {
-        // Option A: điều hướng ngay lập tức
-        window.location.href = json.payment_url;
+      const paymentUrl = json.payment_url || json.data?.url || json.url;
+
+      if (res.ok && paymentUrl) {
+        window.location.href = paymentUrl;
         return;
       }
-      alert(json.message || "Không tạo được liên kết thanh toán. Vui lòng thử lại hoặc liên hệ hỗ trợ.");
+
+      alert(json.message || "Không thể tạo liên kết thanh toán. Có thể đơn hàng đã quá hạn hoặc không hỗ trợ.");
     } catch (e) {
       console.error("retryPayment error", e);
       alert("Lỗi kết nối. Vui lòng thử lại.");
@@ -410,13 +431,13 @@ export default function OrdersPage() {
   const getStatusForMethod = (methodCode: string, action: "reorder" | "retry") => {
     // Trả về cả trạng thái đơn và trạng thái thanh toán để gửi lên server.
     // Điều chỉnh string theo spec backend nếu cần (ví dụ đổi key thành 'trangthai' / 'trangthaithanhtoan').
-    if (methodCode === "dbt") {
+    if (methodCode === "3") {
       // Trạng thái đơn khi tạo/chuẩn bị thanh toán: chờ xử lý.
       // Trạng thái thanh toán ban đầu: chưa thanh toán (server sẽ cập nhật thành 'Đã thanh toán' sau callback của VNPay).
       return { orderStatus: "Chờ xử lý", paymentStatus: "Chưa thanh toán" };
     }
-    if (methodCode === "cod") {
-      // COD: tạo đơn và giữ trạng thái chưa thanh toán
+    if (methodCode === "1") {
+      // 1: tạo đơn và giữ trạng thái chưa thanh toán
       return { orderStatus: "Chờ xử lý", paymentStatus: "Chưa thanh toán" };
     }
     // default
@@ -469,7 +490,7 @@ export default function OrdersPage() {
           return;
         }
 
-        // Nếu chọn VNPay (dbt) => gán phương thức + set trạng thái -> lấy payment_url -> redirect
+        // Nếu chọn VNPay (3) => gán phương thức + set trạng thái -> lấy payment_url -> redirect
         // Lấy mapping trạng thái cho phương thức
         const mapped = getStatusForMethod(methodCode, "reorder");
         // 2) Gán phương thức
@@ -478,8 +499,8 @@ export default function OrdersPage() {
         // Gửi payload với hai khóa phổ biến: 'status' (hoặc 'trangthai') và 'trangthaithanhtoan'.
         await setOrderStatus(newId, { status: mapped.orderStatus, trangthaithanhtoan: mapped.paymentStatus });
 
-        // 4) Nếu là VNPay (dbt) -> gọi payment-url để redirect
-        if (methodCode === "dbt") {
+        // 4) Nếu là VNPay (3) -> gọi payment-url để redirect
+        if (methodCode === "3") {
           await retryPayment(newId);
           return;
         }
@@ -503,15 +524,15 @@ export default function OrdersPage() {
           return;
         }
 
-        // Nếu chọn VNPay (dbt) => gán + set trạng thái -> redirect tới payment_url
+        // Nếu chọn VNPay (3) => gán + set trạng thái -> redirect tới payment_url
         // Map trạng thái theo phương thức
         const mapped = getStatusForMethod(methodCode, "retry");
         // Gán phương thức
         await setOrderPaymentMethod(paymentModalOrderId, methodCode);
         // Set trạng thái đơn + trạng thái thanh toán
         await setOrderStatus(paymentModalOrderId!, { status: mapped.orderStatus, trangthaithanhtoan: mapped.paymentStatus });
-        // Nếu dbt -> redirect sang cổng
-        if (methodCode === "dbt") {
+        // Nếu 3 -> redirect sang cổng
+        if (methodCode === "3") {
           await retryPayment(paymentModalOrderId);
           return;
         }
@@ -705,12 +726,12 @@ export default function OrdersPage() {
                   </div>
 
                   {/* Thanh toán lại nếu cần */}
-                  {detailOrder.phuongthuc?.ma_phuongthuc === "dbt" && isPaymentPending(detailOrder) && (
+                  {isPaymentPending(detailOrder) && isQRMethod(detailOrder) && (
                     <button
                       type="button"
-                      onClick={() => retryPayment(detailOrder.id, "dbt")}
+                      onClick={() => retryPayment(detailOrder.id, "3")}
                       className="gap-6 px-12 py-6 mt-4 text-white border-0 fw-medium rounded-8 flex-center"
-                      style={{ background: "#2563eb", fontSize: 13, cursor: "pointer", width: "100%" }}
+                      style={{ background: "#008080", fontSize: 13, cursor: "pointer", width: "100%" }}
                     >
                       <i className="ph-bold ph-credit-card" /> Thanh toán VNPay
                     </button>
@@ -870,13 +891,23 @@ export default function OrdersPage() {
 
                 <div className="gap-12 flex-align">
                   {/* Nếu đơn đang ở trạng thái chờ thanh toán -> hiển thị Quay lại thanh toán */}
-                  {getFilterKey(detailOrder.trangthai) === "pending" && (
+                  {/* {getFilterKey(detailOrder.trangthai) === "pending" && (
                     <button
                       type="button"
-                      onClick={() => retryPayment(detailOrder.id, "dbt")}
+                      onClick={() => retryPayment(detailOrder.id, "3")}
                       className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
                     >
                       <i className="ph-bold ph-credit-card" /> Quay lại thanh toán
+                    </button>
+                  )} */}
+                  {isPaymentPending(detailOrder) && isQRMethod(detailOrder) && (
+                    <button
+                      type="button"
+                      onClick={() => retryPayment(detailOrder.id, "3")}
+                      className="gap-6 px-12 py-6 mt-4 text-white border-0 fw-medium rounded-8 flex-center"
+                      style={{ background: "#008080", fontSize: 13, cursor: "pointer", width: "100%" }}
+                    >
+                      <i className="ph-bold ph-credit-card" /> Thanh toán lại
                     </button>
                   )}
 
@@ -994,28 +1025,28 @@ export default function OrdersPage() {
                                 const variantName = it.bienthe?.loaibienthe?.ten ?? it.tenloaibienthe ?? "";
 
                                 return (
-                                  <div key={it.id} className="py-6 px-5">
-                                    <div className="d-flex align-items-center gap-12">
+                                  <div key={it.id} className="px-5 py-6">
+                                    <div className="gap-12 d-flex align-items-center">
                                       <a href="#" className="border border-gray-100 rounded-8 flex-center" style={{ maxWidth: 80, maxHeight: 80, width: "100%", height: "100%" }}>
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img src={img} alt={title} className="w-100 rounded-8" style={{ objectFit: "cover" }} />
                                       </a>
                                       <div className="table-product__content text-start">
-                                        <h6 className="title text-sm fw-semibold mb-0">
+                                        <h6 className="mb-0 text-sm title fw-semibold">
                                           <a href="#" className="link text-line-2" title={title} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: 350, display: "inline-block" }}>
                                             {title}
                                           </a>
                                         </h6>
                                         {variantName && (
-                                          <div className="flex-align gap-16 mb-6">
-                                            <a href="#" className="btn bg-gray-50 text-heading text-xs py-4 px-6 rounded-8 flex-center gap-8 fw-medium">
+                                          <div className="gap-16 mb-6 flex-align">
+                                            <a href="#" className="gap-8 px-6 py-4 text-xs btn bg-gray-50 text-heading rounded-8 flex-center fw-medium">
                                               {variantName}
                                             </a>
                                           </div>
                                         )}
-                                        <div className="product-card__price mb-6">
-                                          <div className="flex-align gap-24">
-                                            <span className="text-heading text-sm fw-medium">Số lượng: {qty}</span>
+                                        <div className="mb-6 product-card__price">
+                                          <div className="gap-24 flex-align">
+                                            <span className="text-sm text-heading fw-medium">Số lượng: {qty}</span>
                                             <span className="text-main-600 text-md fw-bold">{formatPrice(price)}</span>
                                           </div>
                                         </div>
@@ -1143,6 +1174,19 @@ export default function OrdersPage() {
                                 <i className="ph-bold ph-credit-card" /> Thanh toán lại
                               </button>
                             )} */}
+                            {(
+                                ((order.trangthaithanhtoan ?? "").toString().toLowerCase().includes("chờ thanh toán") || getFilterKey(order.trangthai) === "pending")
+                                && isQRMethod(order)
+                              ) && (
+                                <button
+                                  type="button"
+                                  onClick={() => retryPayment(order.id, "3")}
+                                  className="gap-8 px-8 py-4 text-sm text-white border fw-medium rounded-4 transition-1 flex-align"
+                                  style={{ background: "#008080" }}
+                                >
+                                  <i className="ph-bold ph-credit-card" /> Thanh toán lại
+                                </button>
+                              )}
 
                               <button
                                 type="button"
@@ -1200,14 +1244,14 @@ export default function OrdersPage() {
                 <button
                   ref={primaryBtnRef}
                   disabled={paymentProcessing}
-                  onClick={() => processPaymentChoice("dbt")}
+                  onClick={() => processPaymentChoice("3")}
                   className="gap-6 px-12 py-8 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-6"
                 >
                   Thanh toán VNPay
                 </button>
                 <button
                   disabled={paymentProcessing}
-                  onClick={() => processPaymentChoice("cod")}
+                  onClick={() => processPaymentChoice("1")}
                   className="gap-6 px-12 py-8 text-sm border fw-medium rounded-6"
                 >
                   Thanh toán khi nhận hàng
