@@ -363,7 +363,7 @@ export default function ThanhToanPage() {
                           checked={paymentMethod === "3"}
                           onChange={() => setPaymentMethod("3")}
                         />
-                        <label className="text-sm form-check-label fw-medium text-neutral-600 w-100" htmlFor="phuongthuc3">Thanh toán qua QR Code</label>
+                        <label className="text-sm form-check-label fw-medium text-neutral-600 w-100" htmlFor="phuongthuc3">Thanh toán qua VNPAY</label>
                       </div>
                     </div>
                   </label>

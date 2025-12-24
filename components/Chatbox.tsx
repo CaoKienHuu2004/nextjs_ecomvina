@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
 
 type Message = {
   id: number;
@@ -16,9 +15,11 @@ export default function Chatbox() {
     { id: 1, role: "ai", text: "Xin chào! Tôi là trợ lý ảo Siêu Thị Vina. Tôi có thể giúp gì cho bạn?" }
   ]);
   const [loading, setLoading] = useState(false);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
+  const genId = () => Date.now() + Math.random();
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,37 +34,55 @@ export default function Chatbox() {
     if (!input.trim() || loading) return;
 
     const userMsgText = input;
-    const newMsgUser: Message = { id: Date.now(), role: "user", text: userMsgText };
-    
+    const newMsgUser: Message = { id: genId(), role: "user", text: userMsgText };
+
     setMessages((prev) => [...prev, newMsgUser]);
     setInput("");
     setLoading(true);
 
     try {
-      const res = await fetch(`${API}/api/v1/chat`, {
+      const res = await fetch(`${API}/api/v1/chat-gpt-ai`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
         },
-        body: JSON.stringify({ message: userMsgText }),
+        body: JSON.stringify({
+          message: userMsgText,
+        }),
       });
 
-      const data = await res.json();
-      const replyText = data.reply || "Xin lỗi, tôi không hiểu ý bạn.";
-      
-      setMessages((prev) => [...prev, { id: Date.now() + 1, role: "ai", text: replyText }]);
+      if (!res.ok) {
+        throw new Error("Server error");
+      }
 
+      const data = await res.json();
+
+      const replyText =
+        data?.reply ||
+        data?.message ||
+        "Xin lỗi, tôi chưa thể trả lời câu hỏi này.";
+
+      setMessages((prev) => [
+        ...prev,
+        { id: genId(), role: "ai", text: replyText },
+      ]);
     } catch (error) {
       console.error("Chat error:", error);
       setMessages((prev) => [
-        ...prev, 
-        { id: Date.now() + 1, role: "ai", text: "Lỗi kết nối server." }
+        ...prev,
+        {
+          id: genId(),
+          role: "ai",
+          text: "Không thể kết nối tới server.",
+        },
       ]);
     } finally {
       setLoading(false);
     }
   };
+
+
 
   return (
     // Dùng style inline để đảm bảo vị trí Fixed (Nổi) hoạt động 100%
@@ -77,7 +96,7 @@ export default function Chatbox() {
       alignItems: 'flex-end',
       fontFamily: 'var(--body-font, sans-serif)'
     }}>
-      
+
       {/* --- CỬA SỔ CHAT --- */}
       {isOpen && (
         <div style={{
@@ -109,8 +128,8 @@ export default function Chatbox() {
           {/* Body */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '15px', backgroundColor: '#f9f9f9' }}>
             {messages.map((msg) => (
-              <div key={msg.id} style={{ 
-                display: 'flex', 
+              <div key={msg.id} style={{
+                display: 'flex',
                 justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
                 marginBottom: '12px'
               }}>
@@ -131,7 +150,7 @@ export default function Chatbox() {
                 </div>
               </div>
             ))}
-            
+
             {loading && (
               <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '10px' }}>
                 <div style={{ padding: '10px', background: '#e0e0e0', borderRadius: '10px', fontSize: '12px', color: '#666' }}>
@@ -159,7 +178,7 @@ export default function Chatbox() {
                 outline: 'none'
               }}
             />
-            <button 
+            <button
               type="submit"
               disabled={loading || !input.trim()}
               className="bg-main-600"

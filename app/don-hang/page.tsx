@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import FullHeader from "@/components/FullHeader";
 import AccountShell from "@/components/AccountShell";
 import { useAuth } from "@/hooks/useAuth";
-import { getTrangThaiDonHang, getPhuongThucThanhToan, getStatusBadgeProps, statusIcon, statusBadgeClass, formatPrice } from "@/utils/chitietdh";
+import { getTrangThaiDonHang, getPhuongThucThanhToan, getStatusBadgeProps, statusIcon, statusBadgeClass, formatPrice, matchesFilter, OrderStatusKey } from "@/utils/chitietdh";
 import Cookies from "js-cookie";
 
 // --- 1. ĐỊNH NGHĨA TYPE CHUẨN (Khớp với API Laravel) ---
@@ -76,7 +76,7 @@ type DetailedOrder = Order & {
 
 
 // Type cho Filter
-type FilterStatus = "all" | "pending" | "processing" | "shipping" | "delivered" | "completed" | "cancelled";
+type FilterStatus = OrderStatusKey;
 
 // Map mã phương thức thanh toán (ma_phuongthuc) sang label hiển thị
 const formatPaymentMethod = (ph?: DetailedOrder["phuongthuc"]) => {
@@ -100,7 +100,7 @@ export default function OrdersPage() {
   // State Filter & Pagination
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("pending");
   const [page, setPage] = useState(1);
-  const pageSize = 5;
+  const PAGE_SIZE = 10;
 
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
@@ -118,69 +118,124 @@ export default function OrdersPage() {
   const [reorderOrder, setReorderOrder] = useState<Order | null>(null);
   const [reorderSelection, setReorderSelection] = useState<{ id_bienthe: number; soluong: number }[]>([]);
   const [reorderProcessing, setReorderProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState<OrderStatusKey>("pending");
   // --- FETCH DATA ---
+  // useEffect(() => {
+  //   const fetchOrders = async () => {
+  //     try {
+  //       setLoading(true);
+  //       const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
+  //       const token = Cookies.get("access_token");
+  //       console.log("don-hang: fetching orders with token:", token ? token.substring(0, 20) + "..." : null);
+
+  //       const res = await fetch(`${API}/api/v1/don-hang`, {
+  //         method: "GET",
+  //         headers: {
+  //           "Authorization": token ? `Bearer ${token}` : "",
+  //           "Accept": "application/json",
+  //         },
+  //         cache: "no-store",
+  //         credentials: "include",
+  //       });
+  //       console.log("don-hang: API response status:", res.status);
+
+  //       if (res.ok) {
+  //         const json: any = await res.json().catch(() => ({}));
+  //         console.log("don-hang: API response data:", json);
+
+  //         // API trả về: { status: 200, message: "...", data: { current_page: 1, data: [...orders], ... } }
+  //         // Orders nằm ở json.data.data
+  //         const ordersArray = json?.data?.data ?? [];
+  //         console.log("don-hang: orders array:", ordersArray, "length:", ordersArray.length);
+
+  //         // Đây là array trực tiếp của orders, không có groups
+  //         const allOrders: Order[] = Array.isArray(ordersArray) ? ordersArray : [];
+
+  //         // Sort by id descending
+  //         const sortedList = [...allOrders].sort((a, b) => b.id - a.id);
+
+  //         setOrders(sortedList);
+  //         console.log("don-hang: set orders complete, count:", sortedList.length);
+  //       } else {
+  //         console.error("Lỗi API:", res.status);
+  //       }
+  //     } catch (error) {
+  //       console.error("Lỗi tải đơn hàng:", error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+
+
+  //   console.log("don-hang: isLoggedIn =", isLoggedIn);
+  //   if (isLoggedIn) {
+  //     fetchOrders();
+  //   } else {
+  //     // Nếu chưa đăng nhập, kiểm tra xem có token không để fetch trực tiếp
+  //     const token = Cookies.get("access_token");
+  //     if (token) {
+  //       console.log("don-hang: có token nhưng isLoggedIn=false, vẫn fetch orders");
+  //       fetchOrders();
+  //     } else {
+  //       setLoading(false);
+  //     }
+  //   }
+  // }, [isLoggedIn]);
+
+  // --- STATE MỚI: Lưu toàn bộ đơn hàng ---
+  const [allOrders, setAllOrders] = useState<Order[]>([]); 
+
+  // --- 1. FETCH ALL DATA (Tải hết 1 lần để lọc cho đúng) ---
   useEffect(() => {
-    const fetchOrders = async () => {
+    const fetchAllData = async () => {
       try {
         setLoading(true);
-        const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
         const token = Cookies.get("access_token");
-        console.log("don-hang: fetching orders with token:", token ? token.substring(0, 20) + "..." : null);
+        if (!token && !isLoggedIn) { setLoading(false); return; }
 
-        const res = await fetch(`${API}/api/v1/don-hang`, {
-          method: "GET",
-          headers: {
-            "Authorization": token ? `Bearer ${token}` : "",
-            "Accept": "application/json",
-          },
-          cache: "no-store",
-          credentials: "include",
+        // Gọi trang 1 trước để biết tổng số trang
+        const res1 = await fetch(`${API}/api/v1/don-hang?page=1`, {
+          headers: { "Authorization": `Bearer ${token}`, "Accept": "application/json" },
+          cache: "no-store"
         });
-        console.log("don-hang: API response status:", res.status);
+        const json1 = await res1.json();
+        let fetchedData = json1?.data?.data || [];
+        const lastPage = json1?.data?.last_page || 1;
 
-        if (res.ok) {
-          const json: any = await res.json().catch(() => ({}));
-          console.log("don-hang: API response data:", json);
-
-          // API trả về: { status: 200, message: "...", data: { current_page: 1, data: [...orders], ... } }
-          // Orders nằm ở json.data.data
-          const ordersArray = json?.data?.data ?? [];
-          console.log("don-hang: orders array:", ordersArray, "length:", ordersArray.length);
-
-          // Đây là array trực tiếp của orders, không có groups
-          const allOrders: Order[] = Array.isArray(ordersArray) ? ordersArray : [];
-
-          // Sort by id descending
-          const sortedList = [...allOrders].sort((a, b) => b.id - a.id);
-
-          setOrders(sortedList);
-          console.log("don-hang: set orders complete, count:", sortedList.length);
-        } else {
-          console.error("Lỗi API:", res.status);
+        // Nếu có nhiều trang, gọi tiếp các trang sau song song (Rất nhanh)
+        if (lastPage > 1) {
+           const promises = [];
+           for (let i = 2; i <= lastPage; i++) {
+             promises.push(fetch(`${API}/api/v1/don-hang?page=${i}`, {
+                headers: { "Authorization": `Bearer ${token}`, "Accept": "application/json" },
+                cache: "no-store"
+             }).then(r => r.json()));
+           }
+           const results = await Promise.all(promises);
+           results.forEach(r => {
+             if (r?.data?.data) fetchedData = [...fetchedData, ...r.data.data];
+           });
         }
-      } catch (error) {
-        console.error("Lỗi tải đơn hàng:", error);
+
+        // Sắp xếp mới nhất lên đầu
+        fetchedData.sort((a: Order, b: Order) => b.id - a.id);
+        
+        setAllOrders(fetchedData);
+        // Lưu vào cả orders cũ để tương thích (dù logic mới dùng allOrders)
+        setOrders(fetchedData); 
+        console.log(`Đã tải xong ${fetchedData.length} đơn hàng.`);
+
+      } catch (e) {
+        console.error("Lỗi tải đơn:", e);
       } finally {
         setLoading(false);
       }
     };
 
-
-
-    console.log("don-hang: isLoggedIn =", isLoggedIn);
-    if (isLoggedIn) {
-      fetchOrders();
-    } else {
-      // Nếu chưa đăng nhập, kiểm tra xem có token không để fetch trực tiếp
-      const token = Cookies.get("access_token");
-      if (token) {
-        console.log("don-hang: có token nhưng isLoggedIn=false, vẫn fetch orders");
-        fetchOrders();
-      } else {
-        setLoading(false);
-      }
-    }
-  }, [isLoggedIn]);
+    fetchAllData();
+  }, [isLoggedIn, API]);
+  
   const openReorderModal = (order: Order) => {
     const purchasable = (order.chitietdonhang ?? []).filter(it => Number(it.dongia ?? it.price ?? 0) > 0);
     if (purchasable.length === 0) {
@@ -657,50 +712,67 @@ export default function OrdersPage() {
 
   // --- LOGIC FILTER ---
   // Helper map trạng thái từ API sang key filter
-  const getFilterKey = (status?: string, paymentStatus?: string): FilterStatus => {
-    const s = (status || "").toLowerCase();
-    const pay = (paymentStatus || "").toLowerCase();
+  
+  
 
-    if (s.includes("chờ thanh toán")) return "pending";
-    if (s.includes("chờ xác nhận") || s.includes("đang xử lý")) return "processing";
-    if (s.includes("đang đóng gói")) return "shipping";
-    if (s.includes("đang giao hàng") || s.includes("đang giao")) return "delivered";
-    // nếu đã giao + đã thanh toán => thành công (completed)
-    if ((s.includes("đã giao") || s.includes("delivered")) &&
-      (pay.includes("đã thanh toán") || pay.includes("paid") || pay.includes("thành công"))) {
-      return "completed";
-    }
-    if (s.includes("đã giao")) return "delivered";
-    if (s.includes("đã hủy") || s.includes("cancel")) return "cancelled";
-    return "all";
-  };
-
+  // Sử dụng matchesFilter để lọc orders (một order có thể hiển thị ở nhiều tabs nếu thỏa điều kiện)
   const filteredOrders = useMemo(() => {
-    if (filterStatus === "all") return orders;
-    return orders.filter(o => getFilterKey(o.trangthai, o.trangthaithanhtoan) === filterStatus);
-  }, [orders, filterStatus]);
+    // Lọc đơn hàng dựa trên Tab đang chọn
+    // Sử dụng hàm matchesFilter từ utils để kiểm tra chính xác
+    return allOrders.filter(order =>
+      matchesFilter(filterStatus as OrderStatusKey, order.trangthai, order.trangthaithanhtoan)
+    );
+  }, [allOrders, filterStatus]);
 
+  // --- 3. COUNTS (Đếm số lượng cho Tabs) ---
   const countsByFilter = useMemo(() => {
-    const map: Record<FilterStatus, number> = {
-      all: 0,
-      pending: 0,
-      processing: 0,
-      shipping: 0,
-      delivered: 0,
-      completed: 0,
-      cancelled: 0,
-    };
-    map.all = orders.length;
-    for (const o of orders) {
-      const k = getFilterKey(o.trangthai, o.trangthaithanhtoan);
-      map[k] = (map[k] ?? 0) + 1;
-    }
+    const map: Record<string, number> = {};
+    STATUS_OPTIONS.forEach(t => map[t.key] = 0);
+    map['all'] = allOrders.length;
+
+    allOrders.forEach(o => {
+      STATUS_OPTIONS.forEach(tab => {
+        if (tab.key !== 'all' && matchesFilter(tab.key, o.trangthai, o.trangthaithanhtoan)) {
+          map[tab.key]++;
+        }
+      });
+    });
     return map;
-  }, [orders]);
+  }, [allOrders]);
+
+  // --- 4. PAGINATION LOGIC (Cắt nhỏ danh sách để hiển thị) ---
+  // Reset về trang 1 khi đổi Tab
+  useEffect(() => { setPage(1); }, [filterStatus]);
+
+  const totalPages = Math.ceil(filteredOrders.length / PAGE_SIZE);
+  const currentOrders = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // // // // Tính số lượng cho mỗi filter (cho phép một order được tính cho nhiều filter)
+  // // // const countsByFilter = useMemo(() => {
+  // // //   // Khởi tạo bộ đếm cho tất cả các tab
+  // // //   const map: Record<string, number> = {
+  // // //     all: 0, pending: 0, processing: 0, packing: 0, shipping: 0, delivered: 0, completed: 0, cancelled: 0
+  // // //   };
+    
+  // //   // Đếm tổng
+  // //   map.all = orders.length;
+
+  //   // Duyệt qua từng đơn hàng để đếm
+  //   orders.forEach(order => {
+  //     // Một đơn hàng có thể thuộc nhiều Tab (ví dụ: Vừa Đã giao, Vừa Chờ thanh toán)
+  //     // Nên ta loop qua các key để check xem đơn hàng này "match" với tab nào
+  //     (Object.keys(map) as OrderStatusKey[]).forEach((key) => {
+  //       if (key !== 'all' && matchesFilter(key, order.trangthai, order.trangthaithanhtoan)) {
+  //         map[key] = (map[key] || 0) + 1;
+  //       }
+  //     });
+  //   });
+  //   return map;
+  // }, [orders]);
 
   // Pagination
-  const totalPages = Math.ceil(filteredOrders.length / pageSize);
-  const currentOrders = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
+  // const totalPages = Math.ceil(filteredOrders.length / PAGE_SIZE);
+  // const currentOrders = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // --- HELPER RENDER ---
   // if (orders.length > 0 && orders[0].chitietdonhang && orders[0].chitietdonhang.length > 0) {
@@ -912,6 +984,17 @@ export default function OrdersPage() {
                               <>
                                 {hasDiscount && <div className="text-sm text-gray-500"><s>{formatPrice(orig)}</s> <span className="ms-2 text-danger-600 fw-medium">-{discountPct}%</span></div>}
                                 <div className="text-md fw-semibold text-main-600">{formatPrice(price)}</div>
+
+                                {/* Mua lại cho từng sản phẩm (không hiển thị với quà tặng 0₫) */}
+                                <div className="mt-8">
+                                  <button
+                                    type="button"
+                                    onClick={() => quickReorderItem(it)}
+                                    className="px-10 py-6 text-sm border fw-medium rounded-6"
+                                  >
+                                    Mua lại
+                                  </button>
+                                </div>
                               </>
                             )}
                           </div>
@@ -1142,6 +1225,18 @@ export default function OrdersPage() {
                                             <span className="text-main-600 text-md fw-bold">{formatPrice(price)}</span>
                                           </div>
                                         </div>
+                                        {/* Mua lại từng sản phẩm (không hiển thị nếu giá = 0) */}
+                                        {price > 0 && (
+                                          <div className="mt-8">
+                                            <button
+                                              type="button"
+                                              onClick={() => quickReorderItem(it)}
+                                              className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-align"
+                                            >
+                                              <i className="ph ph-shopping-cart" /> Mua lại
+                                            </button>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -1266,19 +1361,16 @@ export default function OrdersPage() {
                                 <i className="ph-bold ph-credit-card" /> Thanh toán lại
                               </button>
                             )} */}
-                              {(
-                                ((order.trangthaithanhtoan ?? "").toString().toLowerCase().includes("chờ thanh toán") || getFilterKey(order.trangthai) === "pending")
-                                && isQRMethod(order)
-                              ) && (
-                                  <button
-                                    type="button"
-                                    onClick={() => retryPayment(order.id, "3")}
-                                    className="gap-8 px-8 py-4 text-sm text-white border fw-medium rounded-4 transition-1 flex-align"
-                                    style={{ background: "#008080" }}
-                                  >
-                                    <i className="ph-bold ph-credit-card" /> Thanh toán lại
-                                  </button>
-                                )}
+                              {matchesFilter("pending", order.trangthai, order.trangthaithanhtoan) && isQRMethod(order) && (
+                                <button
+                                  type="button"
+                                  onClick={() => retryPayment(order.id, "3")}
+                                  className="gap-8 px-8 py-4 text-sm text-white border fw-medium rounded-4 transition-1 flex-align"
+                                  style={{ background: "#008080" }}
+                                >
+                                  <i className="ph-bold ph-credit-card" /> Thanh toán lại
+                                </button>
+                              )}
 
                               <button
                                 type="button"
@@ -1363,8 +1455,9 @@ export default function OrdersPage() {
 const STATUS_OPTIONS: { key: FilterStatus; label: string; icon?: string }[] = [
   { key: "pending", label: "Chờ thanh toán", icon: "ph-wallet" },
   { key: "processing", label: "Chờ xác nhận", icon: "ph-clock-countdown" },
-  { key: "shipping", label: "Đang đóng gói", icon: "ph-package" },
-  { key: "delivered", label: "Đã giao", icon: "ph-truck" },
-  { key: "completed", label: "Thành công", icon: "ph-check-fat" },
+  { key: "packing", label: "Đang đóng gói", icon: "ph-package" }, // <--- Mới thêm
+  { key: "shipping", label: "Đang giao hàng", icon: "ph-truck" },
+  { key: "delivered", label: "Đã giao", icon: "ph-map-pin" },
+  { key: "completed", label: "Thành công", icon: "ph-check-circle" },
   { key: "cancelled", label: "Đã hủy", icon: "ph-prohibit" },
 ];
