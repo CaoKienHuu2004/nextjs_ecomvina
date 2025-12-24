@@ -8,11 +8,9 @@ const PHONE_REGEX = /^0\d{9}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // --- 1. Helper chuẩn hóa địa chỉ ---
-// Giúp chuyển đổi mọi định dạng địa chỉ từ API về một chuẩn duy nhất cho Frontend
 const normalizeAddr = (a: any) => ({
   id: a?.id ?? a?.ID ?? undefined,
   id_nguoidung: a?.id_nguoidung ?? a?.user_id ?? undefined,
-  // Ưu tiên ten_nguoinhan, fallback sang hoten, rồi name
   ten_nguoinhan: typeof a?.ten_nguoinhan === "string" ? a.ten_nguoinhan : (typeof a?.hoten === "string" ? a.hoten : (a?.name ? String(a.name) : "")),
   hoten: typeof a?.hoten === "string" ? a.hoten : undefined,
   sodienthoai: typeof a?.sodienthoai === "string" ? a.sodienthoai : (typeof a?.phone === "string" ? a.phone : undefined),
@@ -39,15 +37,19 @@ export type AuthUser = {
   gioitinh?: string;
   ngaysinh?: string;
   avatar?: string;
-  // Sử dụng cấu trúc đã chuẩn hóa
   danh_sach_diachi?: ReturnType<typeof normalizeAddr>[] | null;
 };
 
+// --- CẬP NHẬT: Thêm lại loginWithGoogle vào Type ---
 export type AuthContextType = {
   user: AuthUser | null;
   token: string | null;
   isLoggedIn: boolean;
   login: (payload: { phonemail: string; password: string }) => Promise<void>;
+  
+  // [FIX] Thêm dòng này (đang bị thiếu ở bản mới nhất)
+  loginWithGoogle: (accessToken: string) => Promise<void>; 
+  
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
   updateProfile: (payload: Partial<AuthUser> | FormData) => Promise<AuthUser | null>;
@@ -99,7 +101,6 @@ export function AuthProvider({
     return;
   }, [API, token]);
 
-  // Fix eslint: Tự đồng lấy token từ cookie khi mount
   useEffect(() => {
     const currentToken = Cookies.get(TOKEN_KEY);
     if (currentToken) {
@@ -152,17 +153,13 @@ export function AuthProvider({
     }
   }, [API, token]);
 
-  // Tự động fetch user info khi có token nhưng chưa có user
   useEffect(() => {
     const t = Cookies.get(TOKEN_KEY) || token;
-    console.log("useAuth: checking token for auto-fetch", { hasToken: !!t, hasUser: !!user, tokenValue: t ? t.substring(0, 20) + "..." : null });
     if (t && !user) {
-      console.log("useAuth: calling fetchMe with token");
       fetchMe(t);
     }
   }, [token, user, fetchMe]);
 
-  // Public: refreshProfile - lấy dữ liệu user mới nhất từ server (dùng cookie/token)
   const refreshProfile = useCallback(async (): Promise<AuthUser | null> => {
     const now = Date.now();
     if (now - lastRefreshRef.current < REFRESH_PROFILE_MIN_INTERVAL_MS) {
@@ -193,7 +190,6 @@ export function AuthProvider({
       const candidate = (data && (data.user ?? data.data ?? data)) || null;
       if (!candidate) return null;
 
-      // Áp dụng chuẩn hóa
       const mapped: AuthUser = {
         id: candidate.id ?? candidate.user_id ?? candidate.ID ?? "",
         username: candidate.username ?? candidate.email ?? undefined,
@@ -215,13 +211,12 @@ export function AuthProvider({
       console.error("refreshProfile error:", e);
       return null;
     }
-  }, [API, token, user]); // added user dep to safe return cached
+  }, [API, token, user]);
 
   // --- Login ---
   const login = useCallback(async ({ phonemail, password }: { phonemail: string; password: string }) => {
     if (!phonemail || !password) throw new Error("Vui lòng nhập thông tin đăng nhập.");
 
-    // Validate sơ bộ (giữ nguyên logic cũ của bạn)
     if (!PHONE_REGEX.test(phonemail) && !EMAIL_REGEX.test(phonemail)) {
       throw new Error("Vui lòng nhập Email hoặc Số điện thoại hợp lệ.");
     }
@@ -245,7 +240,50 @@ export function AuthProvider({
     }
 
     if (userPayload) {
-      // Áp dụng chuẩn hóa ngay khi login thành công
+      const mapped: AuthUser = {
+        id: userPayload.id ?? userPayload.user_id ?? "",
+        username: userPayload.username ?? userPayload.email ?? undefined,
+        hoten: userPayload.hoten ?? userPayload.name ?? undefined,
+        sodienthoai: userPayload.sodienthoai ?? userPayload.phone ?? undefined,
+        email: userPayload.email ?? undefined,
+        gioitinh: userPayload.gioitinh ?? undefined,
+        ngaysinh: userPayload.ngaysinh ?? undefined,
+        avatar: userPayload.avatar ?? userPayload.photo ?? undefined,
+        danh_sach_diachi: Array.isArray(userPayload.danh_sach_diachi ?? userPayload.diachi ?? userPayload.address)
+          ? (userPayload.danh_sach_diachi ?? userPayload.diachi ?? userPayload.address).map(normalizeAddr)
+          : null,
+      };
+      setUserState(mapped);
+      Cookies.set("user_info", JSON.stringify(mapped), { expires: 7, path: "/" });
+    } else if (accessToken) {
+      await fetchMe(String(accessToken));
+    }
+  }, [API, fetchMe]);
+
+  // --- [FIX] Login With Google (Đã thêm lại hàm này) ---
+  const loginWithGoogle = useCallback(async (accessTokenFromGoogle: string) => {
+    if (!accessTokenFromGoogle) throw new Error("Không tìm thấy token Google.");
+
+    // Gọi API Backend của bạn để verify token Google
+    const res = await fetch(`${API}/api/v1/auth/google`, { 
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ token: accessTokenFromGoogle }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.message || "Đăng nhập Google thất bại tại Server.");
+
+    const accessToken = data?.access_token ?? data?.token ?? data?.accessToken ?? null;
+    const userPayload = data?.user ?? data?.data ?? null;
+
+    if (accessToken) {
+      Cookies.set(TOKEN_KEY, String(accessToken), { expires: 1, path: "/" });
+      setToken(String(accessToken));
+    }
+
+    if (userPayload) {
       const mapped: AuthUser = {
         id: userPayload.id ?? userPayload.user_id ?? "",
         username: userPayload.username ?? userPayload.email ?? undefined,
@@ -311,7 +349,6 @@ export function AuthProvider({
 
       const returned = j.user ?? j.data ?? j ?? payload;
 
-      // Áp dụng chuẩn hóa khi cập nhật
       const mappedUser: AuthUser = {
         id: returned.id ?? user?.id ?? "",
         username: returned.username ?? returned.email ?? user?.username,
@@ -348,13 +385,14 @@ export function AuthProvider({
     token,
     isLoggedIn: !!user,
     login,
+    loginWithGoogle, // [FIX] Export hàm này ra
     register,
     updateProfile,
     logout,
     refreshProfile,
     setUser: setUserState,
     changePassword,
-  }), [user, token, login, register, updateProfile, logout, refreshProfile, changePassword]);
+  }), [user, token, login, loginWithGoogle, register, updateProfile, logout, refreshProfile, changePassword]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
