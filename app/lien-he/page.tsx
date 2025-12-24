@@ -3,12 +3,9 @@ import React, { useState } from "react";
 import Link from "next/link";
 import FullHeader from "@/components/FullHeader";
 import BenefitsStrip from "@/components/BenefitsStrip";
-import { APP_CONFIG } from "../../src/config/appConfig";
 
-
-// config
-const endpoint_routes_api_fectch_datapost_gui_lien_he_ =
-  APP_CONFIG.API_BASE_URL + APP_CONFIG.API_ENDPOINTS.API_GUI_LIEN_HE;
+// config - sử dụng endpoint đúng
+const endpoint_routes_api_fectch_datapost_gui_lien_he_ = "https://sieuthivina.com/api/v1/lien-he";
 
 const sodienthoai_call_lienhe_cua_web = "8860911975996";
 const sodienthoai_lienhe_cua_web = "+886 0911 975 996";
@@ -26,7 +23,6 @@ export default function Page() {
     hoten: "",
     email: "",
     sodienthoai: "",
-    tieude: "",
     noidung: "",
     website: "", // honeypot
   });
@@ -43,51 +39,88 @@ export default function Page() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Kiểm tra honeypot - chặn spam bot
+    if (formData.website) {
+      console.log("Spam bot detected");
+      return;
+    }
+
     setLoading(true);
     setResponseMessage(null);
 
     try {
+      console.log("🚀 Sending request to:", endpoint_routes_api_fectch_datapost_gui_lien_he_);
+      console.log("📦 Request body:", {
+        hoten: formData.hoten,
+        email: formData.email,
+        sodienthoai: formData.sodienthoai,
+        noidung: formData.noidung,
+      });
+
       const res = await fetch(endpoint_routes_api_fectch_datapost_gui_lien_he_, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
         },
         body: JSON.stringify({
           hoten: formData.hoten,
           email: formData.email,
           sodienthoai: formData.sodienthoai,
-          tieude: formData.tieude,
           noidung: formData.noidung,
-          website: formData.website,
         }),
       });
 
-      const data = await res.json();
+      console.log("📡 Response status:", res.status);
+      console.log("📡 Response ok:", res.ok);
 
-      if (res.ok) {
+      // Kiểm tra content-type trước khi parse JSON
+      const contentType = res.headers.get("content-type");
+      console.log("📄 Content-Type:", contentType);
+
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("❌ Non-JSON response:", text.substring(0, 200));
+        throw new Error("Server trả về định dạng không đúng (không phải JSON)");
+      }
+
+      const data = await res.json();
+      console.log("✅ Response data:", data);
+
+      if (res.ok && data.status === 200) {
         setResponseMessage({
           type: "success",
-          text: data.message || "Gửi thành công",
+          text: data.message || "Gửi liên hệ thành công! Chúng tôi sẽ phản hồi sớm nhất.",
         });
+        // Reset form
         setFormData({
           hoten: "",
           email: "",
           sodienthoai: "",
-          tieude: "",
           noidung: "",
           website: "",
         });
+
+        // Tự động ẩn thông báo sau 5 giây
+        setTimeout(() => {
+          setResponseMessage(null);
+        }, 5000);
       } else {
         setResponseMessage({
           type: "error",
-          text: data.message || "Có lỗi xảy ra",
+          text: data.message || `Lỗi: ${res.status} - ${res.statusText}`,
         });
       }
     } catch (error) {
-      setResponseMessage({ type: "error", text: "Lỗi kết nối server" });
+      console.error("❌ Contact form error:", error);
+      setResponseMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Lỗi kết nối server. Vui lòng thử lại sau.",
+      });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -105,7 +138,7 @@ export default function Page() {
                   href="/"
                   className="text-gray-900 flex-align gap-8 hover-text-main-600"
                 >
-                  <i className="ph ph-house"></i> Home
+                  <i className="ph ph-house"></i> Trang chủ
                 </Link>
               </li>
               <li className="flex-align">
@@ -117,12 +150,6 @@ export default function Page() {
         </div>
       </div>
 
-      {/* value nhập form */}
-      {/* le van a */}
-      {/* testformlienhe@example.com */}
-      {/* 0991654321 */}
-      {/* Yêu cầu hướng đẫn mua hàng  */}
-      {/* Tôi cần webiste hướng đẫn mua hàng. vì tôi ko có rành công nghê, mong anh chi giúp đở  */}
       {/* Contact Section */}
       <section className="contact py-80">
         <div className="container container-lg">
@@ -130,16 +157,25 @@ export default function Page() {
             <div className="col-lg-8">
               <div className="contact-box border border-gray-100 rounded-16 px-24 py-40">
                 <form onSubmit={handleSubmit}>
-                  <h6 className="mb-32">Tùy chỉnh thực hiện yêu cầu.</h6>
+                  <h6 className="mb-32">Gửi yêu cầu hỗ trợ</h6>
 
                   {responseMessage && (
                     <div
                       className={`mb-4 p-3 rounded ${responseMessage.type === "success"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
+                        ? "bg-success-50 text-success-600 border border-success-600"
+                        : "bg-danger-50 text-danger-600 border border-danger-600"
                         }`}
+                      role="alert"
                     >
-                      {responseMessage.text}
+                      <div className="flex-align gap-8">
+                        <i
+                          className={`ph-bold ${responseMessage.type === "success"
+                            ? "ph-check-circle"
+                            : "ph-warning-circle"
+                            } text-xl`}
+                        ></i>
+                        <span>{responseMessage.text}</span>
+                      </div>
                     </div>
                   )}
 
@@ -156,14 +192,37 @@ export default function Page() {
                         className="common-input px-16"
                         id="name"
                         name="hoten"
-                        placeholder="Họ tên"
+                        placeholder="Nhập họ tên của bạn"
                         value={formData.hoten}
                         onChange={handleChange}
                         required
+                        minLength={2}
+                        maxLength={100}
                       />
                     </div>
 
                     <div className="col-sm-6 col-xs-6">
+                      <label
+                        htmlFor="phone"
+                        className="flex-align gap-4 text-sm font-heading-two text-gray-900 fw-semibold mb-4"
+                      >
+                        Số điện thoại <span className="text-danger text-xl line-height-1">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        className="common-input px-16"
+                        id="phone"
+                        name="sodienthoai"
+                        placeholder="0xxxxxxxxx"
+                        value={formData.sodienthoai}
+                        onChange={handleChange}
+                        required
+                        pattern="[0-9]{10,11}"
+                        title="Vui lòng nhập số điện thoại hợp lệ (10-11 số)"
+                      />
+                    </div>
+
+                    <div className="col-sm-12">
                       <label
                         htmlFor="email"
                         className="flex-align gap-4 text-sm font-heading-two text-gray-900 fw-semibold mb-4"
@@ -175,47 +234,9 @@ export default function Page() {
                         className="common-input px-16"
                         id="email"
                         name="email"
-                        placeholder="Email"
+                        placeholder="example@email.com"
                         value={formData.email}
                         onChange={handleChange}
-                      />
-                    </div>
-
-                    <div className="col-sm-6 col-xs-6">
-                      <label
-                        htmlFor="phone"
-                        className="flex-align gap-4 text-sm font-heading-two text-gray-900 fw-semibold mb-4"
-                      >
-                        Số điện thoại<span className="text-danger text-xl line-height-1">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        className="common-input px-16"
-                        id="phone"
-                        name="sodienthoai"
-                        placeholder="Số điện thoại*"
-                        value={formData.sodienthoai}
-                        onChange={handleChange}
-                        required
-                      />
-                    </div>
-
-                    <div className="col-sm-6 col-xs-6">
-                      <label
-                        htmlFor="subject"
-                        className="flex-align gap-4 text-sm font-heading-two text-gray-900 fw-semibold mb-4"
-                      >
-                        Tiều đề <span className="text-danger text-xl line-height-1">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="common-input px-16"
-                        id="subject"
-                        name="tieude"
-                        placeholder="Tiêu đề"
-                        value={formData.tieude}
-                        onChange={handleChange}
-                        required
                       />
                     </div>
 
@@ -230,23 +251,30 @@ export default function Page() {
                         className="common-input px-16"
                         id="message"
                         name="noidung"
-                        placeholder="Nội dung"
+                        placeholder="Nhập nội dung chi tiết bạn muốn liên hệ..."
                         value={formData.noidung}
                         onChange={handleChange}
                         required
+                        minLength={10}
+                        rows={6}
                       ></textarea>
                     </div>
 
-                    {/* Honeypot field */}
+                    {/* Honeypot field - ẩn khỏi người dùng thật */}
                     <input
                       type="text"
                       name="website"
-                      className="hidden"
-                      style={{ display: "none" }}
-                      aria-hidden="true"
+                      tabIndex={-1}
                       autoComplete="off"
                       value={formData.website}
                       onChange={handleChange}
+                      style={{
+                        position: "absolute",
+                        left: "-9999px",
+                        width: "1px",
+                        height: "1px",
+                      }}
+                      aria-hidden="true"
                     />
 
                     <div className="col-sm-12 mt-32">
@@ -255,7 +283,21 @@ export default function Page() {
                         className="btn btn-main py-18 px-32 rounded-8"
                         disabled={loading}
                       >
-                        {loading ? "Đang gửi..." : "Gửi Liên Hệ"}
+                        {loading ? (
+                          <>
+                            <span
+                              className="spinner-border spinner-border-sm me-2"
+                              role="status"
+                              aria-hidden="true"
+                            ></span>
+                            Đang gửi...
+                          </>
+                        ) : (
+                          <>
+                            <i className="ph ph-paper-plane-tilt me-2"></i>
+                            Gửi Liên Hệ
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -266,7 +308,7 @@ export default function Page() {
             {/* Contact Info bên phải */}
             <div className="col-lg-4">
               <div className="contact-box border border-gray-100 rounded-16 px-24 py-40">
-                <h6 className="mb-48">Liện Hệ</h6>
+                <h6 className="mb-48">Thông tin liên hệ</h6>
                 <div className="flex-align gap-16 mb-16">
                   <span className="w-40 h-40 flex-center rounded-circle border border-gray-100 text-main-two-600 text-2xl flex-shrink-0">
                     <i className="ph-fill ph-phone-call"></i>
@@ -309,7 +351,9 @@ export default function Page() {
                   </span>
                 </a>
                 <a
-                  href="#"
+                  href="https://www.google.com/maps/search/?api=1&query=801%2F2A+Ph%E1%BA%A1m+Th%E1%BA%BF+Hi%E1%BB%83n%2C+Ph%C6%B0%E1%BB%9Dng+4%2C+Qu%E1%BA%ADn+8%2C+TP.HCM"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="bg-neutral-600 hover-bg-main-600 rounded-8 p-10 px-16 flex-between flex-wrap gap-8 flex-grow-1"
                 >
                   <span className="text-white fw-medium">Nhận chỉ đường</span>

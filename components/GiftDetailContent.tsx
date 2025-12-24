@@ -693,10 +693,20 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
                             <div className="new-arrival__slider arrow-style-two mt-20">
                                 <div className="d-flex flex-nowrap overflow-auto" style={{ gap: '10px' }}>
                                     {relatedProducts.map((product) => {
-                                        const productImage = product.sanpham?.hinhanhsanpham?.[0]?.hinhanh;
-                                        const imageUrl = productImage?.startsWith('http')
-                                            ? productImage
-                                            : `${API_URL}/assets/client/images/products/${productImage}`;
+                                        // SỬA: Lấy slug sản phẩm để tạo tên file ảnh thumb
+                                        const productSlug = product.sanpham?.slug || '';
+                                        const thumbImage = productSlug
+                                            ? `${API_URL}/assets/client/images/thumbs/${productSlug}-1.webp`
+                                            : product.sanpham?.hinhanhsanpham?.[0]?.hinhanh;
+
+                                        const imageUrl = thumbImage?.startsWith('http')
+                                            ? thumbImage
+                                            : thumbImage?.startsWith('/')
+                                                ? thumbImage
+                                                : thumbImage
+                                                    ? `${API_URL}/assets/client/images/thumbs/${thumbImage}`
+                                                    : '/assets/images/thumbs/placeholder.png';
+
                                         const discountPercent = product.sanpham?.giamgia || 0;
                                         const isInStock = product.trangthai === 'Còn hàng' && product.soluong > 0;
 
@@ -709,17 +719,26 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
                                                     <Link
                                                         href={productDetailUrl({ slug: product.sanpham?.slug || "", id: product.sanpham?.id || product.id })}
                                                         className="flex-center rounded-8 bg-gray-50 position-relative w-100"
-                                                        style={{ display: "block" }} // hoặc thêm class d-block nếu có
+                                                        style={{ display: "block" }}
                                                     >
                                                         <img
                                                             src={imageUrl}
-                                                            alt={product.sanpham?.ten || ""}
+                                                            alt={product.sanpham?.ten || "Sản phẩm"}
                                                             className="w-100 rounded-top-2"
-                                                            style={{ height: "180px", objectFit: "cover" }}
+                                                            style={{ height: "180px", objectFit: "cover", width: "100%" }}
                                                             onError={(e) => {
                                                                 const img = e.currentTarget;
                                                                 img.onerror = null;
-                                                                img.src = "/assets/images/thumbs/placeholder.png";
+                                                                // Fallback 1: Thử ảnh từ hinhanhsanpham
+                                                                const fallbackImage = product.sanpham?.hinhanhsanpham?.[0]?.hinhanh;
+                                                                if (fallbackImage) {
+                                                                    img.src = fallbackImage.startsWith('http')
+                                                                        ? fallbackImage
+                                                                        : `${API_URL}/assets/client/images/products/${fallbackImage}`;
+                                                                } else {
+                                                                    // Fallback 2: Ảnh quà tặng
+                                                                    img.src = gift?.hinhanh || '/assets/images/thumbs/placeholder.png';
+                                                                }
                                                             }}
                                                         />
                                                     </Link>
@@ -787,6 +806,8 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
                                     )}
                                 </div>
                             </div>
+
+
                         </div>
                     </div>
                 </section>

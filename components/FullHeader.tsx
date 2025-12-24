@@ -651,11 +651,7 @@ export default function FullHeader({
                         </Link>
                       </li>
                     )}
-                    <li className="flex-align">
-                      <Link href="/gioi-thieu" className="text-sm text-white hover-text-white pe-1">
-                        <i className="text-white ph-bold ph-info"></i> Giới thiệu về Siêu Thị Vina
-                      </Link>
-                    </li>
+
                     <li className="flex-align">
                       <Link href="/lien-he" className="text-sm text-white hover-text-white">
                         <i className="ph-bold ph-chat-dots"></i> Liên hệ hỗ trợ
