@@ -122,7 +122,7 @@ export default function FeatureSection() {
       </div>
       <style jsx>{`
         .feature {
-          background-color: #187575 !important; /* Mã màu xanh lá chuẩn */
+          background-color: #008080 !important; /* Mã màu xanh lá chuẩn */
           /* Hoặc bạn có thể dùng màu xanh đậm hơn: #198754 */
         }
         .feature-item-wrapper {

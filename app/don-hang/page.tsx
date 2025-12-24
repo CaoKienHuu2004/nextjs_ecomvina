@@ -657,7 +657,7 @@ export default function OrdersPage() {
               <h6 className="gap-12 mb-0 text-gray-600 text-md fw-medium flex-align">
                 Mã đơn: #{detailOrder.madon}
                 <span className={statusBadgeClass(detailOrder.trangthai)}>
-                  {detailOrder.trangthai ?? "Chờ xác nhận"}
+                  {detailOrder.trangthai ?? "Đang xử lý"}
                 </span>
               </h6>
 

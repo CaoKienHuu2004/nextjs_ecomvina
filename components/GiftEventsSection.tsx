@@ -199,28 +199,6 @@ export default function GiftEventsSection() {
                 >
                   Xem tất cả
                 </Link>
-                <div className="flex-align gap-8">
-                  <button
-                    type="button"
-                    id="gift-event-prev"
-                    title="Quà trước"
-                    aria-label="Xem quà trước"
-                    onClick={handlePrev}
-                    className="slick-prev flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1 gift-nav-btn"
-                  >
-                    <i className="ph ph-caret-left"></i>
-                  </button>
-                  <button
-                    type="button"
-                    id="gift-event-next"
-                    title="Quà tiếp"
-                    aria-label="Xem quà tiếp theo"
-                    onClick={handleNext}
-                    className="slick-next flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1 gift-nav-btn"
-                  >
-                    <i className="ph ph-caret-right"></i>
-                  </button>
-                </div>
               </div>
             </div>
           </div>

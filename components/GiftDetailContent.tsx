@@ -6,6 +6,7 @@ import Link from 'next/link';
 import FullHeader from '@/components/FullHeader';
 import { useCart } from '@/hooks/useCart';
 import { productDetailUrl } from '@/utils/paths';
+import Cookies from 'js-cookie';
 
 const API_URL = 'https://sieuthivina.com';
 
@@ -148,13 +149,19 @@ interface QuaTangResponse {
 }
 
 // Fetch chi tiết quà tặng bằng slug - API: /api/v1/qua-tang/{slug}
-async function fetchQuaTangDetail(slug: string): Promise<QuaTangResponse | null> {
+async function fetchQuaTangDetail(slug: string, token?: string): Promise<QuaTangResponse | null> {
     try {
+        const headers: HeadersInit = {
+            Accept: 'application/json',
+        };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch(`${API_URL}/api/v1/qua-tang/${slug}`, {
             method: 'GET',
-            headers: {
-                Accept: 'application/json',
-            },
+            headers,
             cache: 'no-store',
         });
 
@@ -194,27 +201,67 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
     const hasEnoughProducts = currentCount >= targetCount;
     const hasEnoughAmount = targetValue === 0 || currentValue >= targetValue;
 
+    // Refresh progress từ API
+    const refreshProgress = useCallback(async () => {
+        if (!giftSlug) return;
+
+        try {
+            // Lấy token từ cookie (đúng với hệ thống auth)
+            const token = Cookies.get('access_token');
+            console.log('🔄 Refreshing progress with token:', token ? 'yes' : 'no');
+
+            const response = await fetchQuaTangDetail(giftSlug, token || undefined);
+            if (response?.status === 200 && response?.progress) {
+                console.log('🔄 Progress updated:', response.progress);
+                setProgress(response.progress);
+            }
+        } catch (error) {
+            console.error('Error refreshing progress:', error);
+        }
+    }, [giftSlug]);
+
     // Handle add to cart
+    // Handle add to cart - THÊM refreshProgress sau khi addToCart thành công
     const handleAddToCart = async (product: SanPhamThamGia) => {
         const id_chuongtrinh = gift?.id_chuongtrinh;
-        const productImage = product.sanpham?.hinhanhsanpham?.[0]?.hinhanh;
-        const imageUrl = productImage?.startsWith('http')
-            ? productImage
-            : `${API_URL}/assets/client/images/products/${productImage}`;
+        const productSlug = product.sanpham?.slug || '';
+        const thumbImage = productSlug
+            ? `${API_URL}/assets/client/images/thumbs/${productSlug}-1.webp`
+            : product.sanpham?.hinhanhsanpham?.[0]?.hinhanh;
+
+        const imageUrl = thumbImage?.startsWith('http')
+            ? thumbImage
+            : thumbImage?.startsWith('/')
+                ? thumbImage
+                : thumbImage
+                    ? `${API_URL}/assets/client/images/thumbs/${thumbImage}`
+                    : `${API_URL}/assets/client/images/products/${product.sanpham?.hinhanhsanpham?.[0]?.hinhanh}`;
 
         console.log('🛒 Adding to cart with id_chuongtrinh:', id_chuongtrinh);
 
-        await addToCart({
-            id_bienthe: product.id,
-            id: product.sanpham.id,
-            ten: product.sanpham.ten,
-            hinhanh: imageUrl,
-            gia: product.giadagiam || product.giagoc,
-            id_chuongtrinh: id_chuongtrinh ?? undefined,
-        }, 1, id_chuongtrinh ?? undefined);
+        try {
+            await addToCart({
+                id_bienthe: product.id,
+                id: product.sanpham.id,
+                ten: product.sanpham.ten,
+                hinhanh: imageUrl,
+                gia: product.giadagiam || product.giagoc,
+                id_chuongtrinh: id_chuongtrinh ?? undefined,
+            }, 1, id_chuongtrinh ?? undefined);
 
-        setShowCartAlert(true);
-        setTimeout(() => setShowCartAlert(false), 3000);
+            console.log('✅ Product added to cart, waiting for backend to process...');
+
+            // ✅ Delay 800ms để đảm bảo backend đã xử lý xong việc thêm vào giỏ hàng
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            // ✅ Refresh progress sau khi thêm thành công
+            await refreshProgress();
+
+            setShowCartAlert(true);
+            setTimeout(() => setShowCartAlert(false), 5000);
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+        }
     };
 
     // Fetch gift data từ API /api/v1/qua-tang/{slug}
@@ -227,7 +274,9 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
 
             try {
                 setLoading(true);
-                const response = await fetchQuaTangDetail(giftSlug);
+                // Lấy token từ cookie (đúng với hệ thống auth)
+                const token = Cookies.get('access_token');
+                const response = await fetchQuaTangDetail(giftSlug, token || undefined);
                 console.log('🎁 API Response:', response);
 
                 if (response?.status === 200 && response?.quatang) {
@@ -407,24 +456,28 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
                                                 <li className="text-gray-400 mb-14 flex-align gap-14">
                                                     <span
                                                         className={`w-30 h-30 text-md flex-center rounded-circle`}
-                                                        style={{ backgroundColor: hasEnoughProducts ? '#e6f7f7' : '#fff3e6', color: hasEnoughProducts ? '#009999' : '#f39016' }}
+                                                        style={{ backgroundColor: hasEnoughProducts ? '#e6f7f7' : '#fff3e6', color: hasEnoughProducts ? '#008080' : '#FF6B00' }}
                                                     >
                                                         <i className={`ph-bold ${hasEnoughProducts ? 'ph-check' : 'ph-x'}`}></i>
                                                     </span>
                                                     <span className="text-heading fw-medium">
-                                                        Mua tối thiểu <span style={{ color: hasEnoughProducts ? '#009999' : '#f39016' }}>{targetCount} sản phẩm</span> từ {gift.sanphamduoctang?.[0]?.sanpham?.thuonghieu?.ten || 'nhà cung cấp'}
+                                                        Mua tối thiểu{' '}
+                                                        <span style={{ color: hasEnoughProducts ? '#008080' : '#FF6B00' }}>
+                                                            {currentCount}/{targetCount} sản phẩm
+                                                        </span>{' '}
+                                                        từ {gift.sanphamduoctang?.[0]?.sanpham?.thuonghieu?.ten || 'nhà cung cấp'}
                                                     </span>
                                                 </li>
                                                 {(gift.dieukiengiatri ?? 0) > 0 && (
                                                     <li className="text-gray-400 mb-14 flex-align gap-14">
                                                         <span
                                                             className={`w-30 h-30 text-md flex-center rounded-circle`}
-                                                            style={{ backgroundColor: hasEnoughAmount ? '#e6f7f7' : '#fff3e6', color: hasEnoughAmount ? '#009999' : '#f39016' }}
+                                                            style={{ backgroundColor: hasEnoughAmount ? '#e6f7f7' : '#fff3e6', color: hasEnoughAmount ? '#008080' : '#FF6B00' }}
                                                         >
                                                             <i className={`ph-bold ${hasEnoughAmount ? 'ph-check' : 'ph-x'}`}></i>
                                                         </span>
                                                         <span className="text-heading fw-medium">
-                                                            Giá trị đơn hàng tối thiểu <span style={{ color: hasEnoughAmount ? '#009999' : '#f39016' }}>{formatPrice(gift.dieukiengiatri)} đ</span>
+                                                            Giá trị đơn hàng tối thiểu <span style={{ color: hasEnoughAmount ? '#008080' : '#FF6B00' }}>{formatPrice(gift.dieukiengiatri)} đ</span>
                                                         </span>
                                                     </li>
                                                 )}
@@ -434,9 +487,9 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
 
                                             {/* Alert khi đủ điều kiện và đã tự động thêm quà */}
                                             {showCartAlert && (
-                                                <div className="alert alert-success alert-dismissible fade show mb-20" role="alert" style={{ backgroundColor: '#e6f7f7', borderColor: '#009999', color: '#006666' }}>
+                                                <div className="alert alert-success alert-dismissible fade show mb-20" role="alert" style={{ backgroundColor: '#e6f7f7', borderColor: '#008080', color: '#006666' }}>
                                                     <div className="flex-align gap-8">
-                                                        <i className="ph-fill ph-gift text-xl" style={{ color: '#009999' }}></i>
+                                                        <i className="ph-fill ph-gift text-xl" style={{ color: '#008080' }}></i>
                                                         <strong>🎉 Chúc mừng!</strong> Quà tặng đã được tự động thêm vào giỏ hàng của bạn.
                                                     </div>
                                                     <button
@@ -528,25 +581,30 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
                                                     >
                                                         <div
                                                             className="progress-bar rounded-pill text-center"
-                                                            style={{ backgroundColor: progressPercent >= 100 ? '#009999' : '#f39016', width: `${Math.max(progressPercent, 10)}%` }}
+                                                            style={{
+                                                                backgroundColor: progressPercent >= 100 ? '#008080' : '#FF6B00',
+                                                                width: `${Math.max(progressPercent, 10)}%`,
+                                                                transition: 'width 0.5s ease, background-color 0.3s ease' // ✅ THÊM ANIMATION
+                                                            }}
                                                         >
                                                             {progressPercent}%
                                                         </div>
                                                     </div>
+                                                    <span className="text-gray-900 text-sm fw-medium">
+                                                        {progressPercent >= 100
+                                                            ? '🎉 Đã đủ điều kiện nhận quà!'
+                                                            : targetValue > 0
+                                                                ? `Còn ${formatPrice(Math.max(0, targetValue - currentValue))} đ nữa để nhận quà`
+                                                                : `Cần thêm ${Math.max(0, targetCount - currentCount)} sản phẩm nữa để nhận quà`
+                                                        }
+                                                    </span>
                                                 </div>
-                                                <span className="text-gray-900 text-sm fw-medium">
-                                                    {progressPercent >= 100
-                                                        ? '🎉 Đã đủ điều kiện nhận quà!'
-                                                        : targetValue > 0
-                                                            ? `Còn ${formatPrice(Math.max(0, targetValue - currentValue))} đ nữa để nhận quà`
-                                                            : `Cần thêm ${Math.max(0, targetCount - currentCount)} sản phẩm nữa để nhận quà`
-                                                    }
-                                                </span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            {/* ✅ ĐÓNG col-xl-9 Ở ĐÂY */}
 
                             {/* Sidebar */}
                             <div className="col-xl-3">
@@ -669,22 +727,7 @@ export default function GiftDetailContent({ slug }: { slug: string }) {
                                 </h6>
                                 <div className="flex-align gap-16">
                                     <div className="flex-align gap-8">
-                                        <button
-                                            type="button"
-                                            id="new-arrival-prev"
-                                            className="slick-prev flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1"
-                                            aria-label="Sản phẩm trước"
-                                        >
-                                            <i className="ph ph-caret-left"></i>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            id="new-arrival-next"
-                                            className="slick-next flex-center rounded-circle border border-gray-100 hover-border-main-600 text-xl hover-bg-main-600 hover-text-white transition-1"
-                                            aria-label="Sản phẩm tiếp theo"
-                                        >
-                                            <i className="ph ph-caret-right"></i>
-                                        </button>
+
                                     </div>
                                 </div>
                             </div>

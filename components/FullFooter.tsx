@@ -6,7 +6,7 @@ export default function FullFooter() {
   return (
     <>
       {/* Main Footer - Nền xanh cyan, chữ trắng */}
-      <footer className="footer pt-40 pb-0 overflow-hidden" style={{ backgroundColor: '#009999' }}>
+      <footer className="footer pt-40 pb-0 overflow-hidden" style={{ backgroundColor: '#008080' }}>
         <div className="container container-lg">
           <div className="footer-item-two-wrapper d-flex align-items-start flex-wrap">
             {/* Column 1: Logo & Contact */}

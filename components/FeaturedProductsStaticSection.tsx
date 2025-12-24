@@ -119,7 +119,7 @@ const FeaturedProductsStaticSection = () => {
                 <div className="product-card__content w-100 mt-20 mb-10 flex-grow-1 pe-10 align-items-stretch flex-column justify-content-between d-flex">
                     <div>
                         <div className="flex-align gap-4 mb-5">
-                            <span className="text-md d-flex" style={{ color: "#009999" }}><i className="ph-fill ph-storefront"></i></span>
+                            <span className="text-md d-flex" style={{ color: "#008080" }}><i className="ph-fill ph-storefront"></i></span>
                             <span className="text-gray-500 text-xs" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "200px", display: "inline-block" }}>
                                 {product.shop_name}
                             </span>
