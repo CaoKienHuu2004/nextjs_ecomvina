@@ -265,7 +265,7 @@ export function AuthProvider({
     if (!accessTokenFromGoogle) throw new Error("Không tìm thấy token Google.");
 
     // Gọi API Backend của bạn để verify token Google
-    const res = await fetch(`${API}/api/v1/auth/google`, { 
+    const res = await fetch(`${API}/api/v1/login-google`, { 
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       credentials: "include",
