@@ -12,7 +12,7 @@ export default function Chatbox() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
-    { id: 1, role: "ai", text: "Xin chào! Tôi là trợ lý ảo Siêu Thị Vina. Tôi có thể giúp gì cho bạn?" }
+    { id: 1, role: "ai", text: "Xin chào! Tôi là trợ lý Siêu Thị Vina. Tôi có thể giúp gì cho bạn?" }
   ]);
   const [loading, setLoading] = useState(false);
 
@@ -30,58 +30,57 @@ export default function Chatbox() {
   }, [messages, isOpen]);
 
   const handleSend = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!input.trim() || loading) return;
+  e?.preventDefault();
+  if (!input.trim() || loading) return;
 
-    const userMsgText = input;
-    const newMsgUser: Message = { id: genId(), role: "user", text: userMsgText };
+  const userMsgText = input;
+  const newMsgUser: Message = { id: genId(), role: "user", text: userMsgText };
 
-    setMessages((prev) => [...prev, newMsgUser]);
-    setInput("");
-    setLoading(true);
+  setMessages((prev) => [...prev, newMsgUser]);
+  setInput("");
+  setLoading(true);
 
-    try {
-      const res = await fetch(`${API}/api/v1/chat-gpt-ai`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: JSON.stringify({
-          message: userMsgText,
-        }),
-      });
+  try {
+    const res = await fetch(`${API}/api/v1/chat-gpt-ai`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        message: userMsgText,
+      }),
+    });
 
-      if (!res.ok) {
-        throw new Error("Server error");
-      }
-
-      const data = await res.json();
-
-      const replyText =
-        data?.reply ||
-        data?.message ||
-        "Xin lỗi, tôi chưa thể trả lời câu hỏi này.";
-
-      setMessages((prev) => [
-        ...prev,
-        { id: genId(), role: "ai", text: replyText },
-      ]);
-    } catch (error) {
-      console.error("Chat error:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: genId(),
-          role: "ai",
-          text: "Không thể kết nối tới server.",
-        },
-      ]);
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      throw new Error("Server error");
     }
-  };
 
+    const data = await res.json();
+
+    const replyText =
+      data?.reply ||
+      data?.message ||
+      "Xin lỗi, tôi chưa thể trả lời câu hỏi này.";
+
+    setMessages((prev) => [
+      ...prev,
+      { id: genId(), role: "ai", text: replyText },
+    ]);
+  } catch (error) {
+    console.error("Chat error:", error);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: genId(),
+        role: "ai",
+        text: "Không thể kết nối tới server.",
+      },
+    ]);
+  } finally {
+    setLoading(false);
+  }
+};
 
 
   return (
