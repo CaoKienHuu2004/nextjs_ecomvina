@@ -698,24 +698,17 @@ export default function OrdersPage() {
   // 
 
   // --- MUA LẠI ĐƠN HÀNG: mở modal chọn phương thức thanh toán ---
-  // legacy handler kept for compatibility (not used if using modal flow)
   const handleReorder = async (orderId: number) => {
-    // fallback: open modal to choose payment method
     openPaymentModal(orderId, "reorder");
   };
 
   // --- Thanh toán lại cho đơn đã hủy (server cập nhật trạng thái -> gọi payment-url) ---
   const handleRetryPaymentFromCancelled = async (orderId: number) => {
-    // open modal to choose payment method then proceed
     openPaymentModal(orderId, "retry");
   };
 
   // --- LOGIC FILTER ---
   // Helper map trạng thái từ API sang key filter
-  
-  
-
-  // Sử dụng matchesFilter để lọc orders (một order có thể hiển thị ở nhiều tabs nếu thỏa điều kiện)
   const filteredOrders = useMemo(() => {
     // Lọc đơn hàng dựa trên Tab đang chọn
     // Sử dụng hàm matchesFilter từ utils để kiểm tra chính xác
@@ -747,37 +740,7 @@ export default function OrdersPage() {
   const totalPages = Math.ceil(filteredOrders.length / PAGE_SIZE);
   const currentOrders = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // // // // Tính số lượng cho mỗi filter (cho phép một order được tính cho nhiều filter)
-  // // // const countsByFilter = useMemo(() => {
-  // // //   // Khởi tạo bộ đếm cho tất cả các tab
-  // // //   const map: Record<string, number> = {
-  // // //     all: 0, pending: 0, processing: 0, packing: 0, shipping: 0, delivered: 0, completed: 0, cancelled: 0
-  // // //   };
-    
-  // //   // Đếm tổng
-  // //   map.all = orders.length;
-
-  //   // Duyệt qua từng đơn hàng để đếm
-  //   orders.forEach(order => {
-  //     // Một đơn hàng có thể thuộc nhiều Tab (ví dụ: Vừa Đã giao, Vừa Chờ thanh toán)
-  //     // Nên ta loop qua các key để check xem đơn hàng này "match" với tab nào
-  //     (Object.keys(map) as OrderStatusKey[]).forEach((key) => {
-  //       if (key !== 'all' && matchesFilter(key, order.trangthai, order.trangthaithanhtoan)) {
-  //         map[key] = (map[key] || 0) + 1;
-  //       }
-  //     });
-  //   });
-  //   return map;
-  // }, [orders]);
-
-  // Pagination
-  // const totalPages = Math.ceil(filteredOrders.length / PAGE_SIZE);
-  // const currentOrders = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  // --- HELPER RENDER ---
-  // if (orders.length > 0 && orders[0].chitietdonhang && orders[0].chitietdonhang.length > 0) {
-  //   const formatPrice = (val: number) => val.toLocaleString("vi-VN") + " ₫";
-  // }
+  
   const formatOrderDate = (iso?: string) => {
     if (!iso) return "";
     try {
@@ -986,15 +949,17 @@ export default function OrdersPage() {
                                 <div className="text-md fw-semibold text-main-600">{formatPrice(price)}</div>
 
                                 {/* Mua lại cho từng sản phẩm (không hiển thị với quà tặng 0₫) */}
-                                <div className="mt-8">
-                                  <button
-                                    type="button"
-                                    onClick={() => quickReorderItem(it)}
-                                    className="px-10 py-6 text-sm border fw-medium rounded-6"
-                                  >
-                                    Mua lại
-                                  </button>
-                                </div>
+                                {matchesFilter('completed', detailOrder.trangthai, detailOrder.trangthaithanhtoan) && (
+                                  <div className="mt-8">
+                                    <button
+                                      type="button"
+                                      onClick={() => quickReorderItem(it)}
+                                      className="gap-8 px-8 py-4 text-sm border fw-medium text-main-600 border-main-600 hover-bg-main-600 hover-text-white rounded-4 transition-1 flex-right"
+                                    >
+                                      <i className="ph ph-shopping-cart" /> Mua lại
+                                    </button>
+                                  </div>
+                                )}
                               </>
                             )}
                           </div>
@@ -1206,7 +1171,7 @@ export default function OrdersPage() {
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img src={img} alt={title} className="w-100 rounded-8" style={{ objectFit: "cover" }} />
                                       </a>
-                                      <div className="table-product__content text-start">
+                                      <div className="table-product__content text-start flex-grow-1">
                                         <h6 className="mb-0 text-sm title fw-semibold">
                                           <a href="#" className="link text-line-2" title={title} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: 350, display: "inline-block" }}>
                                             {title}
@@ -1225,8 +1190,9 @@ export default function OrdersPage() {
                                             <span className="text-main-600 text-md fw-bold">{formatPrice(price)}</span>
                                           </div>
                                         </div>
+                                        </div>
                                         {/* Mua lại từng sản phẩm (không hiển thị nếu giá = 0) */}
-                                        {price > 0 && (
+                                        {price > 0 && matchesFilter('completed', order.trangthai, order.trangthaithanhtoan) && (
                                           <div className="mt-8">
                                             <button
                                               type="button"
@@ -1237,7 +1203,7 @@ export default function OrdersPage() {
                                             </button>
                                           </div>
                                         )}
-                                      </div>
+                                      
                                     </div>
                                   </div>
                                 );
