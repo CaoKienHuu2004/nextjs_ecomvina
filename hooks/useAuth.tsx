@@ -50,6 +50,7 @@ export type AuthContextType = {
   login: (payload: { phonemail: string; password: string }) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
+  loginWithGoogle: (accessToken: string) => Promise<void>; // <--- MỚI
   updateProfile: (payload: Partial<AuthUser> | FormData) => Promise<AuthUser | null>;
   refreshProfile: () => Promise<AuthUser | null>;
   setUser: (u: AuthUser | null) => void;
@@ -266,6 +267,37 @@ export function AuthProvider({
     }
   }, [API, fetchMe]);
 
+  // --- Action: Đăng nhập Google (MỚI) ---
+  const loginWithGoogle = useCallback(async (googleAccessToken: string) => {
+    if (!googleAccessToken) throw new Error("Không tìm thấy Google Access Token");
+
+    const res = await fetch(`${API}/api/v1/login-google`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ access_token: googleAccessToken }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.message || "Đăng nhập Google thất bại");
+
+    // Xử lý giống login thường
+    const accessToken = data?.access_token ?? data?.token;
+    if (accessToken) {
+      Cookies.set(TOKEN_KEY, String(accessToken), { expires: 7, path: "/" });
+      setToken(String(accessToken));
+    }
+
+    if (data?.user || data?.data) {
+      const mapped = mapUserResponse(data);
+      setUserState(mapped);
+      Cookies.set(USER_INFO_KEY, JSON.stringify(mapped), { expires: 7, path: "/" });
+    } else if (accessToken) {
+      await fetchMe(String(accessToken));
+    }
+    
+    router.refresh();
+  }, [API, fetchMe, mapUserResponse, router]);
+
   // --- Register ---
   const register = useCallback(async (payload: RegisterPayload) => {
     const res = await fetch(`${API}/api/v1/dang-ky`, {
@@ -351,10 +383,11 @@ export function AuthProvider({
     register,
     updateProfile,
     logout,
+    loginWithGoogle, // <--- Export
     refreshProfile,
     setUser: setUserState,
     changePassword,
-  }), [user, token, login, register, updateProfile, logout, refreshProfile, changePassword]);
+  }), [user, token, login, loginWithGoogle, register, updateProfile, logout, refreshProfile, changePassword]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
