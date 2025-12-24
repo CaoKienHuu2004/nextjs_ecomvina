@@ -18,7 +18,7 @@ type Review = {
 };
 
 type OrderItem = {
-  id: number; // Đây chính là id_chitietdonhang
+  id: number;
   soluong: number;
   dongia: number;
   tensanpham?: string;
@@ -45,7 +45,7 @@ export default function ReviewsPage() {
   // State
   const [loading, setLoading] = useState(false);
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]); // Danh sách đơn thành công
-  
+  const [reviewedIds, setReviewedIds] = useState<number[]>([]);
   // Form State
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const [selectableItems, setSelectableItems] = useState<OrderItem[]>([]); // List sản phẩm của đơn đã chọn
@@ -152,11 +152,29 @@ export default function ReviewsPage() {
 
         if (res.ok) {
             alert("Gửi đánh giá thành công! Cảm ơn bạn.");
+            
+            // [MỚI] Thêm ID vừa đánh giá vào danh sách đen
+            setReviewedIds(prev => [...prev, payload.id_chitietdonhang]);
+
             // Reset form
             setForm({ id_chitietdonhang: 0, diem: 5, noidung: "" });
             // Có thể redirect hoặc fetch lại danh sách đánh giá cũ nếu có API get
         } else {
             alert(json.message || "Lỗi khi gửi đánh giá.");
+
+            // [MỚI] Kiểm tra nếu thông báo lỗi có chứa từ khóa "đã đánh giá"
+            // (Bạn cần kiểm tra chính xác message server trả về, 
+            // dựa theo ảnh bạn gửi thì message là "Sản phẩm này bạn đã đánh giá rồi.")
+            const msg = (json.message || "").toLowerCase();
+            if (msg.includes("đã đánh giá") || msg.includes("already reviewed")) {
+                
+                // Cũng thêm ID này vào danh sách ẩn luôn để người dùng không chọn lại được nữa
+                setReviewedIds(prev => [...prev, payload.id_chitietdonhang]);
+                
+                // Reset form để người dùng chọn cái khác
+                setForm(prev => ({ ...prev, id_chitietdonhang: 0 }));
+            }
+        
         }
 
     } catch (e) {
@@ -210,9 +228,17 @@ export default function ReviewsPage() {
                             <option value="0">-- Chọn sản phẩm --</option>
                             {selectableItems.map(item => {
                                 const name = item.tensanpham || item.bienthe?.sanpham?.ten || "Sản phẩm";
+                                // [MỚI] Kiểm tra xem ID này có trong danh sách đã đánh giá chưa
+                                const isReviewed = reviewedIds.includes(item.id);
+
                                 return (
-                                    <option key={item.id} value={item.id}>
-                                        {name} (x{item.soluong})
+                                    <option 
+                                        key={item.id} 
+                                        value={item.id}
+                                        disabled={isReviewed} // Không cho chọn nếu đã đánh giá
+                                        style={isReviewed ? { color: '#aaa' } : {}} // Làm mờ chữ
+                                    >
+                                        {name} (x{item.soluong}) {isReviewed ? '(Đã đánh giá)' : ''}
                                     </option>
                                 );
                             })}
