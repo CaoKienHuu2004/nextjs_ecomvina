@@ -284,7 +284,7 @@ export default function ShopPage() {
                 allProductsFromAPI.push({
                   ...product,
                   categoryFromAPI: inferCategory(product.ten),
-                  categoryName: "Top deal • Siêu rẻ"
+                  categoryName: "Vũ trụ quà tặng"
                 });
               });
             } else if (sourceParam === "best_products") {
@@ -711,6 +711,20 @@ export default function ShopPage() {
     const api = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
     return `${api}/${logo.replace(/^\/+/g, "")}`;
   };
+  // ✅ THÊM: Map source sang tiêu đề tương ứng
+  const getPageTitle = () => {
+    switch (source) {
+      case "hot_sales":
+        return "Vũ trụ quà tặng";
+      case "flash_deals":
+        return "Flash Deals";
+      case "new_arrivals":
+        return "Sản phẩm mới";
+      default:
+        return "Tất cả sản phẩm";
+    }
+  };
+
 
   return (
     <>
@@ -723,7 +737,7 @@ export default function ShopPage() {
               {searchQuery
                 ? `Kết quả tìm kiếm: "${searchQuery}"`
                 : sourceParam === "hot_sales"
-                  ? "Top deal • Siêu rẻ"
+                  ? "Vũ trụ quà tặng"
                   : sourceParam === "best_products"
                     ? "Sản phẩm hàng đầu"
                     : sourceParam === "new_launch"

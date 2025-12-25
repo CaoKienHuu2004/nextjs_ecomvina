@@ -31,7 +31,7 @@ type ProductHotDeal = {
 const API = process.env.NEXT_PUBLIC_SERVER_API || "https://sieuthivina.com";
 
 export default function TopDealsSection({
-  title = "Top deal • Siêu rẻ",
+  title = "Vũ trụ quà tặng",
   perPage = 10,
 }: {
   title?: string;
@@ -339,7 +339,7 @@ export default function TopDealsSection({
                             style={{ height: 260, overflow: "hidden" }}
                           >
                             <span className="px-8 py-4 text-sm text-white product-card__badge bg-main-600 position-absolute inset-inline-start-0 inset-block-start-0 rounded-tl-10 rounded-br-10">
-                              Giảm {discount}%
+                              Quà tặng
                             </span>
                             {/* image fills entire slide area (width 100%) */}
                             <img

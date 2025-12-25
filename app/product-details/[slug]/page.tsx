@@ -31,9 +31,13 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
     const { addToCart } = useCart();
 
     const [product, setProduct] = useState<ProductDetail | null>(null);
-    const storeName = product?.nhacungcap?.ten || product?.thuonghieu || "GLOBAL (Yến Sào NEST100)";
-    const storeLink = product?.nhacungcap?.slug ? `/san-pham?nhacungcap=${product.nhacungcap.slug}` : "/san-pham";
-    const storeLogo = product?.nhacungcap?.logo || "/assets/images/logo/logo_nguyenban.png";
+    // ✅ CẬP NHẬT: Lấy thông tin thương hiệu từ API
+    const storeName = product?.thuonghieu?.ten || "Siêu Thị Vina";
+    const storeLink = product?.thuonghieu?.slug
+        ? `/san-pham?thuonghieu=${product.thuonghieu.slug}`
+        : "/san-pham";
+    const storeLogo = product?.thuonghieu?.logo || "/assets/images/logo/logo_nguyenban.png";
+
 
     const [similarProducts, setSimilarProducts] = useState<SimilarProduct[]>([]);
     const [loading, setLoading] = useState(true);
@@ -1022,15 +1026,31 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                 <div>
                                                     <div className="mt-5 flex-align justify-content-between">
                                                         <div className="gap-4 flex-align w-100">
-                                                            <span className="text-main-600 text-md d-flex"><i className="ph-fill ph-storefront"></i></span>
-                                                            <span className="text-xs text-gray-500 text-truncate">Siêu Thị Vina</span>
+                                                            {/* ✅ HIỂN THỊ THƯƠNG HIỆU TỪ API */}
+                                                            {similarProduct.thuonghieu?.logo ? (
+                                                                <img
+                                                                    src={similarProduct.thuonghieu.logo}
+                                                                    alt={similarProduct.thuonghieu.ten}
+                                                                    className="rounded"
+                                                                    style={{ width: "16px", height: "16px", objectFit: "contain" }}
+                                                                />
+                                                            ) : (
+                                                                <span className="text-main-600 text-md d-flex">
+                                                                    <i className="ph-fill ph-storefront"></i>
+                                                                </span>
+                                                            )}
+                                                            <span className="text-xs text-gray-500 text-truncate">
+                                                                {similarProduct.thuonghieu?.ten || "Siêu Thị Vina"}
+                                                            </span>
                                                         </div>
                                                     </div>
+
                                                     <h6 className="mt-2 mb-2 text-lg title fw-semibold">
                                                         <Link href={`/product-details/${similarProduct.slug}`} className="link text-line-2">
                                                             {similarProduct.ten}
                                                         </Link>
                                                     </h6>
+
                                                     <div className="mt-2 flex-align justify-content-between">
                                                         <div className="gap-6 flex-align">
                                                             <span className="text-xs text-gray-500 fw-medium">Đánh giá</span>
@@ -1044,6 +1064,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                                         </div>
                                                     </div>
                                                 </div>
+
                                                 <div className="mt-5 product-card__price">
                                                     {similarProduct.gia.discount_percent > 0 ? (
                                                         <>
@@ -1067,9 +1088,9 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
                                         </div>
                                     </div>
                                 ))}
-                            </Slider>
-                        </div>
-                    </section>
+                            </Slider >
+                        </div >
+                    </section >
                 )
             }
 
