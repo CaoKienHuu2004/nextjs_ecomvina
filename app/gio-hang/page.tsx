@@ -73,25 +73,25 @@ function DeleteConfirmModal({
 }
 
 function CartPageContent() {
-  const { 
-    items, 
-    loading, 
-    updatesoluong, 
-    removeItem, 
-    subtotal, 
-    totalItems, 
-    refreshCart, 
-    appliedVoucher, 
-    applyVoucher, 
-    removeVoucher, 
-    discountAmount, 
-    total, 
+  const {
+    items,
+    loading,
+    updatesoluong,
+    removeItem,
+    subtotal,
+    totalItems,
+    refreshCart,
+    appliedVoucher,
+    applyVoucher,
+    removeVoucher,
+    discountAmount,
+    total,
     savedAmount, // Sử dụng biến này thay cho việc tự tính
-    gifts, 
-    totalGifts, 
-    availableVouchers 
+    gifts,
+    totalGifts,
+    availableVouchers
   } = useCart();
-  
+
   const { data: homeData } = useHomeData();
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: number | string; name: string }>({
@@ -103,7 +103,7 @@ function CartPageContent() {
   // API Giỏ hàng đã filter sẵn theo điều kiện tiền, nhưng ta vẫn giữ logic filter FE để hiển thị trạng thái "Chưa đủ ĐK"
   const cartCoupons = (availableVouchers && availableVouchers.length > 0) ? availableVouchers : [];
   const homeCoupons = ((homeData?.data as any)?.new_coupon) || [];
-  
+
   // Nếu API giỏ hàng chưa trả về voucher (ví dụ chưa load xong), dùng tạm của home
   const displayCoupons = cartCoupons.length > 0 ? cartCoupons : homeCoupons;
 
@@ -150,10 +150,10 @@ function CartPageContent() {
           id_giohang: `local_${id_bienthe}`, // Format ID khớp với hook mới
           id_bienthe: Number(id_bienthe),
           soluong: Number(it.soluong ?? 1),
-          product: { 
-             ten: it.bienthe?.sanpham?.ten || it.ten_sp || "SP Mẫu",
-             mediaurl: it.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh || "",
-             gia: { current: it.bienthe?.giadagiam || 0 }
+          product: {
+            ten: it.bienthe?.sanpham?.ten || it.ten_sp || "SP Mẫu",
+            mediaurl: it.bienthe?.sanpham?.hinhanhsanpham?.[0]?.hinhanh || "",
+            gia: { current: it.bienthe?.giadagiam || 0 }
           }
         };
       });
@@ -161,10 +161,10 @@ function CartPageContent() {
 
       // 1. Lưu full object để hiển thị ngay (Optimistic)
       localStorage.setItem('marketpro_cart', JSON.stringify(mapped));
-      
+
       // 2. [QUAN TRỌNG] Lưu payload rút gọn để Hook gửi lên API tính toán
-      const payload = { 
-        cart_local: mapped.map((m: any) => ({ id_bienthe: m.id_bienthe, soluong: m.soluong })) 
+      const payload = {
+        cart_local: mapped.map((m: any) => ({ id_bienthe: m.id_bienthe, soluong: m.soluong }))
 
       };
       localStorage.setItem('marketpro_cart_payload', JSON.stringify(payload));
@@ -182,8 +182,8 @@ function CartPageContent() {
   return (
     <>
       <FullHeader showClassicTopBar={true} showTopNav={false} />
-      
-      <section className="py-20 cart">
+
+      <section className="py-20 cart mb-60">
 
         <div className="container container-lg">
           {/* Thông báo xóa */}
@@ -387,33 +387,33 @@ function CartPageContent() {
                   {/* 2. Danh sách Voucher khả dụng */}
                   <div className="gap-10 mt-10 d-flex flex-column" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                     {displayCoupons.map((voucher: any) => {
-                       // Filter cơ bản ở FE để hiển thị UI (ẩn voucher hết hạn)
-                       if (!isVoucherInDateRange(voucher.ngaybatdau, voucher.ngayketthuc)) return null;
-                       if (appliedVoucher && voucher.id === appliedVoucher.id) return null; // Ẩn cái đang chọn
+                      // Filter cơ bản ở FE để hiển thị UI (ẩn voucher hết hạn)
+                      if (!isVoucherInDateRange(voucher.ngaybatdau, voucher.ngayketthuc)) return null;
+                      if (appliedVoucher && voucher.id === appliedVoucher.id) return null; // Ẩn cái đang chọn
 
-                       const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
-                       const isEligible = subtotal >= minOrderValue; // Logic check đơn giản
+                      const { type, minOrderValue } = parseVoucherCondition(voucher.dieukien, voucher.mota);
+                      const isEligible = subtotal >= minOrderValue; // Logic check đơn giản
 
-                       return (
-                         <div key={voucher.id} className={`p-10 border border-dashed rounded-4 ${isEligible ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300 opacity-75'}`}>
-                           <div className="d-flex justify-content-between align-items-center">
-                             <div className="d-flex flex-column" style={{flex: 1, overflow: 'hidden'}}>
-                               <span className="text-sm text-gray-900 fw-bold">{voucher.magiamgia || voucher.code}</span>
-                               <span className="text-xs text-gray-500">Giảm {formatPrice(Number(voucher.giatri))}</span>
-                               {!isEligible && <span className="text-xs text-warning-600">Đơn từ {formatPrice(minOrderValue)}</span>}
-                             </div>
-                             <button
-                               onClick={() => applyVoucher(voucher)}
-                               disabled={!isEligible}
-                               className={`btn btn-sm px-10 py-4 text-xs rounded-4 ${isEligible ? 'btn-main' : 'btn-gray text-gray-500'}`}
-                             >
-                               {isEligible ? 'Dùng' : 'Chưa đủ'}
-                             </button>
-                           </div>
-                         </div>
-                       );
+                      return (
+                        <div key={voucher.id} className={`p-10 border border-dashed rounded-4 ${isEligible ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300 opacity-75'}`}>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <div className="d-flex flex-column" style={{ flex: 1, overflow: 'hidden' }}>
+                              <span className="text-sm text-gray-900 fw-bold">{voucher.magiamgia || voucher.code}</span>
+                              <span className="text-xs text-gray-500">Giảm {formatPrice(Number(voucher.giatri))}</span>
+                              {!isEligible && <span className="text-xs text-warning-600">Đơn từ {formatPrice(minOrderValue)}</span>}
+                            </div>
+                            <button
+                              onClick={() => applyVoucher(voucher)}
+                              disabled={!isEligible}
+                              className={`btn btn-sm px-10 py-4 text-xs rounded-4 ${isEligible ? 'btn-main' : 'btn-gray text-gray-500'}`}
+                            >
+                              {isEligible ? 'Dùng' : 'Chưa đủ'}
+                            </button>
+                          </div>
+                        </div>
+                      );
                     })}
-                    
+
                     {displayCoupons.length === 0 && !appliedVoucher && (
                       <div className="py-10 text-sm text-center text-gray-500">Chưa có mã giảm giá phù hợp.</div>
                     )}
@@ -426,7 +426,7 @@ function CartPageContent() {
                   <div className="mb-20">
                     <h6 className="gap-4 mb-6 text-lg flex-align"><i className="text-xl ph-bold ph-shopping-cart text-main-600"></i> Thông tin thanh toán</h6>
                   </div>
-                  
+
                   <div className="gap-8 mb-20 flex-between">
                     <span className="text-gray-900 font-heading-two">Tạm tính:</span>
                     <span className="text-gray-900 fw-semibold">{formatPrice(subtotal)}</span>
@@ -467,7 +467,7 @@ function CartPageContent() {
                     {loading ? 'Đang tính toán...' : 'Tiến hành thanh toán'}
                   </Link>
                 </div>
-                
+
                 <span className="mt-20 text-center w-100 d-block">
                   <Link href="/shop" className="text-sm text-main-600 fw-medium">
                     <i className="ph-bold ph-arrow-left pe-4"></i> Tiếp tục mua sắm

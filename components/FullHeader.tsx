@@ -263,6 +263,28 @@ export default function FullHeader({
 
   // ===== Cart count helpers =====
   const { totalItems, items: cart, total: totalPrice, removeItem: removeFromCart } = useCart();
+  // ✅ STATE ĐỂ FORCE RE-RENDER
+  const [cartCount, setCartCount] = useState(0);
+  // ✅ ĐỒNG BỘ cartCount với totalItems
+  useEffect(() => {
+    setCartCount(totalItems);
+  }, [totalItems]);
+
+  // ✅ LẮNG NGHE EVENT VÀ CẬP NHẬT STATE
+  useEffect(() => {
+    const handleCartUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const count = customEvent.detail?.count ?? 0;
+      setCartCount(count);
+      console.log('Cart updated:', count);
+    };
+
+    window.addEventListener('cart:updated', handleCartUpdate);
+
+    return () => {
+      window.removeEventListener('cart:updated', handleCartUpdate);
+    };
+  }, []);
 
   // Format currency helper
   const formatCurrency = (price: number) => {
@@ -684,10 +706,11 @@ export default function FullHeader({
                         <i className="ph-bold ph-notepad"></i> Tra cứu đơn hàng
                       </Link>
                     </li>
+                    {/* ✅ GIỎ HÀNG - CẬP NHẬT ĐÚNG CHỖ BẠN YÊU CẦU */}
                     <li className="flex-align">
                       <Link href="/gio-hang" className="text-sm text-white hover-text-white" data-cart-icon>
                         <i className="ph-bold ph-shopping-cart"></i> Giỏ hàng
-                        <span className="px-6 py-4 badge bg-main-two-600 rounded-4 ms-6">{totalItems}</span>
+                        <span className="px-6 py-4 badge bg-main-two-600 rounded-4 ms-6">{cartCount}</span>
                       </Link>
                     </li>
                   </ul>
