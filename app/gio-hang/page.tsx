@@ -296,8 +296,9 @@ function CartPageContent() {
                                   {/* Component Tăng Giảm đã có sẵn */}
                                   <QuantityControl
                                     quantity={item.soluong}
+                                    stock={item.product?.tonkho ?? 30}
                                     onUpdate={(newQty) => updatesoluong(item.id_giohang, newQty)}
-                                    disabled={loading}
+                                    // disabled={loading}
                                   />
                                 </td>
                                 <td className="px-5 py-20">

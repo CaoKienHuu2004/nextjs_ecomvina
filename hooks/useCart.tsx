@@ -54,6 +54,7 @@ export type ProductDisplayInfo = {
   loaibienthe?: string;
   thuonghieu?: string;
   slug?: string;
+  tonkho?: number;
 };
 
 export type CartItem = {
@@ -239,17 +240,32 @@ export function useCart() {
     } catch (e) { console.error(e); }
   }, []);
 
+  // helper để làm sạch URL hình ảnh
+  const cleanImageUrl = (url?: string): string => {
+    if (!url) return "/assets/images/thumbs/product-placeholder.png";
+
+    // Tìm vị trí cuối cùng xuất hiện "http". 
+    // Nếu server nối sai chuỗi (path + url), cái "http" thật sẽ nằm ở phía sau.
+    const lastHttpIndex = url.lastIndexOf("http");
+
+    if (lastHttpIndex > 0) {
+      // Cắt bỏ phần rác phía trước, chỉ lấy từ http cuối cùng trở đi
+      return url.substring(lastHttpIndex);
+    }
+
+    return url;
+  };
   // --- MAPPING HELPERS ---
   const mapServerItemToLocal = useCallback((serverItem: any): CartItem => {
     const bt = serverItem.bienthe || {};
     const sp = bt.sanpham || {};
     const detail = bt.detail || {};
 
-    // [FIX]: Luôn ưu tiên tạo ID dựa trên id_bienthe nếu là Guest để khớp với LocalStorage
+
     const fallbackId = `local_${bt.id}`;
+    const rawUrl = sp.hinhanhsanpham?.[0]?.hinhanh || bt.hinhanh || detail.hinhanh;
 
     return {
-      // Nếu có id_giohang từ DB (User) thì lấy, nếu ko (Guest) thì lấy id_giohang server gửi về hoặc fallback
       id_giohang: serverItem.id_giohang ?? serverItem.id ?? fallbackId,
       id_bienthe: bt.id || serverItem.id_bienthe,
       soluong: serverItem.soluong,
@@ -257,7 +273,9 @@ export function useCart() {
       product: {
         id: bt.id,
         ten: sp.ten || detail.tensanpham || "Sản phẩm",
-        mediaurl: sp.hinhanhsanpham?.[0]?.hinhanh || bt.hinhanh || detail.hinhanh || "/assets/images/thumbs/product-placeholder.png",
+        tonkho: bt.tonkho ?? bt.soluong ?? 30,
+        mediaurl: cleanImageUrl(rawUrl),
+        // ------------------------------------------
         gia: {
           current: bt.giadagiam ?? bt.giaban ?? 0,
           before_discount: bt.giagoc ?? 0,
@@ -302,7 +320,7 @@ export function useCart() {
           cart_items,
           cart_local: [],
           // voucher: currentCode || "",
-          voucher_code: currentCode || "", 
+          voucher_code: currentCode || "",
           gifts: (giftsRef.current || []).map((g: any) => ({
             id_bienthe: g.id_bienthe,
             soluong: g.soluong
