@@ -120,7 +120,7 @@ export default function LoginPage() {
 
                                     <form onSubmit={handleSubmit}>
                                         <div className="mb-24">
-                                            <label className="mb-8 text-gray-900 text-md fw-semibold">Tên đăng nhập</label>
+                                            <label className="mb-8 text-gray-900 text-md fw-semibold">Email hoặc số điện thoại</label>
                                             <input 
                                                 type="text" 
                                                 className="common-input rounded-8" 

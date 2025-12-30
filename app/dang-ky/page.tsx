@@ -4,12 +4,15 @@ import React, { useState, ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
 import FullHeader from "@/components/FullHeader";
 import FullFooter from "@/components/FullFooter";
+import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
 // Định nghĩa kiểu cho state của form
 type FormState = {
     hoten: string;
     email: string;
     sodienthoai: string;
+    phonemail: string;
     username: string;
     password: string;
     password_confirmation: string;
@@ -18,6 +21,7 @@ type FormState = {
 // Định nghĩa kiểu cho phản hồi từ API
 type ApiResponse = {
     success?: boolean;
+    status?: boolean;
     message?: string;
     token?: string;
     errors?: Record<string, string[]>;
@@ -45,11 +49,14 @@ export default function Page() {
     const [form, setForm] = useState<FormState>({
         hoten: "",
         email: "",
+        phonemail: "",
         sodienthoai: "",
         username: "",
         password: "",
         password_confirmation: "",
     });
+    const router = useRouter(); 
+    const { login } = useAuth();
 
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<MessageState | null>(null);
@@ -76,7 +83,7 @@ export default function Page() {
         // Email
         if (!form.email.trim()) return "Vui lòng nhập email";
         // Cấu trúc email cơ bản
-        if (!/^[^\s@]+@[^\s@]+$/.test(form.email)) return "Email không hợp lệ";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "Email không hợp lệ";
         // Kiểm tra domain cho phép
         const allowedDomains = ["fpt.edu.vn", "gmail.com"];
         const emailParts = form.email.trim().toLowerCase().split("@");
@@ -97,6 +104,8 @@ export default function Page() {
         return null;
     };
 
+    
+
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setMessage(null);
@@ -105,6 +114,7 @@ export default function Page() {
             setMessage({ type: "error", text: err });
             return;
         }
+        
         setLoading(true);
         try {
             const payload = {
@@ -116,28 +126,51 @@ export default function Page() {
                 password_confirmation: form.password_confirmation,
             };
 
-            console.debug("REGISTER payload:", payload);
-
             await fetch("https://sieuthivina.com/sanctum/csrf-cookie");
-            // Sử dụng fetch trực tiếp giống trang đăng nhập
+            
             const rawResp = await fetch("https://sieuthivina.com/api/v1/dang-ky", {
                 method: "POST",
-                // credentials: "include",
                 headers: { "Content-Type": "application/json", Accept: "application/json" },
                 body: JSON.stringify(payload),
             });
 
             const parsed = await rawResp.json().catch(() => ({}));
-            console.debug("REGISTER response:", rawResp.status, parsed);
-
             const resp: ApiResponse = parsed as ApiResponse;
 
-            if (resp.success) {
-                setMessage({ type: "success", text: resp.message || "Đăng ký thành công!" });
-                setForm({ hoten: "", username: "", email: "", sodienthoai: "", password: "", password_confirmation: "" });
-                return;
-            }
+            // --- SỬA ĐỔI TẠI ĐÂY ---
+            // Kiểm tra cả 'success' (chuẩn thường) và 'status' (Laravel hay dùng)
+            if (resp.success || resp.status) {
+                setMessage({ type: "success", text: "Đăng ký thành công! Đang đăng nhập..." });
+                
+                try {
+                    // Gọi login từ useAuth
+                    // Lưu ý: Đảm bảo form.email khớp với regex trong useAuth
+                    await login({ 
+                        phonemail: form.email, 
+                        password: form.password 
+                    });
 
+                    // Login thành công -> Về trang chủ
+                    router.push("/");
+                    router.refresh(); 
+                } catch (loginErr) {
+                    console.error("Auto login failed:", loginErr);
+                    // Login thất bại (do mạng hoặc logic) -> Chuyển hướng thủ công sang trang đăng nhập
+                    setMessage({ 
+                        type: "success", 
+                        text: "Đăng ký thành công. Đang chuyển hướng đăng nhập..." 
+                    });
+                    
+                    // Dùng setTimeout để user kịp đọc thông báo rồi mới chuyển
+                    setTimeout(() => {
+                        router.push("/dang-nhap");
+                    }, 2000);
+                }
+                return; // Kết thúc hàm tại đây để không chạy xuống logic lỗi bên dưới
+            }
+            // ------------------------
+
+            // Xử lý lỗi validation từ Server trả về (Laravel MessageBag)
             if (resp.errors && typeof resp.errors === "object") {
                 const firstKey = Object.keys(resp.errors)[0];
                 const firstMsg = resp.errors[firstKey]?.[0];
@@ -153,6 +186,7 @@ export default function Page() {
             }
 
             setMessage({ type: "error", text: resp.message || "Đăng ký thất bại." });
+
         } catch (err) {
             console.error("Register error:", err);
             let msg = "Đăng ký thất bại. Vui lòng thử lại.";
