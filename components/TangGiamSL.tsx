@@ -28,7 +28,7 @@ export default function QuantityControl({ quantity, stock, onUpdate, disabled }:
     // [QUAN TRỌNG] Validate tồn kho
     // Nếu tồn kho > 0 và khách chọn lớn hơn tồn kho
     if (stock > 0 && finalVal > stock) {
-      alert(`Số lượng hiện có trong kho chỉ còn ${stock}. Hệ thống sẽ tự điều chỉnh về mức tối đa.`);
+      alert(`Số lượng hiện có trong kho chỉ còn ${stock}. Nếu bạn muốn mua nhiều hơn, vui lòng liên hệ quản trị viên.`);
       finalVal = stock;
     }
 
